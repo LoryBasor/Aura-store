@@ -1190,15 +1190,15 @@ const SubscriptionPage = {
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
             <div>
               <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Produits</div>
-              <div style="font-size: 24px; font-weight: 700;"> ${data.plan_name.toLowerCase() === 'graduit'? '5 max': '∞'}</div>
+              <div style="font-size: 24px; font-weight: 700;"> ${data.plan_name.toLowerCase() === 'gratuit'? '5 max': '∞'}</div>
             </div>
             <div>
               <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Commandes/mois</div>
-              <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'graduit'? '5 max': '∞'}</div>
+              <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'gratuit'? '5 max': '∞'}</div>
             </div>
             <div>
               <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Stockage</div>
-              <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'graduit'? '100 MB': data.plan_name.toLowerCase() === 'pro'? '500 MB' : '2 GB'}</div>
+              <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'gratuit'? '100 MB': data.plan_name.toLowerCase() === 'pro'? '500 MB' : '2 GB'}</div>
             </div>
           </div>
         </div>
