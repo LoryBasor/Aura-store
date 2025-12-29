@@ -1,0 +1,87 @@
+<!-- ========================================
+     views/admin/dashboard.ejs - VERSION COMPLÈTE
+     ======================================== -->
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📊 Administration AURA</h1>
+    <p class="page-subtitle">Vue globale de la plateforme</p>
+  </div>
+  <div style="display: flex; gap: 12px;">
+    <select class="form-select" style="width: 150px;" id="periodFilter">
+      <option value="7days">7 jours</option>
+      <option value="30days" selected>30 jours</option>
+      <option value="90days">90 jours</option>
+    </select>
+    <button class="btn btn-secondary" id="refreshBtn">
+      🔄 Actualiser
+    </button>
+  </div>
+</div>
+
+<!-- Global Stats Grid -->
+<div class="stats-grid" id="globalStats">
+  <!-- Chargement initial -->
+  <div class="stat-card">
+    <div class="loader"></div>
+  </div>
+</div>
+
+<!-- Charts & Stats Section -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Conversion Rate Card -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">📈 Taux de Conversion</h3>
+    </div>
+    <div id="conversionStats">
+      <div class="loader"></div>
+    </div>
+  </div>
+
+  <!-- Subscription Distribution -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">📊 Répartition Abonnements</h3>
+    </div>
+    <div id="subscriptionDistribution">
+      <div class="loader"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tables Row -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Top Vendors -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">🏆 Top Vendeurs</h3>
+      <a href="/admin/vendors" class="card-action">Voir tout →</a>
+    </div>
+    <div id="topVendors">
+      <div class="loader"></div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">🕐 Activité récente</h3>
+    </div>
+    <div id="recentActivity">
+      <div class="loader"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Expiring Subscriptions Alert -->
+<div class="card" id="expiringSubscriptionsCard" style="display: none;">
+  <div class="card-header">
+    <h3 class="card-title">⚠️ Abonnements expirant bientôt</h3>
+  </div>
+  <div id="expiringSubscriptions"></div>
+</div>
+
+<!-- Script dédié -->
+<script src="/js/admin/dashboard.js"></script>

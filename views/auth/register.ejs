@@ -1,0 +1,117 @@
+<!-- views/auth/register.ejs -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription | AURA</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-box">
+      <!-- Logo -->
+      <div class="auth-logo">
+        <h1>AURA</h1>
+        <p class="auth-subtitle">Créez votre boutique en ligne en quelques minutes</p>
+      </div>
+
+      <!-- Formulaire d'inscription -->
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="business_name" class="form-label required">Nom de votre entreprise</label>
+          <input 
+            type="text" 
+            id="business_name" 
+            name="business_name" 
+            class="form-input" 
+            placeholder="Ex: Ma Boutique"
+            required
+          >
+          <div class="form-error" id="businessNameError"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="email" class="form-label required">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            class="form-input" 
+            placeholder="votre@email.com"
+            required
+          >
+          <div class="form-error" id="emailError"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="phone" class="form-label">Téléphone</label>
+          <input 
+            type="tel" 
+            id="phone" 
+            name="phone" 
+            class="form-input" 
+            placeholder="+237 6XX XXX XXX"
+          >
+          <p class="form-help">Format: +237 612345678</p>
+        </div>
+
+        <div class="form-group">
+          <label for="whatsapp_number" class="form-label">Numéro WhatsApp</label>
+          <input 
+            type="tel" 
+            id="whatsapp_number" 
+            name="whatsapp_number" 
+            class="form-input" 
+            placeholder="+237 6XX XXX XXX"
+          >
+          <p class="form-help">Pour que vos clients vous contactent directement</p>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label required">Mot de passe</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="form-input" 
+            placeholder="••••••••"
+            required
+          >
+          <p class="form-help">Minimum 8 caractères</p>
+          <div class="form-error" id="passwordError"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password" class="form-label required">Confirmer le mot de passe</label>
+          <input 
+            type="password" 
+            id="confirm_password" 
+            name="confirm_password" 
+            class="form-input" 
+            placeholder="••••••••"
+            required
+          >
+          <div class="form-error" id="confirmPasswordError"></div>
+        </div>
+
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary w-full">
+            Créer mon compte
+          </button>
+        </div>
+      </form>
+
+      <!-- Lien connexion -->
+      <div class="auth-link">
+        Vous avez déjà un compte ? <a href="/login">Se connecter</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

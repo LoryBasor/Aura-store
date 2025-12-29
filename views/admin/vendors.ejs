@@ -1,0 +1,142 @@
+<!-- ========================================
+     views/admin/vendors.ejs - VERSION COMPLÈTE
+     ======================================== -->
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">👥 Gestion des vendeurs</h1>
+    <p class="page-subtitle">Administrez tous les comptes vendeurs</p>
+  </div>
+  <button class="btn btn-secondary" id="exportBtn">
+    📊 Exporter CSV
+  </button>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 24px;">
+  <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center;">
+    <input 
+      type="search" 
+      id="searchInput" 
+      class="form-input" 
+      placeholder="Rechercher par nom, email ou téléphone..."
+    >
+    <select class="form-select" style="width: 200px;" id="statusFilter">
+      <option value="">Tous les statuts</option>
+      <option value="active">Actifs</option>
+      <option value="suspended">Suspendus</option>
+      <option value="deactivated">Désactivés</option>
+    </select>
+    <button class="btn btn-primary" id="searchBtn">
+      🔍 Rechercher
+    </button>
+  </div>
+</div>
+
+<!-- Vendors Table -->
+<div class="card">
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Vendeur</th>
+          <th>Contact</th>
+          <th>Abonnement</th>
+          <th>Produits</th>
+          <th>Commandes</th>
+          <th>CA Total</th>
+          <th>Statut</th>
+          <th>Inscription</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="vendorsTableBody">
+        <tr>
+          <td colspan="9" style="text-align: center; padding: 48px;">
+            <div class="loader"></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+<div id="pagination" class="flex-center" style="margin-top: 24px; gap: 8px;">
+  <!-- Pagination dynamique -->
+</div>
+
+<!-- Modal Actions Vendeur -->
+<div class="modal-overlay" id="vendorActionsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Actions vendeur</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="vendorActionsBody">
+      <!-- Actions chargées dynamiquement -->
+    </div>
+  </div>
+</div>
+
+<!-- Modal Suspension -->
+<div class="modal-overlay" id="suspendModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">⛔ Suspendre le vendeur</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="suspendForm">
+      <div class="modal-body">
+        <input type="hidden" id="suspendUserId">
+        <div class="form-group">
+          <label for="suspendReason" class="form-label required">Raison de la suspension</label>
+          <textarea 
+            id="suspendReason" 
+            name="reason" 
+            class="form-textarea" 
+            placeholder="Expliquez la raison de la suspension..."
+            required
+          ></textarea>
+          <p class="form-help">Cette raison sera visible par le vendeur</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+        <button type="submit" class="btn btn-danger">Suspendre</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Reset Password -->
+<div class="modal-overlay" id="resetPasswordModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">🔑 Réinitialiser le mot de passe</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="resetPasswordUserId">
+      <p style="margin-bottom: 16px; color: var(--color-secondary);">
+        Un mot de passe temporaire sera généré et affiché après confirmation.
+      </p>
+      <div id="temporaryPasswordDisplay" style="display: none; padding: 16px; background: var(--color-accent); border-radius: var(--radius-sm); margin-bottom: 16px;">
+        <strong style="color: var(--color-primary);">Mot de passe temporaire :</strong>
+        <div style="font-size: 24px; font-weight: 700; color: var(--color-primary); margin: 12px 0; font-family: monospace;">
+          <span id="temporaryPasswordValue"></span>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="copyPasswordBtn">
+          📋 Copier
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+      <button type="button" class="btn btn-primary" id="confirmResetPasswordBtn">
+        Générer le mot de passe
+      </button>
+    </div>
+  </div>
+</div>

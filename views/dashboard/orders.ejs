@@ -1,0 +1,211 @@
+<!-- ========================================
+     views/dashboard/orders.ejs - VERSION COMPLÈTE
+     ======================================== -->
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📦 Mes commandes</h1>
+    <p class="page-subtitle">Suivez et gérez toutes vos commandes</p>
+  </div>
+  <button class="btn btn-primary" data-action="new-order">
+    + Nouvelle commande
+  </button>
+</div>
+
+<!-- Stats Commandes -->
+<div class="stats-grid" id="orderStats" style="margin-bottom: 24px;">
+  <div class="loader"></div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 24px;">
+  <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center;">
+    <input 
+      type="search" 
+      id="searchInput" 
+      class="form-input" 
+      placeholder="Rechercher par n° commande, client..."
+    >
+    <select class="form-select" style="width: 200px;" data-filter="order-status">
+      <option value="">Tous les statuts</option>
+      <option value="nouvelle">Nouvelles</option>
+      <option value="confirmee">Confirmées</option>
+      <option value="en_preparation">En préparation</option>
+      <option value="en_livraison">En livraison</option>
+      <option value="livree">Livrées</option>
+      <option value="annulee">Annulées</option>
+    </select>
+    <button class="btn btn-secondary" data-action="export-orders">
+      📊 Exporter
+    </button>
+  </div>
+</div>
+
+<!-- Orders Table -->
+<div class="card">
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>N° Commande</th>
+          <th>Date</th>
+          <th>Client</th>
+          <th>Produit</th>
+          <th style="text-align: right;">Quantité</th>
+          <th style="text-align: right;">Montant</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="ordersTableBody">
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 48px;">
+            <div class="loader"></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+<div id="pagination" class="flex-center" style="margin-top: 24px; gap: 8px;"></div>
+
+<!-- ========================================
+     MODAL CRÉER/MODIFIER COMMANDE
+     ======================================== -->
+<div class="modal-overlay" id="orderModal">
+  <div class="modal" style="max-width: 700px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="orderModalTitle">Nouvelle commande</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="orderForm">
+      <div class="modal-body">
+        <input type="hidden" id="orderId">
+        
+        <!-- Sélection produit -->
+        <div class="form-group">
+          <label class="form-label required">Produit</label>
+          <select id="productId" class="form-select" required>
+            <option value="">-- Sélectionner un produit --</option>
+          </select>
+          <p class="form-help" id="productInfo"></p>
+        </div>
+
+        <!-- Infos client -->
+        <div style="padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm); margin-bottom: 16px;">
+          <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">👤 Informations client</h4>
+          
+          <div class="form-group">
+            <label class="form-label required">Nom du client</label>
+            <input type="text" id="customerName" class="form-input" placeholder="Ex: lory basor" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Téléphone</label>
+            <input type="tel" id="customerPhone" class="form-input" placeholder="+237 6XX XXX XXX" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Adresse de livraison</label>
+            <textarea id="customerAddress" class="form-textarea" rows="2" placeholder="Adresse complète..."></textarea>
+          </div>
+        </div>
+
+        <!-- Quantité -->
+        <div class="form-group">
+          <label class="form-label required">Quantité</label>
+          <input type="number" id="quantity" class="form-input" min="1" value="1" required>
+          <p class="form-help" id="stockInfo"></p>
+        </div>
+
+        <!-- Montant total (calculé) -->
+        <div id="totalAmountDisplay" style="padding: 16px; background: var(--color-accent); border-radius: var(--radius-sm); margin-bottom: 16px; display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">Montant total :</strong>
+            <strong style="font-size: 24px; color: var(--color-primary);" id="totalAmount">0 FCFA</strong>
+          </div>
+        </div>
+
+        <!-- Statut (seulement en édition) -->
+        <div class="form-group" id="statusGroup" style="display: none;">
+          <label class="form-label">Statut</label>
+          <select id="orderStatus" class="form-select">
+            <option value="nouvelle">🆕 Nouvelle</option>
+            <option value="confirmee">✅ Confirmée</option>
+            <option value="en_preparation">👨‍🍳 En préparation</option>
+            <option value="en_livraison">🚚 En livraison</option>
+            <option value="livree">📦 Livrée</option>
+            <option value="annulee">❌ Annulée</option>
+          </select>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group">
+          <label class="form-label">Notes (optionnel)</label>
+          <textarea id="orderNotes" class="form-textarea" rows="3" placeholder="Informations complémentaires..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+        <button type="submit" class="btn btn-primary" id="submitOrderBtn">Créer la commande</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================
+     MODAL DÉTAILS COMMANDE
+     ======================================== -->
+<div class="modal-overlay" id="orderDetailsModal">
+  <div class="modal" style="max-width: 700px;">
+    <div class="modal-header">
+      <h3 class="modal-title">📋 Détails de la commande</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="orderDetailsBody">
+      <div class="loader"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary modal-close">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================
+     MODAL CHANGEMENT STATUT
+     ======================================== -->
+<div class="modal-overlay" id="statusModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">🔄 Changer le statut</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="statusForm">
+      <div class="modal-body">
+        <input type="hidden" id="statusOrderId">
+        <div class="form-group">
+          <label for="newStatus" class="form-label required">Nouveau statut</label>
+          <select id="newStatus" name="status" class="form-select" required>
+            <option value="">-- Sélectionner --</option>
+            <option value="nouvelle">🆕 Nouvelle</option>
+            <option value="confirmee">✅ Confirmée</option>
+            <option value="en_preparation">👨‍🍳 En préparation</option>
+            <option value="en_livraison">🚚 En livraison</option>
+            <option value="livree">📦 Livrée</option>
+            <option value="annulee">❌ Annulée</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+        <button type="submit" class="btn btn-primary">Mettre à jour</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Script dédié -->
+<script src="/js/orders.js"></script>
