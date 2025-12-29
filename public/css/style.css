@@ -983,6 +983,7 @@ body {
 
   .main-content {
     margin-left: 0;
+    width: 120vw;
   }
 
   .header {
@@ -995,6 +996,21 @@ body {
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+  }
+
+  .table th, .table td{
+    padding: 10px;
+    white-space: nowrap;
   }
 
   .page-title {

@@ -12,10 +12,6 @@ const dbConfig = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'saas_vendor_db',
-
-  ssl: {
-    ca: process.env.DB_CA
-  },
   waitForConnections: true,
   connectionLimit: 10, // Max 10 connexions simultanées
   queueLimit: 0, // Pas de limite sur la file d'attente
