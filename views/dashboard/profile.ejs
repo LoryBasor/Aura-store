@@ -1,0 +1,135 @@
+<!-- ========================================
+     views/dashboard/profile.ejs
+     ======================================== -->
+<!-- Page Header -->
+<div class="page-header">
+  <h1 class="page-title">👤 Mon Profil</h1>
+  <p class="page-subtitle">Gérez vos informations personnelles</p>
+</div>
+
+<!-- Informations Compte -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Informations du compte</h3>
+  </div>
+  <form id="profileForm">
+    <div style="padding: 24px;">
+      <div class="form-group">
+        <label for="business_name" class="form-label required">Nom de l'entreprise</label>
+        <input 
+          type="text" 
+          id="business_name" 
+          name="business_name" 
+          class="form-input" 
+          placeholder="Ma Boutique"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="email" class="form-label">Email</label>
+        <input 
+          type="email" 
+          id="email" 
+          class="form-input" 
+          disabled
+          style="background: var(--color-surface); cursor: not-allowed;"
+        >
+        <p class="form-help">L'email ne peut pas être modifié</p>
+      </div>
+
+      <div class="form-group">
+        <label for="phone" class="form-label">Téléphone</label>
+        <input 
+          type="tel" 
+          id="phone" 
+          name="phone" 
+          class="form-input" 
+          placeholder="+237 6XX XXX XXX"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="whatsapp_number" class="form-label">Numéro WhatsApp</label>
+        <input 
+          type="tel" 
+          id="whatsapp_number" 
+          name="whatsapp_number" 
+          class="form-input" 
+          placeholder="+237 6XX XXX XXX"
+        >
+        <p class="form-help">Utilisé pour les liens de commande WhatsApp</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Lien de votre boutique</label>
+        <div style="display: flex; gap: 12px;">
+          <input 
+            type="text" 
+            id="store_link" 
+            class="form-input" 
+            readonly
+            style="background: var(--color-surface);"
+          >
+          <button type="button" class="btn btn-secondary" data-action="copy-store-link">
+            📋 Copier
+          </button>
+        </div>
+        <p class="form-help">Partagez ce lien pour afficher tous vos produits</p>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        💾 Enregistrer les modifications
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Changement de mot de passe -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">🔒 Changer le mot de passe</h3>
+  </div>
+  <form id="passwordForm">
+    <div style="padding: 24px;">
+      <div class="form-group">
+        <label for="old_password" class="form-label required">Mot de passe actuel</label>
+        <input 
+          type="password" 
+          id="old_password" 
+          name="old_password" 
+          class="form-input" 
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="new_password" class="form-label required">Nouveau mot de passe</label>
+        <input 
+          type="password" 
+          id="new_password" 
+          name="new_password" 
+          class="form-input" 
+          minlength="8"
+          required
+        >
+        <p class="form-help">Minimum 8 caractères</p>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm_password" class="form-label required">Confirmer le nouveau mot de passe</label>
+        <input 
+          type="password" 
+          id="confirm_password" 
+          name="confirm_password" 
+          class="form-input" 
+          required
+        >
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        🔒 Changer le mot de passe
+      </button>
+    </div>
+  </form>
+</div>

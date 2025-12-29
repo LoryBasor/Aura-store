@@ -1,0 +1,129 @@
+<!-- views/errors/404.ejs -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page introuvable | AURA</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #253337, #5C6C73);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .error-container {
+      max-width: 600px;
+      width: 100%;
+      background: var(--color-white);
+      border-radius: var(--radius-lg);
+      padding: 64px 48px;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .error-code {
+      font-size: 120px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 24px;
+    }
+
+    .error-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: 16px;
+    }
+
+    .error-message {
+      font-size: 16px;
+      color: var(--color-secondary);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .error-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .error-container {
+        padding: 48px 24px;
+      }
+
+      .error-code {
+        font-size: 80px;
+      }
+
+      .error-title {
+        font-size: 24px;
+      }
+
+      .error-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="error-container">
+    <div class="error-code">404</div>
+    <h1 class="error-title">Page introuvable</h1>
+    <p class="error-message">
+      Désolé, la page que vous recherchez n'existe pas ou a été déplacée.
+      <br>Vérifiez l'URL ou retournez à l'accueil.
+    </p>
+    <div class="error-actions">
+      <button class="btn btn-primary" onclick="goBack()">
+        ← Retour
+      </button>
+      <a href="/" class="btn btn-secondary">
+        🏠 Accueil
+      </a>
+    </div>
+  </div>
+
+  <script>
+    function goBack() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = '/';
+      }
+    }
+
+    // Vérifier si l'utilisateur est connecté pour proposer le bon lien d'accueil
+    const token = localStorage.getItem('aura_token');
+    const user = localStorage.getItem('aura_user');
+    
+    if (token && user) {
+      try {
+        const userData = JSON.parse(user);
+        const homeLink = document.querySelector('a[href="/"]');
+        
+        if (userData.role === 'SUPER_ADMIN') {
+          homeLink.href = '/admin/dashboard';
+          homeLink.innerHTML = '🏠 Dashboard Admin';
+        } else {
+          homeLink.href = '/dashboard';
+          homeLink.innerHTML = '🏠 Mon Dashboard';
+        }
+      } catch (e) {
+        // Ignorer les erreurs de parsing
+      }
+    }
+  </script>
+</body>
+</html>

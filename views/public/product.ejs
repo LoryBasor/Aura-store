@@ -1,0 +1,207 @@
+<!-- ========================================
+     views/public/product.ejs
+     ======================================== -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="pageTitle">Produit | AURA</title>
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Meta tags for sharing -->
+  <meta property="og:title" content="Produit" id="ogTitle">
+  <meta property="og:description" content="Découvrez ce produit" id="ogDescription">
+  <meta property="og:image" content="" id="ogImage">
+  <meta property="og:type" content="product">
+  
+  <style>
+    body {
+      background: linear-gradient(135deg, #253337, #5C6C73);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .product-container {
+      max-width: 900px;
+      width: 100%;
+      background: var(--color-white);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .product-image {
+      width: 100%;
+      height: 400px;
+      object-fit: cover;
+      background: linear-gradient(135deg, var(--color-surface), var(--color-accent));
+    }
+
+    .product-content {
+      padding: 32px;
+    }
+
+    .product-header {
+      margin-bottom: 24px;
+    }
+
+    .product-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: 16px;
+    }
+
+    .product-price {
+      font-size: 40px;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: 8px;
+    }
+
+    .product-availability {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 700;
+      gap: 8px;
+    }
+
+    .product-availability.available {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--color-success);
+    }
+
+    .product-availability.unavailable {
+      background: rgba(244, 67, 54, 0.15);
+      color: var(--color-error);
+    }
+
+    .product-description {
+      font-size: 16px;
+      line-height: 1.8;
+      color: var(--color-secondary);
+      margin: 24px 0;
+      padding: 20px;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+    }
+
+    .vendor-info {
+      padding: 20px;
+      background: var(--color-accent);
+      border-radius: var(--radius-md);
+      margin-bottom: 24px;
+    }
+
+    .vendor-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: 8px;
+    }
+
+    .order-actions {
+      display: grid;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .whatsapp-btn {
+      background: #25D366;
+      color: white;
+      padding: 20px;
+      border-radius: var(--radius-md);
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transition: var(--transition);
+      box-shadow: var(--shadow-md);
+    }
+
+    .whatsapp-btn:hover {
+      background: #20BA5A;
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .product-stats {
+      display: flex;
+      gap: 24px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(37, 51, 55, 0.08);
+    }
+
+    .product-stat {
+      text-align: center;
+    }
+
+    .product-stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    .product-stat-label {
+      font-size: 13px;
+      color: var(--color-secondary);
+      margin-top: 4px;
+    }
+
+    .powered-by {
+      text-align: center;
+      padding: 24px;
+      color: var(--color-secondary);
+      font-size: 14px;
+    }
+
+    .powered-by a {
+      color: var(--color-primary);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    @media (max-width: 768px) {
+      .product-container {
+        border-radius: 0;
+      }
+
+      .product-content {
+        padding: 24px 16px;
+      }
+
+      .product-title {
+        font-size: 24px;
+      }
+
+      .product-price {
+        font-size: 32px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="product-container" id="productContainer">
+    <div style="text-align: center; padding: 64px;">
+      <div class="loader"></div>
+      <p style="margin-top: 24px; color: var(--color-secondary);">Chargement du produit...</p>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

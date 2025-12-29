@@ -1,0 +1,159 @@
+<!-- ========================================
+     views/admin/subscriptions.ejs
+     ======================================== -->
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📋 Gestion des Abonnements</h1>
+    <p class="page-subtitle">Administrez les abonnements vendeurs</p>
+  </div>
+  <button class="btn btn-primary" data-action="new-subscription">
+    + Créer un abonnement
+  </button>
+</div>
+
+<!-- Stats Abonnements -->
+<div class="stats-grid" id="subscriptionStats">
+  <div class="loader"></div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 24px;">
+  <div style="display: flex; gap: 16px; align-items: center;">
+    <input 
+      type="search" 
+      id="searchVendor" 
+      class="form-input" 
+      placeholder="Rechercher un vendeur..."
+      style="flex: 1;"
+    >
+    <select class="form-select" style="width: 200px;" id="planFilter">
+      <option value="">Tous les plans</option>
+    </select>
+    <select class="form-select" style="width: 200px;" id="statusFilter">
+      <option value="">Tous les statuts</option>
+      <option value="trial">Trial</option>
+      <option value="active">Actifs</option>
+      <option value="expired">Expirés</option>
+      <option value="cancelled">Annulés</option>
+    </select>
+  </div>
+</div>
+
+<!-- Abonnements List -->
+<div class="card">
+  <div id="subscriptionsList">
+    <div class="loader"></div>
+  </div>
+</div>
+
+<!-- Modal Créer Abonnement -->
+<div class="modal-overlay" id="createSubscriptionModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Créer un abonnement</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="createSubscriptionForm">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label required">Vendeur</label>
+          <select id="selectVendor" class="form-select" required>
+            <option value="">-- Sélectionner un vendeur --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">Plan</label>
+          <select id="selectPlan" class="form-select" required>
+            <option value="">-- Sélectionner un plan --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea id="subscriptionNotes" class="form-textarea" placeholder="Notes internes..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+        <button type="submit" class="btn btn-primary">Créer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Changer Plan -->
+<div class="modal-overlay" id="changePlanModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Changer de plan</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="changePlanForm">
+      <div class="modal-body">
+        <input type="hidden" id="changePlanUserId">
+        <div class="form-group">
+          <label class="form-label required">Nouveau plan</label>
+          <select id="newPlanSelect" class="form-select" required>
+            <option value="">-- Sélectionner --</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+        <button type="submit" class="btn btn-primary">Changer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Prolonger -->
+<div class="modal-overlay" id="extendModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Prolonger l'abonnement</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="extendForm">
+      <div class="modal-body">
+        <input type="hidden" id="extendUserId">
+        <div class="form-group">
+          <label class="form-label required">Nombre de jours</label>
+          <input type="number" id="extendDays" class="form-input" min="1" max="365" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+        <button type="submit" class="btn btn-primary">Prolonger</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Annuler -->
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Annuler l'abonnement</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="cancelForm">
+      <div class="modal-body">
+        <input type="hidden" id="cancelUserId">
+        <div class="form-group">
+          <label class="form-label required">Raison</label>
+          <textarea id="cancelReason" class="form-textarea" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Fermer</button>
+        <button type="submit" class="btn btn-danger">Annuler l'abonnement</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Script -->
+<script src="/js/admin/subscriptions.js"></script>
