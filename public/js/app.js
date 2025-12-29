@@ -75,6 +75,7 @@ const SidebarManager = {
     const mobileBtn = document.getElementById('mobileMenuBtn');
     if (mobileBtn) {
       mobileBtn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+      mobileBtn.style.display = window.screenX <= 900 ? 'flex' : 'none';
     }
   }
 };
