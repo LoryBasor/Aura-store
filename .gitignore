@@ -1,4 +1,8 @@
 .env
 node_modules/
-
+fontend.txt
+backend.txt
+package.json
+package-lock.json
+scripts/
 ca.pem
