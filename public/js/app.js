@@ -1235,7 +1235,7 @@ const SubscriptionPage = {
             <div style="font-size: 28px; font-weight: 700; color: var(--color-primary);">
               ${stats.products.total || 0}
             </div>
-            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'graduit'? '5' : '∞' } </div>
+            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit'? '5' : '∞' } </div>
           </div>
           <div style="width: 100%; height: 8px; background: var(--color-surface); border-radius: 100px; overflow: hidden;">
             <div style="width: ${Math.min(((stats.products.total || 0) / 5) * 100, 100)}%; height: 100%; background: var(--color-primary);"></div>
@@ -1248,7 +1248,7 @@ const SubscriptionPage = {
             <div style="font-size: 28px; font-weight: 700; color: var(--color-primary);">
               ${stats.orders.this_month || 0}
             </div>
-            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'graduit'? '5' : '∞' }</div>
+            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit'? '5' : '∞' }</div>
           </div>
           <div style="width: 100%; height: 8px; background: var(--color-surface); border-radius: 100px; overflow: hidden;">
             <div style="width: ${Math.min(((stats.orders.this_month || 0) / 20) * 100, 100)}%; height: 100%; background: var(--color-success);"></div>
