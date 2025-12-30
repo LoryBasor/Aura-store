@@ -96,8 +96,11 @@ const AdminActivity = {
     }
   },
 
-  renderRealtimeStats(stats) {
+  async renderRealtimeStats(stats) {
     const container = document.getElementById('realtimeStats');
+    const reponse = await API.getAdminDashboard();
+    const conversion = reponse.data.conversion;
+    console.log(conversion)
     if (!container) return;
 
     const periodLabels = {
@@ -140,8 +143,8 @@ const AdminActivity = {
           <span class="stat-label">Taux Conversion</span>
           <div class="stat-icon">📊</div>
         </div>
-        <div class="stat-value">${Math.round((stats.vendors.active / stats.vendors.total) * 100 || 0)}%</div>
-        <div class="stat-change">${stats.vendors.active}/${stats.vendors.total} actifs</div>
+        <div class="stat-value">${conversion.conversion_rate || 0}%</div>
+        <div class="stat-change">${conversion.active_users || 0}/${conversion.total_signups || 0} actifs</div>
       </div>
 
       <div class="stat-card">

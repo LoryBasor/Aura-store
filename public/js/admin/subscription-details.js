@@ -179,12 +179,12 @@ const SubscriptionDetails = {
           <p style="color: var(--color-secondary); margin-bottom: 24px;">
             Ce vendeur n'a pas d'abonnement actif pour le moment.
           </p>
-          <button class="btn btn-primary" onclick="window.location.href='/admin/subscriptions'">
+          <button class="btn btn-primary create-subscription">
             Créer un abonnement
           </button>
         </div>
       `;
-
+      card.querySelector('.create-subscription').addEventListener('click', e => window.location.href = '/admin/subscriptions');
       // Désactiver les actions
       ['changePlanCard', 'extendCard', 'cancelCard'].forEach(id => {
         const card = document.getElementById(id);

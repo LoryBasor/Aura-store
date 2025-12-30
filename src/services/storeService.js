@@ -20,14 +20,21 @@ class StoreService {
       }
 
       const vendor = vendors[0];
+      let query = `
+              SELECT p.*, pl.token as share_token
+              FROM products p
+              LEFT JOIN product_links pl ON p.id = pl.product_id
+              WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
+              ORDER BY p.created_at DESC`;
+      const [isPlanFree] = await pool.execute(
+        "SELECT plan_name FROM v_active_subscriptions WHERE user_id = ? AND plan_slug = 'free'", [vendor.id]
+      ); 
 
+      if(isPlanFree) query += ' LIMIT 5';
+      
       // Récupérer tous les produits disponibles du vendeur
       const [products] = await pool.execute(
-        `SELECT p.*, pl.token as share_token
-         FROM products p
-         LEFT JOIN product_links pl ON p.id = pl.product_id
-         WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
-         ORDER BY p.created_at DESC`,
+        query,
         [vendor.id]
       );
 
