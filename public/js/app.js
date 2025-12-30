@@ -160,7 +160,6 @@ const LoginPage = {
   init() {
     const form = document.getElementById('loginForm');
     if (!form) return;
-
     form.addEventListener('submit', this.handleSubmit.bind(this));
   },
 
@@ -1195,7 +1194,7 @@ const SubscriptionPage = {
             </div>
             <div>
               <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Commandes/mois</div>
-              <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'gratuit'? '5 max': '∞'}</div>
+              <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'gratuit'? '20 max': '∞'}</div>
             </div>
             <div>
               <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Stockage</div>
@@ -1249,7 +1248,7 @@ const SubscriptionPage = {
             <div style="font-size: 28px; font-weight: 700; color: var(--color-primary);">
               ${stats.orders.this_month || 0}
             </div>
-            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit'? '5' : '∞' }</div>
+            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit'? '20' : '∞' }</div>
           </div>
           <div style="width: 100%; height: 8px; background: var(--color-surface); border-radius: 100px; overflow: hidden;">
             <div style="width: ${Math.min(((stats.orders.this_month || 0) / 20) * 100, 100)}%; height: 100%; background: var(--color-success);"></div>

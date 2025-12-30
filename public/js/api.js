@@ -285,7 +285,6 @@ const API = {
         }
       }, 100);
     }
-    
     return data;
   },
 
@@ -293,13 +292,11 @@ const API = {
     const data = await this.post('/auth/register', formData);
     
     if (data && data.data) {
-      this.setToken(data.data.token);
-      this.setUser(data.data.user);
       UI.showNotification('Inscription réussie', 'Bienvenue sur AURA', 'success');
       
       // Attendre un peu pour que le localStorage soit bien enregistré
       setTimeout(() => {
-        window.location.replace('/dashboard');
+        window.location.replace('/login');
       }, 100);
     }
     
@@ -433,6 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const isPublicPage = currentPath.startsWith('/p/');
   const isPublicStore = currentPath.startsWith('/store/');
   const isRootPage = currentPath === '/';
+  const isLoginPage = currentPath.startsWith('/login');
 
   // Page racine redirige vers login
   if (isRootPage) {

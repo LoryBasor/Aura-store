@@ -95,7 +95,7 @@ const SUCCESS_MESSAGES = {
 const RATE_LIMITS = {
   AUTH: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5 // 5 tentatives max
+    max: 20 // 5 tentatives max
   },
   API: {
     windowMs: 15 * 60 * 1000,
@@ -103,7 +103,7 @@ const RATE_LIMITS = {
   },
   PUBLIC: {
     windowMs: 15 * 60 * 1000,
-    max: 200 // Plus permissif pour les liens publics
+    max: 200 // Plus permissif pour les liens publics 
   }
 };
 
@@ -920,6 +920,24 @@ class OrderController {
   }
 
   /**
+   * ✨ NOUVEAU - Créer une commande manuellement (VENDEUR)
+   * POST /api/orders/manual
+   */
+  async createManualOrder(req, res, next) {
+    try {
+      const order = await orderService.createManualOrder(req.user.id, req.body);
+      
+      return createdResponse(
+        res,
+        { order },
+        'Commande créée avec succès'
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Récupérer toutes les commandes du vendeur
    * GET /api/orders
    */
@@ -951,6 +969,24 @@ class OrderController {
       );
       
       return successResponse(res, { order });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * ✨ NOUVEAU - Mettre à jour complètement une commande
+   * PUT /api/orders/:id
+   */
+  async updateOrder(req, res, next) {
+    try {
+      const order = await orderService.updateOrder(
+        req.params.id,
+        req.user.id,
+        req.body
+      );
+      
+      return successResponse(res, { order }, 'Commande mise à jour');
     } catch (error) {
       next(error);
     }
@@ -1007,6 +1043,7 @@ class OrderController {
 
 module.exports = new OrderController();
 
+
 // src/controllers/productController.js
 const productService = require('../services/productService');
 const { successResponse, createdResponse } = require('../utils/response');
@@ -1038,18 +1075,18 @@ class ProductController {
 
   /**
    * Récupérer tous les produits du vendeur
-   * GET /api/products
+   * GET /api/products/:search
    */
   async getProducts(req, res, next) {
     try {
       const page = req.params.page;
       const limit = req.params.limit;
       const is_available = req.params.is_available;
-      
-      const result = await productService.getProductsByUser(req.user.id, {
+      const search = req.params.search;
+      const result = await productService.getProductsByUser(req.user.id, search , {
         page: parseInt(page) || 1,
         limit: parseInt(limit) || 20,
-        is_available: is_available !== undefined ? is_available === 'true' : null
+        is_available: is_available
       });
       
       return successResponse(res, result);
@@ -1876,7 +1913,6 @@ function validateRequest(schema, property = 'body') {
       abortEarly: false, // Retourner toutes les erreurs
       stripUnknown: true // Supprimer les champs non définis dans le schéma
     });
-
     if (error) {
       const errors = error.details.map(detail => ({
         field: detail.path.join('.'),
@@ -1885,7 +1921,7 @@ function validateRequest(schema, property = 'body') {
 
       return errorResponse(
         res,
-        'Données de requête invalides',
+        'Données de requête invalides : ' + error.message,
         400,
         errors
       );
@@ -2056,6 +2092,7 @@ const validateRequest = require('../middlewares/validateRequest');
 const { authLimiter } = require('../middlewares/rateLimiter');
 const { registerSchema, loginSchema } = require('../utils/validators');
 const Joi = require('joi');
+const { successResponse } = require('../utils/response');
 
 const router = express.Router();
 
@@ -2109,6 +2146,15 @@ router.post(
   })),
   authController.changePassword
 );
+
+router.post('/logout', (req, res) => {
+  res.clearCookie('aura_token', {
+    httpOnly: true,
+    sameSite: 'strict'
+  })
+
+  return successResponse(res, null, 'déconnexion réussie ');
+});
 
 module.exports = router;
 
@@ -2207,7 +2253,7 @@ const { ensureOwnership } = require('../middlewares/tenantIsolation');
 const { incrementOrderCount } = require('../middlewares/subscriptionCheck');
 const validateRequest = require('../middlewares/validateRequest');
 const { apiLimiter, publicLimiter } = require('../middlewares/rateLimiter');
-const { orderSchema, updateOrderStatusSchema } = require('../utils/validators');
+const { orderSchema, updateOrderStatusSchema, manualOrderSchema, updateOrderSchema } = require('../utils/validators');
 
 const router = express.Router();
 
@@ -2216,8 +2262,14 @@ const router = express.Router();
  * Préfixe: /api/orders
  */
 
-// Créer une commande (PUBLIC - depuis lien produit)
-// Incrémenter le compteur après création réussie
+// ========================================
+// ROUTES PUBLIQUES
+// ========================================
+
+/**
+ * Créer une commande (PUBLIC - depuis lien produit)
+ * POST /api/orders
+ */
 router.post(
   '/',
   publicLimiter,
@@ -2226,7 +2278,27 @@ router.post(
   incrementOrderCount
 );
 
-// Statistiques des commandes (doit être avant /:id)
+// ========================================
+// ROUTES PROTÉGÉES (VENDEUR)
+// ========================================
+
+/**
+ * ✨ NOUVEAU - Créer une commande manuellement (VENDEUR)
+ * POST /api/orders/manual
+ */
+router.post(
+  '/manual',
+  authenticate,
+  apiLimiter,
+  validateRequest(manualOrderSchema),
+  orderController.createManualOrder,
+  incrementOrderCount
+);
+
+/**
+ * Statistiques des commandes (doit être avant /:id)
+ * GET /api/orders/stats
+ */
 router.get(
   '/stats',
   authenticate,
@@ -2234,7 +2306,10 @@ router.get(
   orderController.getOrderStats
 );
 
-// Liste des commandes du vendeur
+/**
+ * Liste des commandes du vendeur
+ * GET /api/orders
+ */
 router.get(
   '/',
   authenticate,
@@ -2242,7 +2317,10 @@ router.get(
   orderController.getOrders
 );
 
-// Détails d'une commande
+/**
+ * Détails d'une commande
+ * GET /api/orders/:id
+ */
 router.get(
   '/:id',
   authenticate,
@@ -2251,7 +2329,23 @@ router.get(
   orderController.getOrder
 );
 
-// Mise à jour du statut
+/**
+ * ✨ NOUVEAU - Mise à jour complète d'une commande
+ * PUT /api/orders/:id
+ */
+router.put(
+  '/:id',
+  authenticate,
+  apiLimiter,
+  ensureOwnership('orders', 'id'),
+  validateRequest(updateOrderSchema),
+  orderController.updateOrder
+);
+
+/**
+ * Mise à jour du statut
+ * PATCH /api/orders/:id/status
+ */
 router.patch(
   '/:id/status',
   authenticate,
@@ -2261,7 +2355,10 @@ router.patch(
   orderController.updateOrderStatus
 );
 
-// Suppression d'une commande
+/**
+ * Suppression d'une commande
+ * DELETE /api/orders/:id
+ */
 router.delete(
   '/:id',
   authenticate,
@@ -2271,6 +2368,7 @@ router.delete(
 );
 
 module.exports = router;
+
 
 // src/routes/productRoutes.js
 const express = require('express');
@@ -2304,7 +2402,7 @@ router.post(
 
 // Liste des produits du vendeur
 router.get(
-  '/',
+  '/:search/:is_available',
   authenticate,
   apiLimiter,
   productController.getProducts
@@ -2429,8 +2527,9 @@ class AdminDashboardService {
    * Top vendeurs par chiffre d'affaires
    */
   async getTopVendors(limit = 10) {
+    limit = Number(limit) || 10;
     const [vendors] = await pool.execute(
-      `SELECT 
+      `SELECT  
         u.id,
         u.email,
         u.business_name,
@@ -2446,10 +2545,14 @@ class AdminDashboardService {
       LEFT JOIN subscriptions s ON u.id = s.user_id AND s.status IN ('trial', 'active')
       LEFT JOIN subscription_plans sp ON s.plan_id = sp.id
       WHERE u.role = ? AND u.deleted_at IS NULL
-      GROUP BY u.id
+      GROUP BY u.id,
+      u.email,
+      u.business_name,
+      u.store_slug,
+      sp.name
       ORDER BY total_revenue DESC
-      LIMIT ?`,
-      [USER_ROLES.USER, limit]
+      LIMIT ${limit} `,
+      [USER_ROLES.USER]
     );
 
     return vendors.map(v => ({
@@ -2462,7 +2565,8 @@ class AdminDashboardService {
    * Vendeurs récemment inscrits
    */
   async getRecentVendors(limit = 10) {
-    const [vendors] = await pool.execute(
+    limit = Number(limit) || 10;
+    const [vendors] = await pool.execute( 
       `SELECT 
         u.id,
         u.email,
@@ -2476,8 +2580,8 @@ class AdminDashboardService {
       LEFT JOIN subscription_plans sp ON s.plan_id = sp.id
       WHERE u.role = ? AND u.deleted_at IS NULL
       ORDER BY u.created_at DESC
-      LIMIT ?`,
-      [USER_ROLES.USER, limit]
+      LIMIT ${limit}`,
+      [USER_ROLES.USER]
     );
 
     return vendors;
@@ -2487,6 +2591,7 @@ class AdminDashboardService {
    * Commandes récentes (toute la plateforme)
    */
   async getRecentOrders(limit = 20) {
+    limit = Number(limit) || 20;
     const [orders] = await pool.execute(
       `SELECT 
         o.id,
@@ -2502,8 +2607,7 @@ class AdminDashboardService {
       JOIN users u ON o.user_id = u.id
       WHERE o.deleted_at IS NULL
       ORDER BY o.created_at DESC
-      LIMIT ?`,
-      [limit]
+      LIMIT ${limit}` 
     );
 
     return orders.map(o => ({
@@ -2943,6 +3047,7 @@ class UserManagementService {
    * Liste tous les vendeurs avec filtres et pagination
    */
   async listAllVendors({ page = 1, limit = 20, status = null, search = null }) {
+    limit = Number(limit) || 20;
     const offset = calculateOffset(page, limit);
     
     let query = `
@@ -2956,7 +3061,7 @@ class UserManagementService {
         u.account_status,
         u.is_active,
         u.suspended_reason,
-        u.suspended_at,
+        u.suspended_at, 
         u.last_login_at,
         u.created_at,
         s.status as subscription_status,
@@ -2984,10 +3089,10 @@ class UserManagementService {
       query += ' AND (u.email LIKE ? OR u.business_name LIKE ? OR u.phone LIKE ?)';
       const searchPattern = `%${search}%`;
       params.push(searchPattern, searchPattern, searchPattern);
-    }
+    } 
 
-    query += ' ORDER BY u.created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    query += ` ORDER BY u.created_at DESC `;
+    // params.push(offset);
 
     const [vendors] = await pool.execute(query, params);
 
@@ -3363,8 +3468,21 @@ class AuthService {
    */
   async getUserProfile(userId) {
     const [users] = await pool.execute(
-      `SELECT id, email, business_name, phone, whatsapp_number, store_slug, created_at
-       FROM users WHERE id = ? AND deleted_at IS NULL`,
+      `
+      SELECT 
+        s.*,
+        u.id,
+        u.email,
+        u.business_name,
+        u.phone,
+        u.whatsapp_number,
+        u.store_slug,
+        u.created_at,
+        sp.name as plan_name
+      FROM users u
+      JOIN subscriptions s ON u.id = s.user_id
+      JOIN subscription_plans sp ON s.plan_id = sp.id
+       WHERE u.id = ?;`,
       [userId]
     );
 
@@ -3456,14 +3574,12 @@ const { ORDER_STATUS } = require('../config/constants');
  */
 class OrderService {
   /**
-   * Crée une nouvelle commande depuis un lien produit
-   * @param {object} orderData - Données de la commande
-   * @returns {object} Commande créée
+   * Crée une nouvelle commande depuis un lien produit (PUBLIC)
    */
   async createOrder(orderData) {
     const { product_id, customer_name, customer_phone, customer_address, quantity, notes } = orderData;
 
-    // Récupérer le produit et vérifier disponibilité
+    // Récupérer le produit
     const [products] = await pool.execute(
       'SELECT id, user_id, name, price, currency, stock_quantity, is_available FROM products WHERE id = ? AND deleted_at IS NULL',
       [product_id]
@@ -3502,11 +3618,9 @@ class OrderService {
 
     // Calculer le montant total
     const total_amount = product.price * quantity;
-
-    // Générer numéro de commande unique
     const order_number = generateOrderNumber();
 
-    // Créer la commande (snapshot du produit)
+    // Créer la commande
     const [result] = await pool.execute(
       `INSERT INTO orders 
        (user_id, customer_id, product_id, order_number, customer_name, customer_phone, customer_address,
@@ -3540,7 +3654,6 @@ class OrderService {
       [total_amount, customerId]
     );
 
-    // Décrémenter le stock si géré
     if (product.stock_quantity > 0) {
       await pool.execute(
         'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?',
@@ -3552,10 +3665,101 @@ class OrderService {
   }
 
   /**
+   * ✨ NOUVEAU - Créer une commande manuellement (VENDEUR)
+   */
+  async createManualOrder(userId, orderData) {
+    const { product_id, customer_name, customer_phone, customer_address, quantity, notes, status } = orderData;
+
+    // Vérifier que le produit appartient au vendeur
+    const [products] = await pool.execute(
+      'SELECT id, user_id, name, price, currency, stock_quantity, is_available FROM products WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+      [product_id, userId]
+    );
+
+    if (products.length === 0) {
+      throw new AppError('Produit introuvable ou non autorisé', 404);
+    }
+
+    const product = products[0];
+
+    // Vérifier stock
+    if (product.stock_quantity > 0 && product.stock_quantity < quantity) {
+      throw new AppError('Stock insuffisant', 400);
+    }
+
+    // Vérifier/créer le client
+    let customerId = null;
+    const [existingCustomers] = await pool.execute(
+      'SELECT id FROM customers WHERE user_id = ? AND phone = ? AND deleted_at IS NULL',
+      [userId, customer_phone]
+    );
+
+    if (existingCustomers.length > 0) {
+      customerId = existingCustomers[0].id;
+      
+      // Mettre à jour le nom si différent
+      await pool.execute(
+        'UPDATE customers SET name = ? WHERE id = ?',
+        [customer_name, customerId]
+      );
+    } else {
+      const [customerResult] = await pool.execute(
+        'INSERT INTO customers (user_id, name, phone, whatsapp_number) VALUES (?, ?, ?, ?)',
+        [userId, customer_name, customer_phone, customer_phone]
+      );
+      customerId = customerResult.insertId;
+    }
+
+    const total_amount = product.price * quantity;
+    const order_number = generateOrderNumber();
+    const orderStatus = status || ORDER_STATUS.NOUVELLE;
+
+    // Créer la commande
+    const [result] = await pool.execute(
+      `INSERT INTO orders 
+       (user_id, customer_id, product_id, order_number, customer_name, customer_phone, customer_address,
+        product_name, product_price, quantity, total_amount, status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        customerId,
+        product_id,
+        order_number,
+        customer_name,
+        customer_phone,
+        customer_address || null,
+        product.name,
+        product.price,
+        quantity,
+        total_amount,
+        orderStatus,
+        notes || null
+      ]
+    );
+
+    // Mettre à jour les stats
+    await pool.execute(
+      'UPDATE products SET order_count = order_count + 1 WHERE id = ?',
+      [product_id]
+    );
+
+    await pool.execute(
+      'UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ?, last_order_at = NOW() WHERE id = ?',
+      [total_amount, customerId]
+    );
+
+    if (product.stock_quantity > 0) {
+      await pool.execute(
+        'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?',
+        [quantity, product_id]
+      );
+    }
+
+    return this.getOrderById(result.insertId, userId);
+  }
+
+  /**
    * Récupère une commande par ID
-   * @param {number} orderId - ID de la commande
-   * @param {number} userId - ID du vendeur
-   * @returns {object} Commande complète
    */
   async getOrderById(orderId, userId) {
     const [orders] = await pool.execute(
@@ -3575,9 +3779,6 @@ class OrderService {
 
   /**
    * Liste les commandes d'un vendeur
-   * @param {number} userId - ID du vendeur
-   * @param {object} filters - Filtres (page, limit, status)
-   * @returns {object} Liste paginée de commandes
    */
   async getOrdersByUser(userId, { page = 1, limit = 20, status = null }) {
     const offset = calculateOffset(page, limit);
@@ -3595,8 +3796,8 @@ class OrderService {
       params.push(status);
     }
 
-    query += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    query += ' ORDER BY o.created_at DESC';
+    // params.push(limit, offset);
 
     const [orders] = await pool.execute(query, params);
 
@@ -3618,14 +3819,90 @@ class OrderService {
   }
 
   /**
+   * ✨ NOUVEAU - Met à jour complètement une commande
+   */
+  async updateOrder(orderId, userId, updates) {
+    // Vérifier que la commande appartient au vendeur
+    const currentOrder = await this.getOrderById(orderId, userId);
+
+    const fields = [];
+    const values = [];
+
+    // Customer info
+    if (updates.customer_name !== undefined) {
+      fields.push('customer_name = ?');
+      values.push(updates.customer_name);
+    }
+
+    if (updates.customer_phone !== undefined) {
+      fields.push('customer_phone = ?');
+      values.push(updates.customer_phone);
+    }
+
+    if (updates.customer_address !== undefined) {
+      fields.push('customer_address = ?');
+      values.push(updates.customer_address);
+    }
+
+    // Quantity (recalculer le total)
+    if (updates.quantity !== undefined && updates.quantity !== currentOrder.quantity) {
+      const newQuantity = parseInt(updates.quantity);
+      
+      if (newQuantity < 1) {
+        throw new AppError('Quantité invalide', 400);
+      }
+
+      const newTotal = currentOrder.product_price * newQuantity;
+      
+      fields.push('quantity = ?');
+      values.push(newQuantity);
+      
+      fields.push('total_amount = ?');
+      values.push(newTotal);
+
+      // Ajuster le stock
+      const stockDiff = currentOrder.quantity - newQuantity;
+      if (stockDiff !== 0) {
+        await pool.execute(
+          'UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?',
+          [stockDiff, currentOrder.product_id]
+        );
+      }
+    }
+
+    // Notes
+    if (updates.notes !== undefined) {
+      fields.push('notes = ?');
+      values.push(updates.notes);
+    }
+
+    // Status
+    if (updates.status !== undefined) {
+      if (!Object.values(ORDER_STATUS).includes(updates.status)) {
+        throw new AppError('Statut invalide', 400);
+      }
+      fields.push('status = ?');
+      values.push(updates.status);
+    }
+
+    if (fields.length === 0) {
+      throw new AppError('Aucune donnée à mettre à jour', 400);
+    }
+
+    values.push(orderId, userId);
+
+    await pool.execute(
+      `UPDATE orders SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`,
+      values
+    );
+
+    return this.getOrderById(orderId, userId);
+  }
+
+  /**
    * Met à jour le statut d'une commande
-   * @param {number} orderId - ID de la commande
-   * @param {number} userId - ID du vendeur
-   * @param {string} newStatus - Nouveau statut
-   * @returns {object} Commande mise à jour
    */
   async updateOrderStatus(orderId, userId, newStatus) {
-    // Vérifier que le statut est valide
     if (!Object.values(ORDER_STATUS).includes(newStatus)) {
       throw new AppError('Statut invalide', 400);
     }
@@ -3640,13 +3917,11 @@ class OrderService {
 
   /**
    * Supprime une commande (soft delete)
-   * @param {number} orderId - ID de la commande
-   * @param {number} userId - ID du vendeur
    */
   async deleteOrder(orderId, userId) {
     const order = await this.getOrderById(orderId, userId);
 
-    // Remettre le stock si la commande n'était pas livrée
+    // Remettre le stock si pas livrée/annulée
     if (order.status !== ORDER_STATUS.LIVREE && order.status !== ORDER_STATUS.ANNULEE) {
       await pool.execute(
         'UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?',
@@ -3662,8 +3937,6 @@ class OrderService {
 
   /**
    * Récupère les statistiques des commandes
-   * @param {number} userId - ID du vendeur
-   * @returns {object} Statistiques
    */
   async getOrderStats(userId) {
     const [stats] = await pool.execute(
@@ -3675,7 +3948,8 @@ class OrderService {
         SUM(CASE WHEN status = 'en_livraison' THEN 1 ELSE 0 END) as en_livraison,
         SUM(CASE WHEN status = 'livree' THEN 1 ELSE 0 END) as livrees,
         SUM(CASE WHEN status = 'annulee' THEN 1 ELSE 0 END) as annulees,
-        SUM(total_amount) as total_revenue
+        SUM(total_amount) as total_revenue,
+        SUM (CASE WHEN status IN ('confirmees', 'en_preparation', 'en_livraison') THEN 1 ELSE 0 END) as total_en_cours
        FROM orders
        WHERE user_id = ? AND deleted_at IS NULL`,
       [userId]
@@ -3686,6 +3960,7 @@ class OrderService {
 }
 
 module.exports = new OrderService();
+
 
 // src/services/productService.js
 const { pool } = require('../config/database');
@@ -3776,24 +4051,26 @@ class ProductService {
    * @param {object} filters - Filtres (page, limit, is_available)
    * @returns {object} Liste paginée de produits
    */
-  async getProductsByUser(userId, { page = 1, limit = 20, is_available = null }) {
+  async getProductsByUser(userId, search, { page = 1, limit = 20, is_available = 'undefined'}) {
+    limit = Number(limit) || 20;
     const offset = calculateOffset(page, limit);
-    
+    search = search.substring(7);
     let query = `
       SELECT p.*, pl.token as share_token
       FROM products p
       LEFT JOIN product_links pl ON p.id = pl.product_id
-      WHERE p.user_id = ? AND p.deleted_at IS NULL
+      WHERE p.user_id = ? AND p.deleted_at IS NULL AND p.name LIKE '%${search === 'undefined' ? '': search}%'
     `;
     const params = [userId];
 
-    if (is_available !== null) {
+    if (is_available === 'true' || is_available === 'false') {
+      is_available === 'true'? is_available = true : is_available = false;
       query += ' AND p.is_available = ?';
       params.push(is_available);
     }
 
-    query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    query += ` ORDER BY p.created_at DESC`;
+    // params.push(offset);
 
     const [products] = await pool.execute(query, params);
 
@@ -3831,6 +4108,7 @@ class ProductService {
   async updateProduct(productId, userId, updates, newImagePath = null) {
     // Récupérer le produit actuel
     const currentProduct = await this.getProductById(productId, userId);
+    console.log(currentProduct);
 
     const fields = [];
     const values = [];
@@ -3906,7 +4184,7 @@ class ProductService {
 
     // Soft delete
     await pool.execute(
-      'UPDATE products SET deleted_at = NOW() WHERE id = ? AND user_id = ?',
+      'DELETE FROM products WHERE id = ? AND user_id = ?',
       [productId, userId]
     );
 
@@ -4067,14 +4345,15 @@ class StatsService {
    * @returns {array} Liste des top produits
    */
   async getTopProducts(userId, limit = 5) {
+    limit = Number(limit) || 5;
     const [products] = await pool.execute(
       `SELECT 
         id, name, price, currency, order_count, view_count
        FROM products
        WHERE user_id = ? AND deleted_at IS NULL
        ORDER BY order_count DESC, view_count DESC
-       LIMIT ?`,
-      [userId, limit]
+       LIMIT ${limit} `,
+      [userId]
     );
 
     return products;
@@ -4087,6 +4366,7 @@ class StatsService {
    * @returns {array} Liste des commandes récentes
    */
   async getRecentOrders(userId, limit = 10) {
+    limit = Number(limit) || 10;
     const [orders] = await pool.execute(
       `SELECT 
         o.id, o.order_number, o.customer_name, o.product_name, 
@@ -4094,8 +4374,8 @@ class StatsService {
        FROM orders o
        WHERE o.user_id = ? AND o.deleted_at IS NULL
        ORDER BY o.created_at DESC
-       LIMIT ?`,
-      [userId, limit]
+       LIMIT ${limit} `,
+      [userId]
     );
 
     return orders;
@@ -4155,7 +4435,7 @@ class StatsService {
   }
 }
 
-module.exports = new StatsService();
+module.exports = new StatsService(); 
 
 // src/services/storeService.js
 
@@ -4179,14 +4459,21 @@ class StoreService {
       }
 
       const vendor = vendors[0];
+      let query = `
+              SELECT p.*, pl.token as share_token
+              FROM products p
+              LEFT JOIN product_links pl ON p.id = pl.product_id
+              WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
+              ORDER BY p.created_at DESC`;
+      const [isPlanFree] = await pool.execute(
+        "SELECT plan_name FROM v_active_subscriptions WHERE user_id = ? AND plan_slug = 'free'", [vendor.id]
+      ); 
 
+      if(isPlanFree) query += ' LIMIT 5';
+      
       // Récupérer tous les produits disponibles du vendeur
       const [products] = await pool.execute(
-        `SELECT p.*, pl.token as share_token
-         FROM products p
-         LEFT JOIN product_links pl ON p.id = pl.product_id
-         WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
-         ORDER BY p.created_at DESC`,
+        query,
         [vendor.id]
       );
 
@@ -4568,7 +4855,19 @@ const productSchema = Joi.object({
     .default(true)
 });
 
-// Validation création commande
+// Validation pagination
+const paginationSchema = Joi.object({
+  page: Joi.number()
+    .integer()
+    .min(1)
+    .default(1),
+  limit: Joi.number()
+    .integer()
+    .min(1)
+    .max(100)
+    .default(20)
+});
+
 const orderSchema = Joi.object({
   product_id: Joi.number()
     .integer()
@@ -4602,31 +4901,100 @@ const orderSchema = Joi.object({
     .allow('', null)
 });
 
-// Validation mise à jour statut commande
+/**
+ * ✨ NOUVEAU - Validation création commande manuelle (vendeur)
+ */
+const manualOrderSchema = Joi.object({
+  product_id: Joi.number()
+    .integer()
+    .positive()
+    .required()
+    .messages({
+      'any.required': 'Produit requis'
+    }),
+  customer_name: Joi.string()
+    .min(2)
+    .max(255)
+    .required()
+    .messages({
+      'any.required': 'Nom client requis',
+      'string.min': 'Nom minimum 2 caractères'
+    }),
+  customer_phone: Joi.string()
+    .pattern(/^[0-9+\s()-]+$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'Numéro de téléphone invalide',
+      'any.required': 'Téléphone requis'
+    }),
+  customer_address: Joi.string()
+    .max(500)
+    .optional()
+    .allow('', null),
+  quantity: Joi.number()
+    .integer()
+    .min(1)
+    .max(1000)
+    .required()
+    .messages({
+      'any.required': 'Quantité requise',
+      'number.min': 'Quantité minimum 1',
+      'number.max': 'Quantité maximum 1000'
+    }),
+  notes: Joi.string()
+    .max(1000)
+    .optional()
+    .allow('', null),
+  status: Joi.string()
+    .valid('nouvelle', 'confirmee', 'en_preparation', 'en_livraison', 'livree', 'annulee')
+    .optional()
+    .default('nouvelle')
+});
+
+/**
+ * ✨ NOUVEAU - Validation mise à jour complète commande
+ */
+const updateOrderSchema = Joi.object({
+  customer_name: Joi.string()
+    .min(2)
+    .max(255)
+    .optional(),
+  customer_phone: Joi.string()
+    .pattern(/^[0-9+\s()-]+$/)
+    .optional(),
+  customer_address: Joi.string()
+    .max(500)
+    .optional()
+    .allow('', null),
+  quantity: Joi.number()
+    .integer()
+    .min(1)
+    .max(1000)
+    .optional(),
+  notes: Joi.string()
+    .max(1000)
+    .optional()
+    .allow('', null),
+  status: Joi.string()
+    .valid('nouvelle', 'confirmee', 'en_preparation', 'en_livraison', 'livree', 'annulee')
+    .optional()
+});
+
+/**
+ * Validation mise à jour statut commande
+ */
 const updateOrderStatusSchema = Joi.object({
   status: Joi.string()
     .valid('nouvelle', 'confirmee', 'en_preparation', 'en_livraison', 'livree', 'annulee')
     .required()
 });
 
-// Validation pagination
-const paginationSchema = Joi.object({
-  page: Joi.number()
-    .integer()
-    .min(1)
-    .default(1),
-  limit: Joi.number()
-    .integer()
-    .min(1)
-    .max(100)
-    .default(20)
-});
-
 module.exports = {
   registerSchema,
   loginSchema,
-  productSchema,
-  orderSchema,
+  productSchema,orderSchema,
+  manualOrderSchema,
+  updateOrderSchema,
   updateOrderStatusSchema,
   paginationSchema
 };
@@ -4774,452 +5142,3 @@ module.exports = {
   generateUniqueSlug
 };
 
-/**
- * ========================================
- * AURA - Application Express Principale
- * ========================================
- * Serveur avec support EJS, API REST et authentification JWT
- * ========================================
- */
-
-const express = require('express');
-const path = require('path');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const expressLayouts = require('express-ejs-layouts');
-const cookieParser = require('cookie-parser');
-require('dotenv').config();
-
-// Configuration et utilitaires
-const { testConnection, closePool } = require('./src/config/database');
-const { UPLOAD_DIR } = require('./src/config/upload');
-
-// Routes API
-const apiRoutes = require('./src/routes');
-
-// Middlewares d'authentification et autorisation
-const { authenticate, optionalAuth } = require('./src/middlewares/auth');
-const { requireSuperAdmin, checkAccountStatus } = require('./src/middlewares/authorization');
-const { requireActiveSubscription } = require('./src/middlewares/subscriptionCheck');
-
-// Gestion des erreurs
-const { errorHandler, notFoundHandler } = require('./src/middlewares/errorHandler');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-/**
- * ========================================
- * CONFIGURATION EJS
- * ========================================
- */
-app.set('view engine', 'ejs');
-app.use(expressLayouts);
-app.set('layout', 'layouts/main');
-
-/**
- * ========================================
- * MIDDLEWARES GLOBAUX
- * ========================================
- */
-
-// Sécurité (CSP modifié pour permettre inline scripts nécessaires à EJS)
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"]
-    }
-  }
-}));
-
-// CORS
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true
-}));
-
-// Logging
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
-
-// Parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cookieParser());
-
-// Fichiers statiques
-app.use(express.static(path.join(__dirname, UPLOAD_DIR)));
-app.use(express.static(path.join(__dirname, 'public')));
-
-/**
- * ========================================
- * MIDDLEWARE D'AUTHENTIFICATION POUR LES VUES
- * ========================================
- * Vérifie le token et charge req.user pour les pages EJS
- */
-async function authenticateView(req, res, next) {
-  try {
-    // Récupérer le token depuis le header
-    const authHeader = req.cookies.aura_token;
-    
-    if (!authHeader) {
-      // Pas de token, rediriger vers login
-      console.error('Pas de token');
-      return res.redirect('/login');
-    }else{
-      console.log(authHeader);
-    }
-
-    const token = authHeader;
-    const { verifyToken } = require('./src/config/jwt');
-    const { pool } = require('./src/config/database');
-    
-    let decoded;
-    try {
-      decoded = verifyToken(token);
-      console.log(token)
-    } catch (error) {
-      // Token invalide ou expiré
-      console.error('Token invalide ou expiré');
-      return res.redirect('/login');
-    }
-    // Vérifier que l'utilisateur existe
-    const [users] = await pool.execute(
-      'SELECT id, email, business_name, store_slug, is_active, role, account_status FROM users WHERE id = ? AND deleted_at IS NULL',
-      [decoded.userId]
-    );
-
-    if (users.length === 0 || !users[0].is_active) {
-      console.error('utilisateur n extiste pas');
-      return res.redirect('/login');
-    }
-
-    const user = users[0];
-
-    // Vérifier si le compte est suspendu ou désactivé
-    if (user.account_status === 'suspended' || user.account_status === 'deactivated') {
-      return res.render('errors/account-suspended', {
-        title: 'Compte Suspendu',
-        showSidebar: false,
-        showHeader: false,
-        reason: user.suspended_reason || 'Contactez le support'
-      });
-    }
-
-    // Ajouter l'utilisateur au contexte de la requête
-    req.user = {
-      id: user.id,
-      email: user.email,
-      business_name: user.business_name,
-      store_slug: user.store_slug,
-      role: user.role,
-      account_status: user.account_status
-    };
-
-    next();
-  } catch (error) {
-    console.error('Erreur authentification vue:', error);
-    res.redirect('/login');
-  }
-}
-
-/**
- * Middleware pour vérifier Super Admin sur les vues
- */
-function requireSuperAdminView(req, res, next) {
-  if (!req.user || req.user.role !== 'SUPER_ADMIN') {
-    return res.render('errors/403', {
-      title: 'Accès Refusé',
-      showSidebar: false,
-      showHeader: false,
-      message: 'Cette page est réservée aux administrateurs'
-    });
-  }
-  next();
-}
-
-/**
- * ========================================
- * ROUTES API (Backend REST)
- * ========================================
- */
-app.use('/api', apiRoutes);
-
-/**
- * ========================================
- * ROUTES VUES EJS (Frontend)
- * ========================================
- */
-
-// ==================== PAGES PUBLIQUES ====================
-
-// Page d'accueil - redirection intelligente
-app.get('/', (req, res) => {
-  res.redirect('/login');
-});
-
-// Page de connexion
-app.get('/login', (req, res) => {
-  res.render('auth/login', {
-    title: 'Connexion',
-    layout: false
-  });
-});
-
-// Page d'inscription
-app.get('/register', (req, res) => {
-  res.render('auth/register', {
-    title: 'Inscription',
-    layout: false
-  });
-});
-
-// Page produit public (lien de partage)
-app.get('/p/:token', (req, res) => {
-  res.render('public/product', {
-    title: 'Produit',
-    showSidebar: false,
-    showHeader: false,
-    token: req.params.token
-  });
-});
-// Boutique publique (tous les produits d'un vendeur)
-app.get('/store/:storeSlug', (req, res) => {
-  res.render('public/store', {
-    title: 'Boutique',
-    showSidebar: false,
-    showHeader: false,
-    storeSlug: req.params.storeSlug
-  });
-});
-
-// ==================== ESPACE VENDEUR (Protected) ====================
-
-// Dashboard vendeur
-app.get('/dashboard',authenticateView,  (req, res) => {
-  res.render('dashboard/index', {
-    title: 'Tableau de bord',
-    pageTitle: 'Tableau de bord',
-    currentPage: 'dashboard',
-    user: req.user
-  });
-});
-
-// Gestion des produits
-app.get('/products', authenticateView, (req, res) => {
-  res.render('dashboard/products', {
-    title: 'Mes Produits',
-    pageTitle: 'Mes Produits',
-    currentPage: 'products',
-    user: req.user
-  });
-});
-
-// Gestion des commandes
-app.get('/orders', authenticateView, (req, res) => {
-  res.render('dashboard/orders', {
-    title: 'Commandes',
-    pageTitle: 'Mes Commandes',
-    currentPage: 'orders',
-    user: req.user
-  });
-});
-
-// Gestion des clients
-app.get('/customers', authenticateView, (req, res) => {
-  res.render('dashboard/customers', {
-    title: 'Clients',
-    pageTitle: 'Mes Clients',
-    currentPage: 'customers',
-    user: req.user
-  });
-});
-
-// Profil utilisateur
-app.get('/profile', authenticateView, (req, res) => {
-  res.render('dashboard/profile', {
-    title: 'Mon Profil',
-    pageTitle: 'Mon Profil',
-    currentPage: 'profile',
-    user: req.user
-  });
-});
-
-// Abonnement
-app.get('/subscription', authenticateView, (req, res) => {
-  res.render('dashboard/subscription', {
-    title: 'Mon Abonnement',
-    pageTitle: 'Mon Abonnement',
-    currentPage: 'subscription',
-    user: req.user
-  });
-});
-
-// ==================== ESPACE ADMIN (Protected + Super Admin) ====================
-
-// Dashboard admin
-app.get('/admin/dashboard', authenticateView, requireSuperAdminView, (req, res) => {
-  res.render('admin/dashboard', {
-    title: 'Administration',
-    pageTitle: 'Administration',
-    currentPage: 'admin-dashboard',
-    user: req.user
-  });
-});
-
-// Gestion des vendeurs
-app.get('/admin/vendors', authenticateView, requireSuperAdminView, (req, res) => {
-  res.render('admin/customers', {
-    title: 'Gestion Vendeurs',
-    pageTitle: 'Gestion des Vendeurs',
-    currentPage: 'admin-vendors',
-    user: req.user
-  });
-});
-
-// Détails d'un vendeur
-app.get('/admin/vendors/:id', authenticateView, requireSuperAdminView, (req, res) => {
-  res.render('admin/vendor-details', {
-    title: 'Détails Vendeur',
-    pageTitle: 'Détails Vendeur',
-    currentPage: 'admin-vendors',
-    user: req.user,
-    vendorId: req.params.id
-  });
-});
-
-// Gestion des plans et abonnements
-app.get('/admin/plans', authenticateView, requireSuperAdminView, (req, res) => {
-  res.render('admin/plans', {
-    title: 'Plans & Abonnements',
-    pageTitle: 'Plans & Abonnements',
-    currentPage: 'admin-plans',
-    user: req.user
-  });
-});
-
-// Gestion d'un abonnement spécifique
-app.get('/admin/subscriptions/:userId', authenticateView, requireSuperAdminView, (req, res) => {
-  res.render('admin/subscription-details', {
-    title: 'Gestion Abonnement',
-    pageTitle: 'Gestion Abonnement',
-    currentPage: 'admin-plans',
-    user: req.user,
-    userId: req.params.userId
-  });
-});
-
-// Activité globale
-app.get('/admin/activity', authenticateView, requireSuperAdminView, (req, res) => {
-  res.render('admin/activity', {
-    title: 'Activité Globale',
-    pageTitle: 'Activité de la Plateforme',
-    currentPage: 'admin-activity',
-    user: req.user
-  });
-});
-
-/**
- * ========================================
- * GESTION DES ERREURS
- * ========================================
- */
-
-// Page 404 personnalisée
-app.use((req, res) => {
-  // Vérifier si c'est une route API
-  if (req.path.startsWith('/api')) {
-    return notFoundHandler(req, res);
-  }
-  
-  // Sinon, afficher la page 404 HTML
-  res.status(404).render('errors/404', {
-    title: 'Page introuvable',
-    showSidebar: false,
-    showHeader: false
-  });
-});
-
-// Gestionnaire d'erreurs global
-app.use(errorHandler);
-
-/**
- * ========================================
- * DÉMARRAGE DU SERVEUR
- * ========================================
- */
-async function startServer() {
-  try {
-    // Test connexion BDD
-    const dbConnected = await testConnection();
-    
-    if (!dbConnected) {
-      console.error('❌ Impossible de se connecter à la base de données');
-      process.exit(1);
-    }
-
-    // Démarrer le serveur
-    const server = app.listen(PORT, () => {
-      console.log('');
-      console.log('=================================');
-      console.log('✨ AURA - Serveur démarré !');
-      console.log('=================================');
-      console.log(`📱 Port: ${PORT}`);
-      console.log(`🌐 URL: http://localhost:${PORT}`);
-      console.log(`🔧 Environnement: ${process.env.NODE_ENV || 'development'}`);
-      console.log('=================================');
-      console.log('');
-      console.log('📍 Routes disponibles:');
-      console.log('   - http://localhost:' + PORT + '/login (Connexion)');
-      console.log('   - http://localhost:' + PORT + '/register (Inscription)');
-      console.log('   - http://localhost:' + PORT + '/dashboard (Vendeur)');
-      console.log('   - http://localhost:' + PORT + '/admin/dashboard (Admin)');
-      console.log('   - http://localhost:' + PORT + '/api/health (API Health)');
-      console.log('');
-    });
-
-    // Arrêt gracieux
-    process.on('SIGTERM', () => gracefulShutdown(server));
-    process.on('SIGINT', () => gracefulShutdown(server));
-
-  } catch (error) {
-    console.error('❌ Erreur au démarrage:', error);
-    process.exit(1);
-  }
-}
-
-/**
- * Arrêt gracieux du serveur
- */
-async function gracefulShutdown(server) {
-  console.log('\n⏳ Arrêt du serveur en cours...');
-  
-  server.close(async () => {
-    console.log('✅ Serveur HTTP fermé');
-    await closePool();
-    console.log('✅ Connexions BDD fermées');
-    console.log('✅ Arrêt complet');
-    process.exit(0);
-  });
-
-  // Forcer l'arrêt après 10 secondes
-  setTimeout(() => {
-    console.error('⚠️ Arrêt forcé après timeout');
-    process.exit(1);
-  }, 10000);
-}
-
-// Démarrer le serveur
-if (require.main === module) {
-  startServer();
-}
-
-module.exports = app;
