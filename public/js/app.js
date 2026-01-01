@@ -2410,18 +2410,3 @@ document.addEventListener('DOMContentLoaded', () => {
 // Export pour utilisation globale
 window.AppUtils = AppUtils;
 window.ModalManager = ModalManager;
-
-const header = document.querySelector('.header');
-    const stickyOffset = header.offsetTop;
-
-    window.addEventListener('scroll', () => {
-
-      if(window.scrollY > stickyOffset){
-        header.classList.add('fixed');
-      }
-      else {
-        header.classList.remove('fixed');
-      }
-
-    });
-    alert('test')

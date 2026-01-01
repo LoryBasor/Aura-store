@@ -65,12 +65,6 @@ class AuthService {
 
     const user = users[0];
 
-    // Générer le token JWT
-    const token = generateToken({
-      userId: user.id,
-      email: user.email
-    });
-
     return {
       user: {
         id: user.id,
@@ -78,8 +72,7 @@ class AuthService {
         business_name: user.business_name,
         store_slug: user.store_slug,
         created_at: user.created_at
-      },
-      token
+      }
     };
   }
 
