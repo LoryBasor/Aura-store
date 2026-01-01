@@ -138,30 +138,51 @@ class AuthService {
    * @returns {object} Informations utilisateur
    */
   async getUserProfile(userId) {
-    const [users] = await pool.execute(
-      `
-      SELECT 
-        s.*,
-        u.id,
-        u.email,
-        u.business_name,
-        u.phone,
-        u.whatsapp_number,
-        u.store_slug,
-        u.created_at,
-        sp.name as plan_name
-      FROM users u
-      JOIN subscriptions s ON u.id = s.user_id
-      JOIN subscription_plans sp ON s.plan_id = sp.id
-       WHERE u.id = ?;`,
-      [userId]
-    );
 
+    const user = await pool.execute('SELECT role FROM users WHERE id = ?', [userId]);
+    let users = null;
+    if(user.role === 'SUPER_ADMIN'){
+        users = await pool.execute(`
+
+        SELECT 
+          id,
+          email,
+          business_name,
+          phone,
+          whatsapp_number,
+          created_at
+          FROM users
+          WHERE id = ?
+
+        `, 
+        [userId]
+      );
+    }
+    else {
+        users = await pool.execute(
+        `
+        SELECT 
+          s.*,
+          u.id,
+          u.email,
+          u.business_name,
+          u.phone,
+          u.whatsapp_number,
+          u.store_slug,
+          u.created_at,
+          sp.name as plan_name
+        FROM users u
+        JOIN subscriptions s ON u.id = s.user_id
+        JOIN subscription_plans sp ON s.plan_id = sp.id
+        WHERE u.id = ?;`,
+        [userId]
+      );
+    }
     if (users.length === 0) {
       throw new AppError('Utilisateur introuvable', 404);
     }
 
-    return users[0];
+    return users[0][0];
   }
 
   /**

@@ -11,12 +11,16 @@ async function authenticate(req, res, next) {
   try {
     // Récupérer le token depuis l'en-tête Authorization
     const authHeader = req.headers.authorization;
+    // Récupérer le token depuis le cookie
+    const authCookie = req.cookies.aura_token;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return unauthorizedResponse(res, 'Token manquant');
+    if(!authCookie) {
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return unauthorizedResponse(res, 'Token manquant');
+      }
     }
 
-    const token = authHeader.substring(7); // Enlever "Bearer "
+    const token = authHeader ? authHeader.substring(7): authCookie; // Enlever "Bearer "
 
     // Vérifier et décoder le token
     let decoded;
@@ -91,8 +95,7 @@ async function optionalAuth(req, res, next) {
 
     next();
   } catch (error) {
-    // En cas d'erreur, on continue quand même (auth optionnelle)
-    next();
+    return res.redirect('/login');
   }
 }
 

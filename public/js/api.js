@@ -1,90 +1,51 @@
 /**
- * public/js/api.js
- * ========================================
- * AURA - Module API Central
- * ========================================
- * Gestion centralisée des appels API
- * - Authentification JWT automatique
- * - Gestion des erreurs globales
- * - Notifications automatiques
- * - Redirection si session invalide
- * ========================================
+ * public/js/api.js - VERSION ÉTENDUE
+ * Ajout des nouveaux endpoints pour les fonctionnalités par plan
  */
 
 const API = {
   baseURL: '/api',
   
-  /**
-   * Récupère le token JWT du localStorage
-   */
   getToken() {
     return localStorage.getItem('aura_token');
   },
 
-  /**
-   * Sauvegarde le token JWT
-   */
   setToken(token) {
     localStorage.setItem('aura_token', token);
   },
 
-  /**
-   * Supprime le token JWT
-   */
   removeToken() {
     localStorage.removeItem('aura_token');
   },
 
-  /**
-   * Récupère les infos utilisateur du localStorage
-   */
   getUser() {
     const user = localStorage.getItem('aura_user');
     return user ? JSON.parse(user) : null;
   },
 
-  /**
-   * Sauvegarde les infos utilisateur
-   */
   setUser(user) {
     localStorage.setItem('aura_user', JSON.stringify(user));
   },
 
-  /**
-   * Supprime les infos utilisateur
-   */
   removeUser() {
     localStorage.removeItem('aura_user');
   },
 
-  /**
-   * Déconnexion complète
-   */
   log_out() {
     this.removeToken();
     this.removeUser();
-    // Force le rechargement complet pour éviter les problèmes de cache
     window.location.replace('/login');
   },
 
-  /**
-   * Vérifie si l'utilisateur est authentifié
-   */
   isAuthenticated() {
     return !!this.getToken();
   },
 
-  /**
-   * Vérifie si l'utilisateur est Super Admin
-   */
   isSuperAdmin() {
     const user = this.getUser();
     return user && user.role === 'SUPER_ADMIN';
   },
 
-  /**
-   * Construit les headers pour les requêtes
-   */
   buildHeaders() {
     const headers = {
       'Content-Type': 'application/json'
@@ -98,26 +59,21 @@ const API = {
     return headers;
   },
 
-  /**
-   * Gère les erreurs HTTP
-   */
   async handleResponse(response) {
-    // Session expirée ou invalide
     if (response.status === 401) {
       UI.showNotification('Session expirée', 'Veuillez vous reconnecter', 'error');
       this.logout();
       return null;
     }
 
-    // Accès interdit
     if (response.status === 403) {
-      UI.showNotification('Accès refusé', 'Vous n\'avez pas les permissions nécessaires', 'error');
-      throw new Error('Accès refusé');
+      const data = await response.json();
+      UI.showNotification('Accès refusé', data.message || 'Permissions insuffisantes', 'error');
+      throw new Error(data.message || 'Accès refusé');
     }
 
     const data = await response.json();
 
-    // Erreur serveur
     if (!response.ok) {
       const message = data.message || 'Une erreur est survenue';
       throw new Error(message);
@@ -126,9 +82,6 @@ const API = {
     return data;
   },
 
-  /**
-   * Effectue une requête GET
-   */
   async get(endpoint, showLoader = true) {
     if (showLoader) UI.showLoader();
 
@@ -147,9 +100,6 @@ const API = {
     }
   },
 
-  /**
-   * Effectue une requête POST
-   */
   async post(endpoint, body = {}, showLoader = true) {
     if (showLoader) UI.showLoader();
 
@@ -169,9 +119,6 @@ const API = {
     }
   },
 
-  /**
-   * Effectue une requête PUT
-   */
   async put(endpoint, body = {}, showLoader = true) {
     if (showLoader) UI.showLoader();
 
@@ -191,9 +138,6 @@ const API = {
     }
   },
 
-  /**
-   * Effectue une requête PATCH
-   */
   async patch(endpoint, body = {}, showLoader = true) {
     if (showLoader) UI.showLoader();
 
@@ -213,9 +157,6 @@ const API = {
     }
   },
 
-  /**
-   * Effectue une requête DELETE
-   */
   async delete(endpoint, showLoader = true) {
     if (showLoader) UI.showLoader();
 
@@ -234,9 +175,6 @@ const API = {
     }
   },
 
-  /**
-   * Upload de fichier (FormData)
-   */
   async upload(endpoint, formData, showLoader = true) {
     if (showLoader) UI.showLoader();
 
@@ -262,11 +200,9 @@ const API = {
     }
   },
 
-  /**
-   * ========================================
-   * MÉTHODES MÉTIER - AUTHENTIFICATION
-   * ========================================
-   */
+  // ========================================
+  // AUTHENTIFICATION
+  // ========================================
 
   async login(email, password) {
     const data = await this.post('/auth/login', { email, password });
@@ -275,9 +211,7 @@ const API = {
       this.setUser(data.data.user);
       UI.showNotification('Connexion réussie', 'Bienvenue sur AURA', 'success');
       
-      // Attendre un peu pour que le localStorage soit bien enregistré
       setTimeout(() => {
-        // Redirection selon le rôle avec replace pour éviter de revenir en arrière
         if (data.data.user.role === 'SUPER_ADMIN') {
           window.location.replace('/admin/dashboard');
         } else {
@@ -293,8 +227,6 @@ const API = {
     
     if (data && data.data) {
       UI.showNotification('Inscription réussie', 'Bienvenue sur AURA', 'success');
-      
-      // Attendre un peu pour que le localStorage soit bien enregistré
       setTimeout(() => {
         window.location.replace('/login');
       }, 100);
@@ -310,18 +242,17 @@ const API = {
   async updateProfile(updates) {
     return await this.put('/auth/profile', updates);
   },
-  async logout () {
+
+  async logout() {
     await this.post('/auth/logout');
     this.log_out();
   },
 
-  /**
-   * ========================================
-   * MÉTHODES MÉTIER - PRODUITS
-   * ========================================
-   */
+  // ========================================
+  // PRODUITS
+  // ========================================
 
-  async getProducts(page = 1, search ,limit = 20, is_available = null) {
+  async getProducts(page = 1, search, limit = 20, is_available = null) {
     return await this.get(`/products/search=${search}/${is_available}`);
   },
 
@@ -341,11 +272,9 @@ const API = {
     return await this.delete(`/products/${id}`);
   },
 
-  /**
-   * ========================================
-   * MÉTHODES MÉTIER - COMMANDES
-   * ========================================
-   */
+  // ========================================
+  // COMMANDES
+  // ========================================
 
   async getOrders(page = 1, limit = 20, status = null) {
     let url = `/orders?page=${page}&limit=${limit}`;
@@ -365,11 +294,9 @@ const API = {
     return await this.get('/orders/stats');
   },
 
-  /**
-   * ========================================
-   * MÉTHODES MÉTIER - DASHBOARD
-   * ========================================
-   */
+  // ========================================
+  // DASHBOARD
+  // ========================================
 
   async getDashboard() {
     return await this.get('/dashboard');
@@ -379,11 +306,130 @@ const API = {
     return await this.get(`/dashboard/stats/${period}`);
   },
 
-  /**
-   * ========================================
-   * MÉTHODES MÉTIER - ADMIN
-   * ========================================
-   */
+  // ========================================
+  //  - STATISTIQUES AVANCÉES (PRO/BUSINESS)
+  // ========================================
+
+  async getAdvancedStats() {
+    return await this.get('/features/stats/complete');
+  },
+
+  async getOrdersEvolution(period = 'day', days = 30) {
+    return await this.get(`/features/stats/evolution?period=${period}&days=${days}`);
+  },
+
+  async getConversionMetrics() {
+    return await this.get('/features/stats/conversion');
+  },
+
+  async getTopProducts(limit = 10) {
+    return await this.get(`/features/stats/top-products?limit=${limit}`);
+  },
+
+  async getCustomerAnalysis() {
+    return await this.get('/features/stats/customers');
+  },
+
+  async getForecast() {
+    return await this.get('/features/stats/forecast');
+  },
+
+  // ========================================
+  //  - EXPORT (PRO/BUSINESS)
+  // ========================================
+
+  async exportOrdersJSON() {
+    window.open(`${this.baseURL}/features/export/orders/json`, '_blank');
+    UI.showNotification('Export', 'Exportation réussi ', 'info');
+  },
+
+  async exportProductsJSON() {
+    window.open(`${this.baseURL}/features/export/products/json`, '_blank');
+    UI.showNotification('Export', 'Exportation réussi ', 'info');
+  },
+
+  async exportStatsJSON() {
+    window.open(`${this.baseURL}/features/export/stats/json`, '_blank');
+    UI.showNotification('Export', 'Exportation réussi ', 'info');
+  },
+
+  async exportOrdersExcel() {
+    window.open(`${this.baseURL}/features/export/orders/excel`, '_blank');
+    UI.showNotification('Export', 'Exportation réussi ', 'info');
+  },
+
+  async exportProductsExcel() {
+    window.open(`${this.baseURL}/features/export/products/excel`, '_blank');
+    UI.showNotification('Export', 'Exportation réussi ', 'info');
+  },
+
+  // ========================================
+  //  - PERSONNALISATION (BUSINESS)
+  // ========================================
+
+  async getCustomization() {
+    return await this.get('/features/customization');
+  },
+
+  async updateCustomization(updates) {
+    return await this.put('/features/customization', updates);
+  },
+
+  async uploadLogo(formData) {
+    return await this.upload('/features/customization/logo', formData);
+  },
+
+  async uploadBanner(formData) {
+    return await this.upload('/features/customization/banner', formData);
+  },
+
+  async deleteLogo() {
+    return await this.delete('/features/customization/logo');
+  },
+
+  async deleteBanner() {
+    return await this.delete('/features/customization/banner');
+  },
+
+  async resetCustomization() {
+    return await this.post('/features/customization/reset');
+  },
+
+  // ========================================
+  //  - INTÉGRATIONS SOCIALES (BUSINESS)
+  // ========================================
+
+  async getIntegrations() {
+    return await this.get('/features/integrations');
+  },
+
+  async updateIntegrations(updates) {
+    return await this.put('/features/integrations', updates);
+  },
+
+  async toggleWhatsApp(enabled) {
+    return await this.post('/features/integrations/whatsapp/toggle', { enabled });
+  },
+
+  async toggleInstagram(enabled) {
+    return await this.post('/features/integrations/instagram/toggle', { enabled });
+  },
+
+  async toggleFacebook(enabled) {
+    return await this.post('/features/integrations/facebook/toggle', { enabled });
+  },
+
+  async testWhatsAppMessage() {
+    return await this.post('/features/integrations/whatsapp/test');
+  },
+
+  async getMessagePreview() {
+    return await this.get('/features/integrations/message-preview');
+  },
+
+  // ========================================
+  // ADMIN
+  // ========================================
 
   async getAdminDashboard() {
     return await this.get('/admin/dashboard');
@@ -391,7 +437,6 @@ const API = {
 
   async getVendors(page = 1, limit = 20, search = '') {
     let url = `/admin/vendors`;
-    // if (search) url += `&search=${encodeURIComponent(search)}`;
     return await this.get(url);
   },
 
@@ -420,19 +465,14 @@ const API = {
   }
 };
 
-/**
- * Protection automatique des pages
- * Vérifie l'authentification au chargement
- */
+// Protection automatique des pages
 document.addEventListener('DOMContentLoaded', () => {
   const currentPath = window.location.pathname;
   const isAuthPage = currentPath.includes('/login') || currentPath.includes('/register');
   const isPublicPage = currentPath.startsWith('/p/');
   const isPublicStore = currentPath.startsWith('/store/');
   const isRootPage = currentPath === '/';
-  const isLoginPage = currentPath.startsWith('/login');
 
-  // Page racine redirige vers login
   if (isRootPage) {
     if (API.isAuthenticated()) {
       const user = API.getUser();
@@ -447,7 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Pages auth : rediriger si déjà connecté
   if (isAuthPage) {
     if (API.isAuthenticated()) {
       const user = API.getUser();
@@ -460,18 +499,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Pages publiques : pas de vérification
   if (isPublicPage || isPublicStore) {
     return;
   }
 
-  // Pages protégées : vérifier l'authentification
   if (!API.isAuthenticated()) {
     window.location.replace('/login');
     return;
   }
 
-  // Vérifier les pages admin
   const isAdminPage = currentPath.startsWith('/admin');
   if (isAdminPage && !API.isSuperAdmin()) {
     UI.showNotification('Accès refusé', 'Cette page est réservée aux administrateurs', 'error');

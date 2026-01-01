@@ -236,8 +236,9 @@ class ProductService {
    * @returns {object} Produit + infos vendeur
    */
   async getProductByShareToken(token) {
+    let customMessage = null;
     const [products] = await pool.execute(
-      `SELECT p.*, u.business_name, u.whatsapp_number, u.store_slug, pl.click_count
+      `SELECT p.*, u.business_name, u.whatsapp_number,u.id, u.store_slug, pl.click_count
        FROM products p
        JOIN users u ON p.user_id = u.id
        JOIN product_links pl ON p.id = pl.product_id
@@ -250,6 +251,12 @@ class ProductService {
     }
 
     const product = products[0];
+    const [isPlanBusiness] = await pool.execute(`SELECT user_id FROM v_user_plan_access WHERE user_id = ? AND plan_name = 'Business' AND (subscription_status = 'active' OR subscription_status = 'trial')`, [product.id]);
+
+    if (isPlanBusiness.length !== 0){
+      const [custom_message] = await pool.execute(`SELECT custom_order_message FROM social_integrations WHERE user_id = ?`, [product.id]);
+      customMessage = custom_message[0];
+    }
     product.image_url = getImageUrl(product.image_url);
 
     // Incrémenter le compteur de vues
@@ -263,7 +270,7 @@ class ProductService {
       [product.id]
     );
 
-    return product;
+    return {product, customMessage};
   }
 }
 

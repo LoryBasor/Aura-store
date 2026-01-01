@@ -1,0 +1,94 @@
+<!-- views/dashboard/advanced-stats.ejs -->
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📊 Statistiques Avancées</h1>
+    <p class="page-subtitle">Analyse détaillée de votre activité</p>
+  </div>
+  <div style="display: flex; gap: 12px;">
+    <button class="btn btn-secondary" data-action="export-stats-json">
+      📥 Exporter JSON
+    </button>
+  </div>
+</div>
+
+<!-- Container principal -->
+<div id="advancedStatsContainer">
+  
+  <!-- Métriques de conversion -->
+  <div id="conversionMetrics" class="card" style="margin-bottom: 24px;">
+    <div class="loader"></div>
+  </div>
+
+  <!-- Contrôles graphique -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div style="padding: 20px; display: flex; gap: 16px; align-items: center;">
+      <div style="flex: 1;">
+        <label class="form-label">Période</label>
+        <select id="periodSelect" class="form-select">
+          <option value="day">Par jour</option>
+          <option value="week">Par semaine</option>
+          <option value="month">Par mois</option>
+        </select>
+      </div>
+      <div style="flex: 1;">
+        <label class="form-label">Durée</label>
+        <select id="daysSelect" class="form-select">
+          <option value="7">7 derniers jours</option>
+          <option value="30" selected>30 derniers jours</option>
+          <option value="90">90 derniers jours</option>
+          <option value="365">365 derniers jours</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Graphique évolution -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <h3 class="card-title">Évolution des ventes</h3>
+    </div>
+    <div id="evolutionChart">
+      <div class="loader"></div>
+    </div>
+  </div>
+
+  <!-- Grille 2 colonnes -->
+  <div class="grille2">
+    
+    <!-- Top produits -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">🏆 Top 10 produits</h3>
+      </div>
+      <div id="topProductsList" style="padding: 20px;">
+        <div class="loader"></div>
+      </div>
+    </div>
+
+    <!-- Prévisions -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">🔮 Prévisions</h3>
+      </div>
+      <div id="forecastCard">
+        <div class="loader"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analyse clients -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">👥 Analyse des clients</h3>
+    </div>
+    <div id="customerAnalysis">
+      <div class="loader"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Script dédié -->
+<script src="/js/advancedStats.js"></script>

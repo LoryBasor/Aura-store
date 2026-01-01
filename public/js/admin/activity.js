@@ -100,7 +100,6 @@ const AdminActivity = {
     const container = document.getElementById('realtimeStats');
     const reponse = await API.getAdminDashboard();
     const conversion = reponse.data.conversion;
-    console.log(conversion)
     if (!container) return;
 
     const periodLabels = {
@@ -679,9 +678,11 @@ AdminActivity.loadSubscriptionsTab = async function() {
       </div>
 
       <div style="text-align: center;">
-        <button class="btn btn-primary" onclick="window.location.href='/admin/subscriptions'">
-          📋 Gérer les abonnements
-        </button>
+        <a href='/admin/subscriptions'>
+          <button class="btn btn-primary">
+            📋 Gérer les abonnements
+          </button>
+        </a>
       </div>
     </div>
   `;

@@ -86,7 +86,7 @@ app.use(express.static(path.join(__dirname, 'public')));
  */
 async function authenticateView(req, res, next) {
   try {
-    // Récupérer le token depuis le header
+    // Récupérer le token depuis le cookie
     const authHeader = req.cookies.aura_token;
     
     if (!authHeader) {
@@ -104,7 +104,6 @@ async function authenticateView(req, res, next) {
     let decoded;
     try {
       decoded = verifyToken(token);
-      console.log(token)
     } catch (error) {
       // Token invalide ou expiré
       console.error('Token invalide ou expiré');
@@ -232,6 +231,36 @@ app.get('/dashboard',authenticateView,  (req, res) => {
     title: 'Tableau de bord',
     pageTitle: 'Tableau de bord',
     currentPage: 'dashboard',
+    user: req.user
+  });
+});
+
+// Statistiques avancées (PRO et BUSINESS)
+app.get('/advanced-stats', (req, res) => {
+  res.render('dashboard/advanced-stats', {
+    title: 'Statistiques Avancées',
+    pageTitle: 'Statistiques Avancées',
+    currentPage: 'advanced-stats',
+    user: req.user
+  });
+});
+
+// Personnalisation (BUSINESS uniquement)
+app.get('/customization', (req, res) => {
+  res.render('dashboard/customization', {
+    title: 'Personnalisation',
+    pageTitle: 'Personnalisation',
+    currentPage: 'customization',
+    user: req.user
+  });
+});
+
+// Intégrations (BUSINESS uniquement)
+app.get('/integrations', (req, res) => {
+  res.render('dashboard/integrations', {
+    title: 'Intégrations',
+    pageTitle: 'Intégrations',
+    currentPage: 'integrations',
     user: req.user
   });
 });

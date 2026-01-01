@@ -75,7 +75,6 @@ const SidebarManager = {
     const mobileBtn = document.getElementById('mobileMenuBtn');
     if (mobileBtn) {
       mobileBtn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
-      mobileBtn.style.display = window.screenX <= 900 ? 'flex' : 'none';
     }
   }
 };
@@ -258,10 +257,14 @@ const RegisterPage = {
 // ========================================
 // PAGE: DASHBOARD
 // ========================================
+
 const DashboardPage = {
   init() {
     if (document.getElementById('statsGrid')) {
-      this.loadDashboard();
+      // Attendre que PlanManager soit initialisé
+      setTimeout(() => {
+        this.loadDashboard();
+      }, 100);
     }
   },
 
@@ -270,12 +273,114 @@ const DashboardPage = {
       const data = await API.getDashboard();
       
       if (data && data.data) {
-        this.renderStats(data.data.overview);
-        this.renderRecentOrders(data.data.recent_orders);
-        this.renderTopProducts(data.data.top_products);
+        // Vérifier le plan
+        const plan = PlanManager.currentPlan;
+
+        if (plan === 'free') {
+          this.renderFreeStats(data.data.overview);
+        } else {
+          this.renderStats(data.data.overview);
+          this.renderRecentOrders(data.data.recent_orders);
+          this.renderTopProducts(data.data.top_products);
+          
+          // Ajouter section export pour PRO/BUSINESS
+          if (PlanManager.hasAccess('export_data')) {
+            this.addExportSection();
+          }
+
+          // Afficher message d'upgrade pour PRO
+          if (plan === 'pro') {
+            this.showBusinessUpgrade();
+          }
+        }
       }
     } catch (error) {
       console.error('Erreur chargement dashboard:', error);
+    }
+  },
+
+  renderFreeStats(stats) {
+    const statsGrid = document.getElementById('statsGrid');
+    if (!statsGrid) return;
+    
+    statsGrid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-label">Total Produits</span>
+          <div class="stat-icon">📦</div>
+        </div>
+        <div class="stat-value">${stats.products.total || 0}</div>
+        <div class="stat-change">${stats.products.available || 0} disponibles</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-label">Commandes</span>
+          <div class="stat-icon">🛒</div>
+        </div>
+        <div class="stat-value">${stats.orders.total || 0}</div>
+        <div class="stat-change">Total cumulé</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-label">Chiffre d'affaires</span>
+          <div class="stat-icon">💰</div>
+        </div>
+        <div class="stat-value">${UI.formatCurrency(stats.revenue.total || 0)}</div>
+        <div class="stat-change">Total cumulé</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-label">Dernière commande</span>
+          <div class="stat-icon">📅</div>
+        </div>
+        <div class="stat-value" style="font-size: 16px;">
+          ${stats.orders.total > 0 ? 'Récemment' : 'Aucune'}
+        </div>
+        <div class="stat-change">${stats.orders.total || 0} au total</div>
+      </div>
+    `;
+
+    // Ajouter message d'upgrade
+    const container = document.querySelector('.content');
+    if (container) {
+      const upgradeCard = document.createElement('div');
+      upgradeCard.className = 'card';
+      upgradeCard.style.cssText = 'margin-top: 24px; padding: 32px; text-align: center; background: linear-gradient(135deg, var(--color-accent), var(--color-surface));';
+      upgradeCard.innerHTML = `
+        <div style="font-size: 48px; margin-bottom: 16px;">🚀</div>
+        <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">
+          Passez au plan Pro pour débloquer :
+        </h3>
+        <ul style="list-style: none; display: inline-block; text-align: left; margin: 24px 0;">
+          <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--color-success); font-size: 20px;">✓</span>
+            Statistiques avancées
+          </li>
+          <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--color-success); font-size: 20px;">✓</span>
+            Export de vos données (JSON, Excel)
+          </li>
+          <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--color-success); font-size: 20px;">✓</span>
+            Produits et commandes illimités
+          </li>
+          <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--color-success); font-size: 20px;">✓</span>
+            Support prioritaire
+          </li>
+        </ul>
+        <a href="/subscription" class="btn btn-primary btn-lg">
+          Découvrir les plans
+        </a>
+      `;
+      
+      const statsGridElement = document.getElementById('statsGrid');
+      if (statsGridElement && statsGridElement.parentNode) {
+        statsGridElement.parentNode.insertBefore(upgradeCard, statsGridElement.nextSibling);
+      }
     }
   },
 
@@ -404,6 +509,72 @@ const DashboardPage = {
         `).join('')}
       </div>
     `;
+  },
+
+  addExportSection() {
+    const container = document.querySelector('.content');
+    if (!container) return;
+
+    const exportCard = document.createElement('div');
+    exportCard.className = 'card';
+    exportCard.style.cssText = 'margin-top: 24px;';
+    exportCard.innerHTML = `
+      <div class="card-header">
+        <h3 class="card-title">📊 Export de données</h3>
+      </div>
+      <div style="padding: 24px;">
+        <p style="color: var(--color-secondary); margin-bottom: 16px;">
+          Exportez vos données en JSON ou Excel pour une analyse approfondie.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+          <button class="btn btn-secondary exportOrdersJson">
+            📦 Commandes (JSON)
+          </button>
+          <button class="btn btn-secondary exportOrdersExcel">
+            📦 Commandes (Excel)
+          </button>
+          <button class="btn btn-secondary exportProductsJson">
+            📦 Produits (JSON)
+          </button>
+          <button class="btn btn-secondary exportProductsExcel">
+            📦 Produits (Excel)
+          </button>
+        </div>
+      </div>
+    `;
+
+    exportCard.querySelector('.exportOrdersJson').addEventListener('click', () => API.exportOrdersJSON());
+    exportCard.querySelector('.exportOrdersExcel').addEventListener('click', () => API.exportOrdersExcel());
+    exportCard.querySelector('.exportProductsJson').addEventListener('click', () => API.exportProductsJSON());
+    exportCard.querySelector('.exportProductsExcel').addEventListener('click', () => API.exportProductsExcel());
+    container.appendChild(exportCard);
+  },
+
+  showBusinessUpgrade() {
+    const container = document.querySelector('.content');
+    if (!container) return;
+
+    const upgradeCard = document.createElement('div');
+    upgradeCard.className = 'card';
+    upgradeCard.style.cssText = 'margin-top: 24px; padding: 24px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1)); border: 2px solid var(--color-primary);';
+    upgradeCard.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 24px;">
+        <div style="font-size: 48px;">🎨</div>
+        <div style="flex: 1;">
+          <h4 style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--color-primary);">
+            Passez au plan Business
+          </h4>
+          <p style="color: var(--color-secondary); margin-bottom: 12px;">
+            Personnalisez votre boutique et ajoutez des intégrations WhatsApp, Instagram et Facebook.
+          </p>
+          <a href="/subscription" class="btn btn-primary">
+            Découvrir Business
+          </a>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(upgradeCard);
   }
 };
 
@@ -1196,10 +1367,6 @@ const SubscriptionPage = {
               <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Commandes/mois</div>
               <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'gratuit'? '20 max': '∞'}</div>
             </div>
-            <div>
-              <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Stockage</div>
-              <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'gratuit'? '100 MB': data.plan_name.toLowerCase() === 'pro'? '500 MB' : '2 GB'}</div>
-            </div>
           </div>
         </div>
         
@@ -1238,7 +1405,7 @@ const SubscriptionPage = {
             <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit'? '5' : '∞' } </div>
           </div>
           <div style="width: 100%; height: 8px; background: var(--color-surface); border-radius: 100px; overflow: hidden;">
-            <div style="width: ${Math.min(((stats.products.total || 0) / 5) * 100, 100)}%; height: 100%; background: var(--color-primary);"></div>
+            <div style="width: ${user.plan_name.toLowerCase() === 'gratuit'? Math.min(((stats.products.total || 0) / 5) * 100, 100): 100}%; height: 100%; background: var(--color-primary);"></div>
           </div>
         </div>
         
@@ -1251,7 +1418,7 @@ const SubscriptionPage = {
             <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit'? '20' : '∞' }</div>
           </div>
           <div style="width: 100%; height: 8px; background: var(--color-surface); border-radius: 100px; overflow: hidden;">
-            <div style="width: ${Math.min(((stats.orders.this_month || 0) / 20) * 100, 100)}%; height: 100%; background: var(--color-success);"></div>
+            <div style="width: ${user.plan_name.toLowerCase() === 'gratuit'? Math.min(((stats.orders.this_month || 0) / 20) * 100, 100) : 100}%; height: 100%; background: var(--color-success);"></div>
           </div>
         </div>
         
@@ -1301,10 +1468,6 @@ const SubscriptionPage = {
               <span style="color: var(--color-success); font-size: 18px;">✓</span>
               Support prioritaire
             </li>
-            <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
-              <span style="color: var(--color-success); font-size: 18px;">✓</span>
-              500 MB stockage
-            </li>
           </ul>
           
           <button class="btn btn-primary w-full" data-action="contact-support" data-plan="Pro">
@@ -1326,11 +1489,11 @@ const SubscriptionPage = {
             </li>
             <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
               <span style="color: var(--color-success); font-size: 18px;">✓</span>
-              Accès API
+              Personalisation de la boutique (logo, banière, apparence etc..)
             </li>
             <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
               <span style="color: var(--color-success); font-size: 18px;">✓</span>
-              Branding personnalisé
+              Message de commandes personalisable
             </li>
             <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
               <span style="color: var(--color-success); font-size: 18px;">✓</span>
@@ -1338,7 +1501,11 @@ const SubscriptionPage = {
             </li>
             <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
               <span style="color: var(--color-success); font-size: 18px;">✓</span>
-              2 GB stockage
+              Intégration Instagram
+            </li>
+            <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
+              <span style="color: var(--color-success); font-size: 18px;">✓</span>
+              Intégration Facebook
             </li>
           </ul>
           
@@ -1815,9 +1982,8 @@ const PublicProductPage = {
     try {
       const response = await fetch(`/api/p/${token}`);
       const data = await response.json();
-
       if (data && data.data) {
-        this.renderProduct(data.data);
+        this.renderProduct(data.data.product);
       } else {
         this.showError('Produit introuvable');
       }
@@ -1828,12 +1994,19 @@ const PublicProductPage = {
   },
 
   renderProduct(data) {
-    const { product, vendor, whatsapp_url } = data;
+    const { product, customMessage } = data;
+    const {whatsapp_number} = product;
+    let whatsapp_url = `https://wa.me/${whatsapp_number.split(' ').join('').replace('+','')}?text=`;
+    let message = "Bonjour 👋 Je suis intéressé(e) par le produit {{product_name}} à {{product_price}} {{currency}}. Pouvez-vous me donner plus d'informations ?";
     const container = document.getElementById('productContainer');
     if (!container) return;
-
+    if(customMessage !== null){
+      const { custom_order_message } = customMessage;
+      message = custom_order_message;
+    }
+    whatsapp_url += encodeURI(message.replace('{{product_name}}', product.name).replace('{{product_price}}', product.price).replace('{{currency}}', product.currency).replace('{{quantity}}', product.stock_quantity));
     // Update meta tags
-    document.title = `${product.name} | ${vendor.business_name}`;
+    document.title = `${product.name} | ${product.business_name}`;
     
     container.innerHTML = `
       ${product.image_url ? 
@@ -1851,7 +2024,7 @@ const PublicProductPage = {
         </div>
 
         <div class="vendor-info">
-          <div class="vendor-name">🏪 ${vendor.business_name}</div>
+          <div class="vendor-name">🏪 ${product.business_name}</div>
           <div style="font-size: 14px; color: var(--color-secondary);">
             Vendeur vérifié sur AURA
           </div>
@@ -1943,6 +2116,11 @@ const PublicStorePage = {
       const data = await response.json();
 
       if (data && data.data) {
+        // Appliquer la personnalisation si disponible
+        if (data.data.customization) {
+          this.applyCustomization(data.data.customization);
+        }
+
         this.renderStore(data.data);
       } else {
         this.showError('Boutique introuvable');
@@ -1953,18 +2131,85 @@ const PublicStorePage = {
     }
   },
 
+  applyCustomization(customization) {
+    // Créer styles dynamiques
+    const styleId = 'dynamic-store-styles';
+    let styleElement = document.getElementById(styleId);
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      document.head.appendChild(styleElement);
+    }
+
+    styleElement.textContent = `
+      :root {
+        --custom-primary: ${customization.primary_color};
+        --custom-secondary: ${customization.secondary_color};
+        --custom-text: ${customization.text_color};
+      }
+
+      .store-header {
+        background: linear-gradient(135deg, var(--custom-primary), var(--custom-secondary)) !important;
+      }
+
+      .product-price {
+        color: var(--custom-primary) !important;
+      }
+
+      .product-cta {
+        background: var(--custom-secondary) !important;
+      }
+
+      .product-cta:hover {
+        filter: brightness(0.9);
+      }
+
+      .product-name {
+        color: var(--custom-text) !important;
+      }
+    `;
+  },
+
   renderStore(data) {
-    const { vendor, products } = data;
+    const { vendor, products, customization, integrations } = data;
 
     document.title = `${vendor.business_name} | AURA`;
 
-    document.getElementById('storeInfo').innerHTML = `
-      <div class="store-name">${vendor.business_name}</div>
-      <div class="store-subtitle">
-        ✨ ${products.length} produit${products.length > 1 ? 's' : ''} disponible${products.length > 1 ? 's' : ''}
+    // Header avec logo et bannière si disponibles
+    let headerContent = '';
+    
+    if (customization && customization.banner_url) {
+      headerContent += `
+        <div style="width: 100%; height: 300px; overflow: hidden; border: 2px solid ${customization.primary_color}; border-radius: 10px;">
+          <img src="${customization.banner_url}" alt="Bannière" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+      `;
+    }
+
+    headerContent += `
+      <div style="padding: 48px 24px; text-align: center;">
+        ${customization && customization.logo_url ? 
+          `<div style="display: inline-block; position: relative; bottom: 80px; width:102px; max-height: 102px; border: 1.5px solid ${customization.text_color}; border-radius: 50%"><img src="${customization.logo_url}" alt="Logo" style="width: 100px;  max-height: 100px; margin-bottom: 16px; border-radius: 50%;"> </div>` : 
+          ''
+        }
+          <div style="position: relative; bouttom: -60px;">
+            <div class="store-name">${vendor.business_name}</div>
+            <div class="store-subtitle">
+              ✨ ${customization && customization.show_product_count ? 
+                `${products.length} produit${products.length > 1 ? 's' : ''} disponible${products.length > 1 ? 's' : ''}` :
+                'Découvrez nos produits'
+              }
+            </div>
+
+            ${integrations && customization && customization.show_social_links ? this.renderSocialLinks(integrations) : ''}
+        </div>
       </div>
     `;
 
+    document.getElementById('storeInfo').innerHTML = headerContent;
+
+    // Afficher les produits
     const grid = document.getElementById('productsGridStore');
     if (!grid) return;
 
@@ -1983,38 +2228,129 @@ const PublicStorePage = {
       return;
     }
 
-    grid.innerHTML = products.map(product => `
-      <div class="product-card" data-action="view-product" data-token="${product.share_token}">
-        ${product.image_url ? 
-          `<img src="${product.image_url}" alt="${product.name}" class="product-image">` :
-          `<div class="product-image" style="display: flex; align-items: center; justify-content: center; font-size: 80px;">📦</div>`
-        }
-        <div class="product-info">
-          <h3 class="product-name">${product.name}</h3>
-          <div class="product-price">${UI.formatCurrency(product.price, product.currency)}</div>
-          ${product.stock_quantity > 0 ? 
-            `<div style="font-size: 13px; color: var(--color-success); margin-bottom: 12px;">
-              ✔ En stock (${product.stock_quantity})
-            </div>` : ''
-          }
-          <button class="product-cta" data-action="order-product" data-token="${product.share_token}">
-            💬 Commander via WhatsApp
+    grid.innerHTML = products.map(product => {
+      // Construire l'URL WhatsApp si l'intégration est active
+      let orderUrl = `/p/${product.share_token}`;
+      
+      if (integrations && integrations.whatsapp && integrations.whatsapp.enabled && integrations.whatsapp.url) {
+        orderUrl = integrations.whatsapp.url;
+      }
+
+      return `
+        <div class="product-card">
+          <a href="/p/${product.share_token}" style="text-decoration: none; color: inherit;">
+            ${product.image_url ? 
+              `<img src="${product.image_url}" alt="${product.name}" class="product-image">` :
+              `<div class="product-image" style="display: flex; align-items: center; justify-content: center; font-size: 80px;">📦</div>`
+            }
+            <div class="product-info">
+              <h3 class="product-name">${product.name}</h3>
+              <div class="product-price">${UI.formatCurrency(product.price, product.currency)}</div>
+              ${product.stock_quantity > 0 ? 
+                `<div style="font-size: 13px; color: var(--color-success); margin-bottom: 12px;">
+                  ✓ En stock (${product.stock_quantity})
+                </div>` : ''
+              }
+            </div>
+          </a>
+          <button class="product-cta commanderWhatsapp" data-link-product='${orderUrl}'">
+            💬 Commander
           </button>
         </div>
+      `;
+    }).join('');
+    grid.querySelectorAll('.commanderWhatsapp').forEach(e => e.addEventListener('click', e => window.location.href= e.target.dataset.linkProduct));
+    // Afficher le message personnalisé si disponible
+    if (customization && customization.order_message) {
+      const messageDiv = document.createElement('div');
+      messageDiv.style.cssText = 'max-width: 1200px; margin: 0 auto 48px; padding: 0 24px;';
+      messageDiv.innerHTML = `
+        <div style="
+          padding: 24px;
+          margin: 24px 0;
+          background: rgba(255, 255, 255, 0.95);
+          border-radius: var(--radius-lg);
+          text-align: center;
+          box-shadow: var(--shadow-md);
+        ">
+          <div style="font-size: 20px; margin-bottom: 8px;">💬</div>
+          <p style="color: var(--color-secondary); margin: 0;">
+            ${customization.order_message}
+          </p>
+        </div>
+      `;
+      
+      grid.parentElement.appendChild(messageDiv);
+    }
+  },
+
+  renderSocialLinks(integrations) {
+    const links = [];
+    if (integrations.whatsapp && integrations.whatsapp.enabled) {
+      let whatsapp_url = `https://wa.me/${integrations.whatsapp.number.split(' ').join('').replace('+', '')}`
+      links.push(`
+        <a href="${whatsapp_url || '#'}" target="_blank" style="
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          background: #25D366;
+          color: white;
+          border-radius: 100px;
+          text-decoration: none;
+          font-weight: 600;
+          margin: 0 4px;
+        ">
+          📱 WhatsApp
+        </a>
+      `);
+    }
+
+    if (integrations.instagram && integrations.instagram.enabled && integrations.instagram.url) {
+      links.push(`
+        <a href="${integrations.instagram.url}" target="_blank" style="
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          background: linear-gradient(45deg, #f09433 0%, #dc2743 50%, #bc1888 100%);
+          color: white;
+          border-radius: 100px;
+          text-decoration: none;
+          font-weight: 600;
+          margin: 0 4px;
+        ">
+          📷 Instagram
+        </a>
+      `);
+    }
+
+    if (integrations.facebook && integrations.facebook.enabled && integrations.facebook.url) {
+      links.push(`
+        <a href="${integrations.facebook.url}" target="_blank" style="
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          background: #1877F2;
+          color: white;
+          border-radius: 100px;
+          text-decoration: none;
+          font-weight: 600;
+          margin: 0 4px;
+        ">
+          👥 Facebook
+        </a>
+      `);
+    }
+
+    if (links.length === 0) return '';
+
+    return `
+      <div style="margin-top: 24px;">
+        ${links.join('')}
       </div>
-    `).join('');
-
-    // Attacher événements
-    AppUtils.delegate(grid, 'click', '[data-action="view-product"]', (e) => {
-      if (!e.target.closest('[data-action="order-product"]')) {
-        window.location.href = `/p/${e.target.closest('[data-action="view-product"]').dataset.token}`;
-      }
-    });
-
-    AppUtils.delegate(grid, 'click', '[data-action="order-product"]', (e) => {
-      e.stopPropagation();
-      window.location.href = `/p/${e.target.dataset.token}`;
-    });
+    `;
   },
 
   showError(message) {
@@ -2029,7 +2365,7 @@ const PublicStorePage = {
         </p>
       </div>
     `;
-    document.getElementById('productsGrid').innerHTML = '';
+    document.getElementById('productsGridStore').innerHTML = '';
   }
 };
 
@@ -2037,6 +2373,10 @@ const PublicStorePage = {
 // INITIALISATION GLOBALE
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
+  if (API.isAuthenticated() && !API.isSuperAdmin()) {
+    PlanManager.init();
+  }
+
   // Initialiser les modules communs
   SidebarManager.init();
   NotificationManager.init();
@@ -2054,8 +2394,34 @@ document.addEventListener('DOMContentLoaded', () => {
   AdminVendorsPage.init();
   PublicProductPage.init();
   PublicStorePage.init();
+  
+  // ✨ NOUVEAU - Initialiser les nouvelles pages
+  if (typeof AdvancedStatsPage !== 'undefined') {
+    AdvancedStatsPage.init();
+  }
+  if (typeof CustomizationPage !== 'undefined') {
+    CustomizationPage.init();
+  }
+  if (typeof IntegrationsPage !== 'undefined') {
+    IntegrationsPage.init();
+  }
 });
 
 // Export pour utilisation globale
 window.AppUtils = AppUtils;
 window.ModalManager = ModalManager;
+
+const header = document.querySelector('.header');
+    const stickyOffset = header.offsetTop;
+
+    window.addEventListener('scroll', () => {
+
+      if(window.scrollY > stickyOffset){
+        header.classList.add('fixed');
+      }
+      else {
+        header.classList.remove('fixed');
+      }
+
+    });
+    alert('test')
