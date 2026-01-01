@@ -11,6 +11,7 @@ const OrdersManager = {
   currentSearch: '',
   products: [],
   editingOrderId: null,
+  filterOrders: [],
 
   init() {
     this.attachEventListeners();
@@ -106,7 +107,16 @@ const OrdersManager = {
       const data = await API.get(url, false);
       
       if (data && data.data) {
-        this.renderOrdersTable(data.data.orders);
+        this.filterOrders = data.data.orders.filter(order => 
+          order.order_number.includes(this.currentSearch) ||
+          order.customer_name.includes(this.currentSearch) ||
+          order.product_name.includes(this.currentSearch) ||
+          order.product_price.includes(this.currentSearch) ||
+          order.status.includes(this.currentSearch) ||
+          order.status.includes(this.currentStatus)
+
+        );
+        this.renderOrdersTable(this.filterOrders);
         this.renderPagination(data.data.pagination);
       }
     } catch (error) {
@@ -662,7 +672,7 @@ OrdersManager.contactCustomer = function(phone) {
 };
 
 OrdersManager.exportOrders = function() {
-  UI.showNotification('Export', 'Fonctionnalité à venir', 'info');
+  API.exportOrdersExcel();
 };
 
 // Export global

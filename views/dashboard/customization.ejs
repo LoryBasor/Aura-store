@@ -1,0 +1,138 @@
+<!-- views/dashboard/customization.ejs -->
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">🎨 Personnalisation</h1>
+    <p class="page-subtitle">Personnalisez l'apparence de votre boutique</p>
+  </div>
+  <button class="btn btn-danger" data-action="reset-customization">
+    🔄 Réinitialiser
+  </button>
+</div>
+
+<!-- Container principal -->
+<div id="customizationContainer">
+
+  <div class="grille2">
+    
+    <!-- Panneau de configuration -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+      
+      <!-- Couleurs -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🎨 Couleurs</h3>
+        </div>
+        <form id="colorsForm">
+          <div style="padding: 24px;">
+            <div class="form-group">
+              <label class="form-label">Couleur primaire</label>
+              <input type="color" id="primaryColor" class="form-input" style="height: 50px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Couleur secondaire</label>
+              <input type="color" id="secondaryColor" class="form-input" style="height: 50px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Couleur du texte</label>
+              <input type="color" id="textColor" class="form-input" style="height: 50px;">
+            </div>
+            <button type="submit" class="btn btn-primary">
+              💾 Enregistrer les couleurs
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Logo et Bannière -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🖼️ Logo et Bannière</h3>
+        </div>
+        <div style="padding: 24px;">
+          <div class="form-group">
+            <label class="form-label">Logo</label>
+            <input type="file" id="logoUpload" class="form-input" accept="image/*">
+            <div id="logoPreview" style="margin-top: 12px;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Bannière</label>
+            <input type="file" id="bannerUpload" class="form-input" accept="image/*">
+            <div id="bannerPreview" style="margin-top: 12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Message de commande -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">💬 Message de commande</h3>
+        </div>
+        <form id="messageForm">
+          <div style="padding: 24px;">
+            <div class="form-group">
+              <label class="form-label">Message personnalisé</label>
+              <textarea id="orderMessage" class="form-textarea" rows="4" placeholder="Merci pour votre commande !"></textarea>
+              <p class="form-help">Ce message s'affichera après qu'un client passe commande</p>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              💾 Enregistrer le message
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Options d'affichage -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">⚙️ Options d'affichage</h3>
+        </div>
+        <form id="optionsForm">
+          <div style="padding: 24px;">
+            <div class="form-group">
+              <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                <input type="checkbox" id="showProductCount">
+                <span>Afficher le nombre de produits</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                <input type="checkbox" id="showSocialLinks">
+                <span>Afficher les liens sociaux</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                <input type="checkbox" id="showContactInfo">
+                <span>Afficher les informations de contact</span>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              💾 Enregistrer les options
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Prévisualisation -->
+    <div style="position: sticky; top: 24px;">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">👁️ Aperçu</h3>
+        </div>
+        <div id="storePreview" style="overflow: hidden;">
+          <!-- Prévisualisation dynamique -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Scripts -->
+<script src="/js/customization.js"></script>

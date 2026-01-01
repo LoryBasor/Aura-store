@@ -4,13 +4,15 @@ const authRoutes = require('./authRoutes');
 const productRoutes = require('./productRoutes');
 const orderRoutes = require('./orderRoutes');
 const adminRoutes = require('./adminRoutes');
+const storesRoutes = require('./storesRoutes');
+const planFeaturesRoutes = require('./planFeaturesRoutes'); // ✨ NOUVEAU
 const dashboardController = require('../controllers/dashboardController');
 const productController = require('../controllers/productController');
 const { authenticate } = require('../middlewares/auth');
 const { checkAccountStatus } = require('../middlewares/authorization');
 const { requireActiveSubscription } = require('../middlewares/subscriptionCheck');
+const { attachUserPlan } = require('../middlewares/checkPlanAccess'); // ✨ NOUVEAU
 const { apiLimiter, publicLimiter } = require('../middlewares/rateLimiter');
-const storesRoutes = require('../routes/storesRoutes');
 
 const router = express.Router();
 
@@ -41,12 +43,18 @@ router.use(
   orderRoutes
 );
 
+router.use(
+  '/features',
+  planFeaturesRoutes
+);
+
 // Routes du dashboard vendeur (protégées)
 router.get(
   '/dashboard',
   authenticate,
   checkAccountStatus,
   requireActiveSubscription,
+  attachUserPlan, // ✨ Attache le plan pour utilisation dans le dashboard
   apiLimiter,
   dashboardController.getDashboard
 );
@@ -67,11 +75,12 @@ router.get(
   productController.getProductByShareLink
 );
 
+// Routes boutiques publiques
 router.use(
   '/store',
   publicLimiter,
   storesRoutes
-)
+);
 
 // Route de santé (health check)
 router.get('/health', (req, res) => {
