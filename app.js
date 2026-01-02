@@ -17,6 +17,7 @@ require('dotenv').config();
 
 // Configuration et utilitaires
 const { testConnection, closePool } = require('./src/config/database');
+const { testConnection: testCloudinary } = require('./src/config/cloudinary');
 const { UPLOAD_DIR } = require('./src/config/upload');
 
 // Routes API
@@ -75,7 +76,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Fichiers statiques
-app.use(express.static(path.join(__dirname, UPLOAD_DIR)));
 app.use(express.static(path.join(__dirname, 'public')));
 
 /**
@@ -417,7 +417,11 @@ async function startServer() {
       console.error('❌ Impossible de se connecter à la base de données');
       process.exit(1);
     }
-
+    // Tester la connexion Cloudinary
+    const cloudinaryOk = await testCloudinary();
+    if (!cloudinaryOk) {
+      throw new Error('Connexion Cloudinary échouée');
+    }
     // Démarrer le serveur
     const server = app.listen(PORT, () => {
       console.log('');
@@ -425,7 +429,7 @@ async function startServer() {
       console.log('✨ AURA - Serveur démarré !');
       console.log('=================================');
       console.log(`📱 Port: ${PORT}`);
-      console.log(`🌐 URL: http://localhost:${PORT}`);
+      console.log(`🌐 URL: http://localhost:${PORT}`); 
       console.log(`🔧 Environnement: ${process.env.NODE_ENV || 'development'}`);
       console.log('=================================');
       console.log('');

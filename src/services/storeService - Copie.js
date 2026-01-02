@@ -1,14 +1,14 @@
 // src/services/storeService.js
 const { pool } = require('../config/database');
 const { AppError } = require('../middlewares/errorHandler');
+const { getImageUrl } = require('../config/upload');
 const storeCustomizationService = require('./storeCustomizationService');
 const socialIntegrationsService = require('./socialIntegrationsService');
 
-/**
- * Service de gestion des boutiques publiques
- * Les images sont maintenant servies depuis Cloudinary
- */
 class StoreService {
+  /**
+   * Récupère la boutique avec personnalisation et intégrations
+   */
   async getStore(storeSlug) {
     // Récupérer les infos du vendeur
     const [vendors] = await pool.execute(
@@ -27,7 +27,8 @@ class StoreService {
 
     const vendor = vendors[0];
     const planSlug = vendor.plan_slug || 'free';
-    
+
+    // Récupérer les produits (limite selon le plan)
     let query = `
       SELECT p.*, pl.token as share_token
       FROM products p
@@ -35,24 +36,26 @@ class StoreService {
       WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
       ORDER BY p.created_at DESC
     `;
-    
-    const [isPlanFree] = await pool.execute(
-      "SELECT plan_name FROM v_active_subscriptions WHERE user_id = ? AND plan_slug = 'free'", 
-      [vendor.id]
-    ); 
 
-    if(isPlanFree.length > 0) {
+    // Limiter à 5 produits si plan Free
+    if (planSlug === 'free') {
       query += ' LIMIT 5';
     }
-    
-    // Récupérer tous les produits disponibles du vendeur
+
     const [products] = await pool.execute(query, [vendor.id]);
 
+    // Formater les URLs des images
+    products.forEach(product => {
+      product.image_url = getImageUrl(product.image_url);
+    });
+
+    // ✨ NOUVEAU - Récupérer la personnalisation (si plan Business)
     let customization = null;
     if (planSlug === 'business') {
       customization = await storeCustomizationService.getPublicCustomization(storeSlug);
     }
 
+    // ✨ NOUVEAU - Récupérer les intégrations sociales (si plan Business)
     let integrations = null;
     if (planSlug === 'business') {
       integrations = await socialIntegrationsService.getPublicIntegrations(storeSlug);
@@ -61,12 +64,13 @@ class StoreService {
     return {
       vendor: {
         business_name: vendor.business_name,
-        store_slug: vendor.store_slug, whatsapp_number: vendor.whatsapp_number,
+        store_slug: vendor.store_slug,
+        whatsapp_number: vendor.whatsapp_number,
         plan: planSlug
       },
       products,
-      customization, 
-      integrations, 
+      customization, // ✨ Configuration visuelle
+      integrations, // ✨ Liens sociaux
       has_more: planSlug === 'free' && products.length === 5 // Indicateur si plan limité
     };
   }
@@ -121,7 +125,7 @@ class StoreService {
         store_slug: product.store_slug,
         whatsapp_number: product.whatsapp_number
       },
-      integrations 
+      integrations // ✨ URLs WhatsApp/Instagram/Facebook générées
     };
   }
 }

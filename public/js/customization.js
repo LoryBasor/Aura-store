@@ -56,7 +56,7 @@ const CustomizationPage = {
     // Supprimer logo
     const deleteLogoBtn = document.querySelector('[data-action="delete-logo"]');
     if (deleteLogoBtn) {
-      deleteLogoBtn.addEventListener('click', () => this.deleteLogo());
+      deleteLogoBtn.addEventListener('click', () => console.log('delete logo'));
     }
 
     // Supprimer bannière

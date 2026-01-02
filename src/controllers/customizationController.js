@@ -1,10 +1,11 @@
 // src/controllers/customizationController.js
 const storeCustomizationService = require('../services/storeCustomizationService');
 const { successResponse } = require('../utils/response');
-const { getImageUrl } = require('../config/upload');
+const { uploadImage } = require('../config/cloudinary');
 
 /**
  * Contrôleur de personnalisation (BUSINESS uniquement)
+ * Utilise Cloudinary pour l'upload des images
  */
 class CustomizationController {
   /**
@@ -15,9 +16,7 @@ class CustomizationController {
     try {
       const config = await storeCustomizationService.getCustomization(req.user.id);
       
-      // Formatter les URLs d'images
-      config.logo_url = getImageUrl(config.logo_url);
-      config.banner_url = getImageUrl(config.banner_url);
+      // Les URLs Cloudinary sont déjà complètes, pas de transformation nécessaire
       
       return successResponse(res, { customization: config });
     } catch (error) {
@@ -38,9 +37,6 @@ class CustomizationController {
         updates
       );
       
-      config.logo_url = getImageUrl(config.logo_url);
-      config.banner_url = getImageUrl(config.banner_url);
-      
       return successResponse(
         res,
         { customization: config },
@@ -52,7 +48,7 @@ class CustomizationController {
   }
 
   /**
-   * Upload le logo
+   * Upload le logo vers Cloudinary
    * POST /api/customization/logo
    */
   async uploadLogo(req, res, next) {
@@ -64,15 +60,31 @@ class CustomizationController {
         });
       }
 
-      const logoPath = `/${req.file.path.replace(/\\/g, '/')}`;
+      // Upload vers Cloudinary
+      let logoData;
+      try {
+        const uploadResult = await uploadImage(
+          req.file.buffer,
+          'customization/logos',
+          req.user.id
+        );
+        
+        logoData = {
+          url: uploadResult.url,
+          public_id: uploadResult.public_id
+        };
+      } catch (uploadError) {
+        console.error('Erreur upload logo:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Échec de l\'upload du logo'
+        });
+      }
       
       const config = await storeCustomizationService.uploadLogo(
         req.user.id,
-        logoPath
+        logoData
       );
-      
-      config.logo_url = getImageUrl(config.logo_url);
-      config.banner_url = getImageUrl(config.banner_url);
       
       return successResponse(
         res,
@@ -85,7 +97,7 @@ class CustomizationController {
   }
 
   /**
-   * Upload la bannière
+   * Upload la bannière vers Cloudinary
    * POST /api/customization/banner
    */
   async uploadBanner(req, res, next) {
@@ -97,15 +109,31 @@ class CustomizationController {
         });
       }
 
-      const bannerPath = `/${req.file.path.replace(/\\/g, '/')}`;
+      // Upload vers Cloudinary
+      let bannerData;
+      try {
+        const uploadResult = await uploadImage(
+          req.file.buffer,
+          'customization/banners',
+          req.user.id
+        );
+        
+        bannerData = {
+          url: uploadResult.url,
+          public_id: uploadResult.public_id
+        };
+      } catch (uploadError) {
+        console.error('Erreur upload bannière:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Échec de l\'upload de la bannière'
+        });
+      }
       
       const config = await storeCustomizationService.uploadBanner(
         req.user.id,
-        bannerPath
+        bannerData
       );
-      
-      config.logo_url = getImageUrl(config.logo_url);
-      config.banner_url = getImageUrl(config.banner_url);
       
       return successResponse(
         res,
@@ -118,15 +146,12 @@ class CustomizationController {
   }
 
   /**
-   * Supprime le logo
+   * Supprime le logo de Cloudinary
    * DELETE /api/customization/logo
    */
   async deleteLogo(req, res, next) {
     try {
       const config = await storeCustomizationService.deleteLogo(req.user.id);
-      
-      config.logo_url = getImageUrl(config.logo_url);
-      config.banner_url = getImageUrl(config.banner_url);
       
       return successResponse(
         res,
@@ -139,15 +164,12 @@ class CustomizationController {
   }
 
   /**
-   * Supprime la bannière
+   * Supprime la bannière de Cloudinary
    * DELETE /api/customization/banner
    */
   async deleteBanner(req, res, next) {
     try {
       const config = await storeCustomizationService.deleteBanner(req.user.id);
-      
-      config.logo_url = getImageUrl(config.logo_url);
-      config.banner_url = getImageUrl(config.banner_url);
       
       return successResponse(
         res,
@@ -166,9 +188,6 @@ class CustomizationController {
   async resetToDefault(req, res, next) {
     try {
       const config = await storeCustomizationService.resetToDefault(req.user.id);
-      
-      config.logo_url = getImageUrl(config.logo_url);
-      config.banner_url = getImageUrl(config.banner_url);
       
       return successResponse(
         res,

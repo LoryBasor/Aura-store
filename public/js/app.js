@@ -1995,6 +1995,7 @@ const PublicProductPage = {
 
   renderProduct(data) {
     const { product, customMessage } = data;
+    console.log(data);
     const {whatsapp_number} = product;
     let whatsapp_url = `https://wa.me/${whatsapp_number.split(' ').join('').replace('+','')}?text=`;
     let message = "Bonjour 👋 Je suis intéressé(e) par le produit {{product_name}} à {{product_price}} {{currency}}. Pouvez-vous me donner plus d'informations ?";
@@ -2114,7 +2115,6 @@ const PublicStorePage = {
     try {
       const response = await fetch(`/api/store/${storeSlug}`);
       const data = await response.json();
-
       if (data && data.data) {
         // Appliquer la personnalisation si disponible
         if (data.data.customization) {

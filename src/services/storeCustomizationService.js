@@ -1,9 +1,11 @@
 // src/services/storeCustomizationService.js
 const { pool } = require('../config/database');
 const { AppError } = require('../middlewares/errorHandler');
+const { deleteImage } = require('../config/cloudinary');
 
 /**
  * Service de personnalisation de la boutique (BUSINESS uniquement)
+ * Utilise Cloudinary pour le stockage des images
  */
 class StoreCustomizationService {
   /**
@@ -55,7 +57,9 @@ class StoreCustomizationService {
       'secondary_color',
       'text_color',
       'logo_url',
+      'logo_public_id',
       'banner_url',
+      'banner_public_id',
       'order_message',
       'show_product_count',
       'show_social_links',
@@ -97,45 +101,87 @@ class StoreCustomizationService {
   }
 
   /**
-   * Upload logo
+   * Upload logo vers Cloudinary
    */
-  async uploadLogo(userId, logoPath) {
-    return this.updateCustomization(userId, { logo_url: logoPath });
+  async uploadLogo(userId, logoData) {
+    // Récupérer l'ancien logo pour le supprimer
+    const config = await this.getCustomization(userId);
+    
+    if (config.logo_public_id) {
+      try {
+        await deleteImage(config.logo_public_id);
+      } catch (error) {
+        console.error('Erreur suppression ancien logo:', error);
+        // Continue quand même
+      }
+    }
+
+    return this.updateCustomization(userId, {
+      logo_url: logoData.url,
+      logo_public_id: logoData.public_id
+    });
   }
 
   /**
-   * Upload bannière
+   * Upload bannière vers Cloudinary
    */
-  async uploadBanner(userId, bannerPath) {
-    return this.updateCustomization(userId, { banner_url: bannerPath });
+  async uploadBanner(userId, bannerData) {
+    // Récupérer l'ancienne bannière pour la supprimer
+    const config = await this.getCustomization(userId);
+    
+    if (config.banner_public_id) {
+      try {
+        await deleteImage(config.banner_public_id);
+      } catch (error) {
+        console.error('Erreur suppression ancienne bannière:', error);
+        // Continue quand même
+      }
+    }
+
+    return this.updateCustomization(userId, {
+      banner_url: bannerData.url,
+      banner_public_id: bannerData.public_id
+    });
   }
 
   /**
-   * Supprime le logo
+   * Supprime le logo de Cloudinary
    */
   async deleteLogo(userId) {
     const config = await this.getCustomization(userId);
-    
-    if (config.logo_url) {
-      const { deleteFile } = require('../config/upload');
-      deleteFile(config.logo_url);
+    console.log('Config avant suppression logo:', config);
+    if (config.logo_public_id) {
+      try {
+        await deleteImage(config.logo_public_id);
+      } catch (error) {
+        console.error('Erreur suppression logo Cloudinary:', error);
+      }
     }
 
-    return this.updateCustomization(userId, { logo_url: null });
+    return this.updateCustomization(userId, {
+      logo_url: null,
+      logo_public_id: null
+    });
   }
 
   /**
-   * Supprime la bannière
+   * Supprime la bannière de Cloudinary
    */
   async deleteBanner(userId) {
     const config = await this.getCustomization(userId);
     
-    if (config.banner_url) {
-      const { deleteFile } = require('../config/upload');
-      deleteFile(config.banner_url);
+    if (config.banner_public_id) {
+      try {
+        await deleteImage(config.banner_public_id);
+      } catch (error) {
+        console.error('Erreur suppression bannière Cloudinary:', error);
+      }
     }
 
-    return this.updateCustomization(userId, { banner_url: null });
+    return this.updateCustomization(userId, {
+      banner_url: null,
+      banner_public_id: null
+    });
   }
 
   /**
@@ -160,15 +206,15 @@ class StoreCustomizationService {
       return null;
     }
 
-    const { getImageUrl } = require('../config/upload');
     const config = configs[0];
 
+    // Les URLs Cloudinary sont déjà complètes
     return {
       primary_color: config.primary_color,
       secondary_color: config.secondary_color,
       text_color: config.text_color,
-      logo_url: getImageUrl(config.logo_url),
-      banner_url: getImageUrl(config.banner_url),
+      logo_url: config.logo_url,
+      banner_url: config.banner_url,
       order_message: config.order_message,
       show_product_count: config.show_product_count,
       show_social_links: config.show_social_links,
@@ -182,14 +228,21 @@ class StoreCustomizationService {
   async resetToDefault(userId) {
     const config = await this.getCustomization(userId);
 
-    // Supprimer les images
-    if (config.logo_url) {
-      const { deleteFile } = require('../config/upload');
-      deleteFile(config.logo_url);
+    // Supprimer les images de Cloudinary
+    if (config.logo_public_id) {
+      try {
+        await deleteImage(config.logo_public_id);
+      } catch (error) {
+        console.error('Erreur suppression logo:', error);
+      }
     }
-    if (config.banner_url) {
-      const { deleteFile } = require('../config/upload');
-      deleteFile(config.banner_url);
+    
+    if (config.banner_public_id) {
+      try {
+        await deleteImage(config.banner_public_id);
+      } catch (error) {
+        console.error('Erreur suppression bannière:', error);
+      }
     }
 
     await pool.execute(
@@ -198,7 +251,9 @@ class StoreCustomizationService {
         secondary_color = '#10B981',
         text_color = '#1F2937',
         logo_url = NULL,
+        logo_public_id = NULL,
         banner_url = NULL,
+        banner_public_id = NULL,
         order_message = 'Merci pour votre commande ! Nous vous contacterons bientôt.',
         show_product_count = TRUE,
         show_social_links = TRUE,
