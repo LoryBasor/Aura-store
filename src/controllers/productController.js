@@ -2,9 +2,10 @@
 const productService = require('../services/productService');
 const { successResponse, createdResponse } = require('../utils/response');
 const { buildWhatsAppOrderUrl } = require('../utils/helpers');
+const { uploadImage } = require('../config/cloudinary');
 
 /**
- * Contrôleur de gestion des produits
+ * Contrôleur de gestion des produits avec Cloudinary
  */
 class ProductController {
   /**
@@ -13,12 +14,31 @@ class ProductController {
    */
   async createProduct(req, res, next) {
     try {
-      const imagePath = req.file ? `/${req.file.path.replace(/\\/g, '/')}` : null;
-       
+      let imageData = null;
+
+      // Upload vers Cloudinary si image fournie
+      if (req.file) {
+        try {
+          const uploadResult = await uploadImage(
+            req.file.buffer,
+            'products',
+            req.user.id
+          );
+          
+          imageData = {
+            url: uploadResult.url,
+            public_id: uploadResult.public_id
+          };
+        } catch (uploadError) {
+          console.error('Erreur upload Cloudinary:', uploadError);
+          return next(new Error('Échec de l\'upload de l\'image'));
+        }
+      }
+      
       const product = await productService.createProduct(
         req.user.id,
         req.body,
-        imagePath
+        imageData
       );
       
       return createdResponse(res, { product }, 'Produit créé avec succès');
@@ -37,7 +57,8 @@ class ProductController {
       const limit = req.params.limit;
       const is_available = req.params.is_available;
       const search = req.params.search;
-      const result = await productService.getProductsByUser(req.user.id, search , {
+      
+      const result = await productService.getProductsByUser(req.user.id, search, {
         page: parseInt(page) || 1,
         limit: parseInt(limit) || 20,
         is_available: is_available
@@ -72,13 +93,32 @@ class ProductController {
    */
   async updateProduct(req, res, next) {
     try {
-      const newImagePath = req.file ? `/${req.file.path.replace(/\\/g, '/')}` : null;
+      let newImageData = null;
+
+      // Upload nouvelle image vers Cloudinary si fournie
+      if (req.file) {
+        try {
+          const uploadResult = await uploadImage(
+            req.file.buffer,
+            'products',
+            req.user.id
+          );
+          
+          newImageData = {
+            url: uploadResult.url,
+            public_id: uploadResult.public_id
+          };
+        } catch (uploadError) {
+          console.error('Erreur upload Cloudinary:', uploadError);
+          return next(new Error('Échec de l\'upload de l\'image'));
+        }
+      }
       
       const product = await productService.updateProduct(
         req.params.id,
         req.user.id,
         req.body,
-        newImagePath
+        newImageData
       );
       
       return successResponse(res, { product }, 'Produit mis à jour');

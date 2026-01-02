@@ -1,22 +1,22 @@
 // src/services/productService.js
 const { pool } = require('../config/database');
 const { slugify, generateToken, buildProductShareLink } = require('../utils/helpers');
-const { getImageUrl, deleteFile } = require('../config/upload');
+const { deleteImage } = require('../config/cloudinary');
 const { AppError } = require('../middlewares/errorHandler');
 const { calculateOffset } = require('../utils/helpers');
 
 /**
- * Service de gestion des produits
+ * Service de gestion des produits avec Cloudinary
  */
 class ProductService {
   /**
    * Crée un nouveau produit
    * @param {number} userId - ID du vendeur
    * @param {object} productData - Données du produit
-   * @param {string} imagePath - Chemin de l'image uploadée
+   * @param {object} imageData - {url, public_id} depuis Cloudinary
    * @returns {object} Produit créé avec lien de partage
    */
-  async createProduct(userId, productData, imagePath = null) {
+  async createProduct(userId, productData, imageData = null) {
     const { name, description, price, currency, stock_quantity, is_available } = productData;
 
     // Générer un slug unique
@@ -37,11 +37,23 @@ class ProductService {
       slugSuffix = slugSuffix ? slugSuffix + 1 : 1;
     }
 
-    // Créer le produit
+    // Créer le produit avec URL et public_id Cloudinary
     const [result] = await pool.execute(
-      `INSERT INTO products (user_id, name, slug, description, price, currency, image_url, stock_quantity, is_available)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, name, slug, description, price, currency || 'XAF', imagePath, stock_quantity || 0, is_available ?? true]
+      `INSERT INTO products 
+       (user_id, name, slug, description, price, currency, image_url, image_public_id, stock_quantity, is_available)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId, 
+        name, 
+        slug, 
+        description, 
+        price, 
+        currency || 'XAF', 
+        imageData?.url || null,
+        imageData?.public_id || null,
+        stock_quantity || 0, 
+        is_available ?? true
+      ]
     );
 
     // Générer un token pour le lien de partage
@@ -75,7 +87,7 @@ class ProductService {
     }
 
     const product = products[0];
-    product.image_url = getImageUrl(product.image_url);
+    // L'URL Cloudinary est déjà complète, pas besoin de transformation
     product.share_link = product.share_token ? buildProductShareLink(product.share_token) : null;
 
     return product;
@@ -84,6 +96,7 @@ class ProductService {
   /**
    * Liste tous les produits d'un vendeur
    * @param {number} userId - ID du vendeur
+   * @param {string} search - Recherche
    * @param {object} filters - Filtres (page, limit, is_available)
    * @returns {object} Liste paginée de produits
    */
@@ -91,6 +104,7 @@ class ProductService {
     limit = Number(limit) || 20;
     const offset = calculateOffset(page, limit);
     search = search.substring(7);
+    
     let query = `
       SELECT p.*, pl.token as share_token
       FROM products p
@@ -106,13 +120,11 @@ class ProductService {
     }
 
     query += ` ORDER BY p.created_at DESC`;
-    // params.push(offset);
 
     const [products] = await pool.execute(query, params);
 
-    // Formater les URLs
+    // Formater les liens de partage
     products.forEach(product => {
-      product.image_url = getImageUrl(product.image_url);
       product.share_link = product.share_token ? buildProductShareLink(product.share_token) : null;
     });
 
@@ -138,13 +150,12 @@ class ProductService {
    * @param {number} productId - ID du produit
    * @param {number} userId - ID du vendeur
    * @param {object} updates - Champs à mettre à jour
-   * @param {string} newImagePath - Nouveau chemin image (optionnel)
+   * @param {object} newImageData - {url, public_id} depuis Cloudinary
    * @returns {object} Produit mis à jour
    */
-  async updateProduct(productId, userId, updates, newImagePath = null) {
+  async updateProduct(productId, userId, updates, newImageData = null) {
     // Récupérer le produit actuel
     const currentProduct = await this.getProductById(productId, userId);
-    console.log(currentProduct);
 
     const fields = [];
     const values = [];
@@ -186,14 +197,23 @@ class ProductService {
       values.push(updates.is_available);
     }
 
-    // Gestion de la nouvelle image
-    if (newImagePath) {
-      // Supprimer l'ancienne image
-      if (currentProduct.image_url) {
-        deleteFile(currentProduct.image_url);
+    // Gestion de la nouvelle image Cloudinary
+    if (newImageData) {
+      // Supprimer l'ancienne image de Cloudinary
+      if (currentProduct.image_public_id) {
+        try {
+          await deleteImage(currentProduct.image_public_id);
+        } catch (error) {
+          console.error('Erreur suppression ancienne image:', error);
+          // On continue quand même
+        }
       }
+      
       fields.push('image_url = ?');
-      values.push(newImagePath);
+      values.push(newImageData.url);
+      
+      fields.push('image_public_id = ?');
+      values.push(newImageData.public_id);
     }
 
     if (fields.length === 0) {
@@ -218,15 +238,20 @@ class ProductService {
   async deleteProduct(productId, userId) {
     const product = await this.getProductById(productId, userId);
 
-    // Soft delete
+    // Soft delete en base
     await pool.execute(
       'DELETE FROM products WHERE id = ? AND user_id = ?',
       [productId, userId]
     );
 
-    // Supprimer l'image physique
-    if (product.image_url) {
-      deleteFile(product.image_url);
+    // Supprimer l'image de Cloudinary
+    if (product.image_public_id) {
+      try {
+        await deleteImage(product.image_public_id);
+      } catch (error) {
+        console.error('Erreur suppression image Cloudinary:', error);
+        // L'erreur ne doit pas bloquer la suppression du produit
+      }
     }
   }
 
@@ -236,7 +261,6 @@ class ProductService {
    * @returns {object} Produit + infos vendeur
    */
   async getProductByShareToken(token) {
-    let customMessage = null;
     const [products] = await pool.execute(
       `SELECT p.*, u.business_name, u.whatsapp_number,u.id, u.store_slug, pl.click_count
        FROM products p
@@ -251,13 +275,12 @@ class ProductService {
     }
 
     const product = products[0];
-    const [isPlanBusiness] = await pool.execute(`SELECT user_id FROM v_user_plan_access WHERE user_id = ? AND plan_name = 'Business' AND (subscription_status = 'active' OR subscription_status = 'trial')`, [product.id]);
-
+     const [isPlanBusiness] = await pool.execute(`SELECT user_id FROM v_user_plan_access WHERE user_id = ? AND plan_name = 'Business' AND (subscription_status = 'active' OR subscription_status = 'trial')`, [product.id]);
+    let customMessage = null;
     if (isPlanBusiness.length !== 0){
       const [custom_message] = await pool.execute(`SELECT custom_order_message FROM social_integrations WHERE user_id = ?`, [product.id]);
       customMessage = custom_message[0];
     }
-    product.image_url = getImageUrl(product.image_url);
 
     // Incrémenter le compteur de vues
     await pool.execute(
