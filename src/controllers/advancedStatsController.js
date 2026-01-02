@@ -42,7 +42,7 @@ class AdvancedStatsController {
 
   /**
    * Top produits
-   * GET /api/stats/top-products?limit=10
+   * GET /api/stats/top-products
    */
   async getTopProducts(req, res, next) {
     try {

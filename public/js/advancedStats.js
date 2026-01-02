@@ -18,7 +18,7 @@ const AdvancedStatsPage = {
         this.showAccessDenied();
         return;
       }
-    }, 600);
+    }, 1000);
 
     this.attachEventListeners();
     this.loadAllStats();

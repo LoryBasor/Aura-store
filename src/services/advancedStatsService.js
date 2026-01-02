@@ -95,9 +95,8 @@ class AdvancedStatsService {
        LEFT JOIN orders o ON p.id = o.product_id AND o.deleted_at IS NULL
        WHERE p.user_id = ? AND p.deleted_at IS NULL
        GROUP BY p.id
-       ORDER BY sales_count DESC, total_revenue DESC
-       LIMIT ?`,
-      [userId, limit]
+       ORDER BY sales_count DESC, total_revenue DESC`,
+      [userId]
     );
 
     return products.map(p => ({
