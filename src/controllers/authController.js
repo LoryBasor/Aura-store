@@ -31,7 +31,8 @@ class AuthController {
       const result = await authService.login(email, password);
       res.cookie('aura_token', result.token, {
         httpOnly: true,
-        sameSite: 'strict'
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 70000000
       });
       return successResponse(res, result, 'Connexion réussie');
     } catch (error) {
