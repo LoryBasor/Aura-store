@@ -106,7 +106,7 @@ class ProductService {
     search = search.substring(7);
     
     let query = `
-      SELECT p.*, pl.token as share_token
+      SELECT p.*, pl.token as share_token, pl.click_count
       FROM products p
       LEFT JOIN product_links pl ON p.id = pl.product_id
       WHERE p.user_id = ? AND p.deleted_at IS NULL AND p.name LIKE '%${search === 'undefined' ? '': search}%'
