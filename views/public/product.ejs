@@ -415,7 +415,7 @@
     </div>
   </div>
 
-  <!-- Modal de Commande (à ajouter avant </body> dans views/public/product.ejs) -->
+  <!-- Modal de Commande -->
   <div class="order-modal-overlay" id="orderModalOverlay" style="display: none;">
     <div class="order-modal">
       <div class="order-modal-header">
@@ -425,10 +425,6 @@
 
       <form id="publicOrderForm">
         <div class="order-modal-body">
-          <!-- Résumé produit -->
-          <div class="order-product-summary" id="orderProductSummary">
-            <!-- Rempli dynamiquement -->
-          </div>
 
           <!-- Informations client -->
           <div class="form-group">
@@ -472,6 +468,11 @@
           </div>
         </div>
 
+        <!-- Résumé produit -->
+          <div class="order-product-summary" id="orderProductSummary">
+            <!-- Rempli dynamiquement -->
+          </div>
+
         <div class="order-modal-footer">
           <button type="button" class="btn btn-secondary" id="cancelOrder">Annuler</button>
           <button type="submit" class="btn btn-primary" id="submitOrder">
@@ -485,7 +486,6 @@
   <script src="/js/ui.js"></script>
   <script src="/js/planManager.js"></script>
   <script src="/js/app.js"></script>
-  <script src="/js/publicOrder.js"></script>
 </body>
 
 </html>
