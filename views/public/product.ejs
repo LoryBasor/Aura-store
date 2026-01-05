@@ -3,18 +3,19 @@
      ======================================== -->
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title id="pageTitle">Produit | AURA</title>
   <link rel="stylesheet" href="/css/style.css">
-  
+
   <!-- Meta tags for sharing -->
   <meta property="og:title" content="Produit" id="ogTitle">
   <meta property="og:description" content="Découvrez ce produit" id="ogDescription">
   <meta property="og:image" content="" id="ogImage">
   <meta property="og:type" content="product">
-  
+
   <style>
     body {
       background: linear-gradient(135deg, #253337, #5C6C73);
@@ -191,7 +192,221 @@
       }
     }
   </style>
+  <style>
+    /* Styles du modal de commande */
+    .order-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .order-modal {
+      background: white;
+      border-radius: 12px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.3s ease;
+    }
+
+    .order-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .order-modal-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #253337;
+      margin: 0;
+    }
+
+    .order-modal-close {
+      background: none;
+      border: none;
+      font-size: 32px;
+      color: #666;
+      cursor: pointer;
+      padding: 0;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .order-modal-close:hover {
+      background: #f5f5f5;
+      color: #253337;
+    }
+
+    .order-modal-body {
+      padding: 24px;
+    }
+
+    .order-product-summary {
+      padding: 16px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      border-left: 4px solid #253337;
+    }
+
+    .order-modal-footer {
+      padding: 24px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-weight: 600;
+      color: #253337;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: #253337;
+      box-shadow: 0 0 0 3px rgba(37, 51, 55, 0.1);
+    }
+
+    .form-input.error {
+      border-color: #f44336;
+    }
+
+    .form-error {
+      display: block;
+      color: #f44336;
+      font-size: 13px;
+      margin-top: 4px;
+      min-height: 18px;
+    }
+
+    .form-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: #e8f4f8;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+
+    .form-checkbox input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .form-checkbox label {
+      cursor: pointer;
+      font-size: 14px;
+      color: #253337;
+      user-select: none;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #253337;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1a2428;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37, 51, 55, 0.3);
+    }
+
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #253337;
+    }
+
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .order-modal {
+        max-height: 95vh;
+      }
+
+      .order-modal-header,
+      .order-modal-body,
+      .order-modal-footer {
+        padding: 16px;
+      }
+    }
+  </style>
 </head>
+
 <body>
   <div class="product-container" id="productContainer">
     <div style="text-align: center; padding: 64px;">
@@ -200,9 +415,77 @@
     </div>
   </div>
 
+  <!-- Modal de Commande (à ajouter avant </body> dans views/public/product.ejs) -->
+  <div class="order-modal-overlay" id="orderModalOverlay" style="display: none;">
+    <div class="order-modal">
+      <div class="order-modal-header">
+        <h3 class="order-modal-title">🛒 Passer commande</h3>
+        <button class="order-modal-close" id="closeOrderModal">&times;</button>
+      </div>
+
+      <form id="publicOrderForm">
+        <div class="order-modal-body">
+          <!-- Résumé produit -->
+          <div class="order-product-summary" id="orderProductSummary">
+            <!-- Rempli dynamiquement -->
+          </div>
+
+          <!-- Informations client -->
+          <div class="form-group">
+            <label for="clientName" class="form-label">Nom complet *</label>
+            <input type="text" id="clientName" name="customer_name" class="form-input" placeholder="Ex: Jean Dupont"
+              required>
+            <span class="form-error" id="nameError"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="clientPhone" class="form-label">Téléphone *</label>
+            <input type="tel" id="clientPhone" name="customer_phone" class="form-input" placeholder="+237 6XX XXX XXX"
+              required>
+            <span class="form-error" id="phoneError"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="clientQuantity" class="form-label">Quantité *</label>
+            <input type="number" id="clientQuantity" name="quantity" class="form-input" min="1" value="1" required>
+            <span class="form-error" id="quantityError"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="clientAddress" class="form-label">Adresse de livraison</label>
+            <textarea id="clientAddress" name="customer_address" class="form-textarea" rows="3"
+              placeholder="Ex: Quartier Bonamoussadi, Rue des Fleurs"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="clientNotes" class="form-label">Notes (optionnel)</label>
+            <textarea id="clientNotes" name="notes" class="form-textarea" rows="2"
+              placeholder="Précisions sur la commande..."></textarea>
+          </div>
+
+          <!-- Checkbox Se souvenir -->
+          <div class="form-checkbox">
+            <input type="checkbox" id="rememberMe" name="remember_me">
+            <label for="rememberMe">
+              💾 Se souvenir de mes informations pour mes prochaines commandes
+            </label>
+          </div>
+        </div>
+
+        <div class="order-modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelOrder">Annuler</button>
+          <button type="submit" class="btn btn-primary" id="submitOrder">
+            ✅ Confirmer la commande
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/planManager.js"></script>
   <script src="/js/app.js"></script>
+  <script src="/js/publicOrder.js"></script>
 </body>
+
 </html>

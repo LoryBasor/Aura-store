@@ -31,14 +31,14 @@ const registerSchema = Joi.object({
       'any.required': 'Nom commercial requis'
     }),
   phone: Joi.string()
-    .pattern(/^[0-9+\s()-]+$/)
+    .pattern(/^\+\d(?:\s?\d){9,14}$/)
     .optional()
     .allow('', null)
     .messages({
       'string.pattern.base': 'Numéro de téléphone invalide'
     }),
   whatsapp_number: Joi.string()
-    .pattern(/^[0-9+\s()-]+$/)
+    .pattern(/^\+\d(?:\s?\d){9,14}$/)
     .optional()
     .allow('', null)
 });
@@ -111,7 +111,7 @@ const orderSchema = Joi.object({
       'any.required': 'Nom client requis'
     }),
   customer_phone: Joi.string()
-    .pattern(/^[0-9+\s()-]+$/)
+    .pattern(/^\+\d(?:\s?\d){9,14}$/)
     .required()
     .messages({
       'string.pattern.base': 'Numéro de téléphone invalide',
@@ -151,7 +151,7 @@ const manualOrderSchema = Joi.object({
       'string.min': 'Nom minimum 2 caractères'
     }),
   customer_phone: Joi.string()
-    .pattern(/^[0-9+\s()-]+$/)
+    .pattern(/^\+\d(?:\s?\d){9,14}$/)
     .required()
     .messages({
       'string.pattern.base': 'Numéro de téléphone invalide',
@@ -190,7 +190,7 @@ const updateOrderSchema = Joi.object({
     .max(255)
     .optional(),
   customer_phone: Joi.string()
-    .pattern(/^[0-9+\s()-]+$/)
+    .pattern(/^\+\d(?:\s?\d){9,14}$/)
     .optional(),
   customer_address: Joi.string()
     .max(500)
