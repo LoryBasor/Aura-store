@@ -13,7 +13,7 @@ const PublicOrderManager = {
     setTimeout(() => {
         this.attachEventListeners();
         this.loadSavedCustomerInfo();
-    }, 1000);
+    }, 2000);
   },
 
   /**
