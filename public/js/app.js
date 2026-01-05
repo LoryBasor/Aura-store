@@ -2376,7 +2376,7 @@ const PublicOrderManager = {
     setTimeout(() => {
         this.attachEventListeners();
         this.loadSavedCustomerInfo();
-    }, 500);
+    }, 5000);
   },
 
   /**
