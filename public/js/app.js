@@ -74,7 +74,7 @@ const SidebarManager = {
   handleResize() {
     const mobileBtn = document.getElementById('mobileMenuBtn');
     if (mobileBtn) {
-      mobileBtn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+      mobileBtn.style.display = window.innerWidth <= 1024 ? 'flex' : 'none';
     }
   }
 };
@@ -1368,6 +1368,9 @@ const SubscriptionPage = {
               <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'gratuit'? '20 max': '∞'}</div>
             </div>
           </div>
+        </div>
+        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 16px; color: var(--color-warning);">
+          ⚠️ Expire le: ${data.expires_at ? UI.formatDate(data.expires_at) : 'Bientôt'}
         </div>
         
         <button class="btn" style="background: white; color: var(--color-primary); width: 100%;" data-action="upgrade">
