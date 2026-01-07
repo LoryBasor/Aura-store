@@ -584,6 +584,7 @@ const DashboardPage = {
 const ProductsPage = {
   currentPage: 1,
   currentFilter: 'undefined',
+  allProducts: [], // Stocke tous les produits pour la recherche
 
   init() {
     if (!document.getElementById('productsGrid')) return;
@@ -603,8 +604,14 @@ const ProductsPage = {
     // Preview image
     AppUtils.on('#image', 'change', this.handleImagePreview);
 
-    // Recherche
-    AppUtils.on('#searchInput', 'keyup', () => this.loadProducts(1, document.querySelector('#searchInput').value));
+    // Recherche avec debounce
+    let searchTimeout;
+    AppUtils.on('#searchInput', 'keyup', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        this.filterProductsLocally(e.target.value);
+      }, 300);
+    });
 
     // Filtre statut
     AppUtils.on('[data-filter="status"]', 'change', (e) => {
@@ -632,9 +639,10 @@ const ProductsPage = {
   async loadProducts(page = 1, search) {
     this.currentPage = page;
     try {
-      const data = await API.getProducts(page, search,1, this.currentFilter);
+      const data = await API.getProducts(page, search, 1, this.currentFilter);
       
       if (data && data.data) {
+        this.allProducts = data.data.products; // Stocker les produits
         this.renderProducts(data.data.products);
       }
     } catch (error) {
@@ -642,25 +650,163 @@ const ProductsPage = {
     }
   },
 
-  renderProducts(products) {
+  filterProductsLocally(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+      // Afficher tous les produits
+      this.currentPage = 1;
+      this.renderProductsWithPagination(this.allProducts);
+      return;
+    }
+
+    const normalizedSearch = this.normalizeString(searchTerm);
+    
+    const filteredProducts = this.allProducts.filter(product => {
+      const name = this.normalizeString(product.name);
+      const description = this.normalizeString(product.description || '');
+      const price = product.price.toString();
+      
+      return name.includes(normalizedSearch) || 
+             description.includes(normalizedSearch) ||
+             price.includes(normalizedSearch);
+    });
+
+    this.currentPage = 1;
+    this.renderProductsWithPagination(filteredProducts, searchTerm);
+  },
+
+  renderProductsWithPagination(products, searchTerm = '') {
+    const itemsPerPage = 20;
+    const startIndex = (this.currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedProducts = products.slice(startIndex, endIndex);
+
+    this.renderProducts(paginatedProducts, searchTerm);
+
+    // Pagination pour produits
+    const totalPages = Math.ceil(products.length / itemsPerPage);
+    this.renderProductsPagination(totalPages, products.length);
+  },
+
+  renderProductsPagination(totalPages, totalItems) {
+    const container = document.getElementById('pagination');
+    if (!container) return;
+    
+    if (totalPages <= 1) {
+      container.innerHTML = '';
+      return;
+    }
+
+    let html = '<div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 32px;">';
+    
+    // Bouton Précédent
+    if (this.currentPage > 1) {
+      html += `<button class="btn btn-secondary btn-sm" data-action="prev-page-products">← Précédent</button>`;
+    }
+    
+    // Numéros de pages
+    const maxPagesToShow = 5;
+    let startPage = Math.max(1, this.currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    
+    if (endPage - startPage < maxPagesToShow - 1) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    if (startPage > 1) {
+      html += `<button class="btn btn-secondary btn-sm" data-action="goto-page" data-page="1">1</button>`;
+      if (startPage > 2) html += `<span style="padding: 8px; color: var(--color-secondary);">...</span>`;
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      if (i === this.currentPage) {
+        html += `<button class="btn btn-primary btn-sm" disabled>${i}</button>`;
+      } else {
+        html += `<button class="btn btn-secondary btn-sm" data-action="goto-page" data-page="${i}">${i}</button>`;
+      }
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) html += `<span style="padding: 8px; color: var(--color-secondary);">...</span>`;
+      html += `<button class="btn btn-secondary btn-sm" data-action="goto-page" data-page="${totalPages}">${totalPages}</button>`;
+    }
+    
+    // Bouton Suivant
+    if (this.currentPage < totalPages) {
+      html += `<button class="btn btn-secondary btn-sm" data-action="next-page-products">Suivant →</button>`;
+    }
+
+    html += `<span style="padding: 8px 16px; color: var(--color-secondary); font-size: 13px;">${totalItems} produit${totalItems > 1 ? 's' : ''}</span>`;
+    html += '</div>';
+    
+    container.innerHTML = html;
+
+    // Événements de pagination
+    AppUtils.on('[data-action="prev-page-products"]', 'click', () => {
+      this.currentPage--;
+      const searchInput = document.getElementById('searchInput');
+      this.filterProductsLocally(searchInput ? searchInput.value : '');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    
+    AppUtils.on('[data-action="next-page-products"]', 'click', () => {
+      this.currentPage++;
+      const searchInput = document.getElementById('searchInput');
+      this.filterProductsLocally(searchInput ? searchInput.value : '');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.querySelectorAll('[data-action="goto-page"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        this.currentPage = parseInt(e.target.dataset.page);
+        const searchInput = document.getElementById('searchInput');
+        this.filterProductsLocally(searchInput ? searchInput.value : '');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+  },
+
+  normalizeString(str) {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
+      .trim();
+  },
+
+  renderProducts(products, searchTerm = '') {
     const grid = document.getElementById('productsGrid');
     if (!grid) return;
     
     if (!products || products.length === 0) {
-      grid.innerHTML = `
-        <div class="empty-state" style="grid-column: 1 / -1;">
-          <div class="empty-state-icon">📦</div>
-          <h3 class="empty-state-title">Aucun produit</h3>
-          <p class="empty-state-text">Commencez par ajouter votre premier produit</p>
-          <button class="btn btn-primary" data-action="new-product">Créer un produit</button>
-        </div>
-      `;
-      grid.querySelector('[data-action="new-product"]').addEventListener('click', () => this.openProductModal());
+      if (searchTerm) {
+        // Message pour recherche sans résultat
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon">🔍</div>
+            <h3 class="empty-state-title">Aucun résultat</h3>
+            <p class="empty-state-text">Aucun produit ne correspond à "${searchTerm}"</p>
+            <button class="btn btn-secondary" onclick="document.getElementById('searchInput').value = ''; ProductsPage.filterProductsLocally('');">
+              Effacer la recherche
+            </button>
+          </div>
+        `;
+      } else {
+        // Message pour liste vide
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon">📦</div>
+            <h3 class="empty-state-title">Aucun produit</h3>
+            <p class="empty-state-text">Commencez par ajouter votre premier produit</p>
+            <button class="btn btn-primary" data-action="new-product">Créer un produit</button>
+          </div>
+        `;
+        grid.querySelector('[data-action="new-product"]')?.addEventListener('click', () => this.openProductModal());
+      }
       return;
     }
 
     grid.innerHTML = products.map(product => `
-      <div class="card" style="padding: 0; overflow: hidden;">
+      <div class="card" style="padding: 0; overflow: hidden;" data-product-id="${product.id}">
         ${product.image_url ? 
           `<img src="${product.image_url}" alt="${product.name}" style="width: 100%; height: 200px; object-fit: cover;">` :
           `<div style="width: 100%; height: 200px; background: linear-gradient(135deg, var(--color-surface), var(--color-accent)); display: flex; align-items: center; justify-content: center; font-size: 48px;">📦</div>`
@@ -706,6 +852,14 @@ const ProductsPage = {
         </div>
       </div>
     `).join('');
+
+    // Afficher le nombre de résultats si recherche active
+    if (searchTerm) {
+      const resultCount = document.createElement('div');
+      resultCount.style.cssText = 'grid-column: 1 / -1; text-align: center; padding: 12px; color: var(--color-secondary); font-size: 14px;';
+      resultCount.textContent = `${products.length} produit${products.length > 1 ? 's' : ''} trouvé${products.length > 1 ? 's' : ''}`;
+      grid.insertBefore(resultCount, grid.firstChild);
+    }
   },
 
   renderPagination(pagination) {
@@ -868,12 +1022,18 @@ const ProductsPage = {
   }
 };
 
+
+// ========================================
+// PAGE: ORDERS
+// ========================================
 // ========================================
 // PAGE: ORDERS
 // ========================================
 const OrdersPage = {
   currentPage: 1,
   currentStatus: null,
+  allOrders: [], // Stocker toutes les commandes pour la recherche
+  filteredOrders: [], // Commandes après filtrage
 
   init() {
     if (!document.getElementById('ordersTableBody')) return;
@@ -884,11 +1044,25 @@ const OrdersPage = {
     // Filtre statut
     AppUtils.on('[data-filter="order-status"]', 'change', (e) => {
       this.currentStatus = e.target.value || null;
-      this.loadOrders(1);
+      this.applyFilters();
     });
 
-    // Recherche
-    AppUtils.on('#searchInput', 'keyup', () => this.loadOrders(1));
+    // Recherche en temps réel avec debounce
+    let searchTimeout;
+    AppUtils.on('#searchInput', 'input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        this.applyFilters();
+      }, 300);
+    });
+
+    // Support touche Échap pour réinitialiser la recherche
+    AppUtils.on('#searchInput', 'keyup', (e) => {
+      if (e.key === 'Escape') {
+        e.target.value = '';
+        this.applyFilters();
+      }
+    });
 
     // Formulaire changement statut
     const statusForm = document.getElementById('statusForm');
@@ -913,11 +1087,12 @@ const OrdersPage = {
   async loadOrders(page = 1) {
     this.currentPage = page;
     try {
-      const data = await API.getOrders(page, 20, this.currentStatus);
+      // Charger toutes les commandes sans limite pour la recherche côté client
+      const data = await API.getOrders(1, 1000, null);
       
       if (data && data.data) {
-        this.renderOrdersTable(data.data.orders);
-        this.renderPagination(data.data.pagination);
+        this.allOrders = data.data.orders || [];
+        this.applyFilters();
       }
     } catch (error) {
       console.error('Erreur chargement commandes:', error);
@@ -934,6 +1109,198 @@ const OrdersPage = {
     } catch (error) {
       console.error('Erreur chargement stats:', error);
     }
+  },
+
+  applyFilters() {
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput ? searchInput.value.trim() : '';
+    const normalizedSearch = this.normalizeString(searchTerm);
+
+    // Filtrer par statut et recherche
+    this.filteredOrders = this.allOrders.filter(order => {
+      // Filtre par statut
+      if (this.currentStatus && order.status !== this.currentStatus) {
+        return false;
+      }
+
+      // Filtre par recherche
+      if (normalizedSearch) {
+        const searchableText = this.normalizeString([
+          order.order_number,
+          order.customer_name,
+          order.customer_phone,
+          order.product_name
+        ].join(' '));
+
+        return searchableText.includes(normalizedSearch);
+      }
+
+      return true;
+    });
+
+    // Réinitialiser à la page 1 lors d'un nouveau filtre
+    this.currentPage = 1;
+    this.renderFilteredOrders();
+  },
+
+  renderFilteredOrders() {
+    // Pagination côté client
+    const itemsPerPage = 20;
+    const startIndex = (this.currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedOrders = this.filteredOrders.slice(startIndex, endIndex);
+
+    // Mettre à jour l'affichage
+    this.renderOrdersTable(paginatedOrders);
+    
+    // Mettre à jour la pagination
+    const totalPages = Math.ceil(this.filteredOrders.length / itemsPerPage);
+    this.renderOrdersPagination(totalPages, this.filteredOrders.length);
+
+    // Afficher le compteur de résultats
+    this.updateSearchCount();
+  },
+
+  renderOrdersPagination(totalPages, totalItems) {
+    const container = document.getElementById('pagination');
+    if (!container) return;
+    
+    if (totalPages <= 1) {
+      container.innerHTML = '';
+      return;
+    }
+
+    let html = '<div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 32px; flex-wrap: wrap;">';
+    
+    // Bouton Précédent
+    if (this.currentPage > 1) {
+      html += `<button class="btn btn-secondary btn-sm" data-action="prev-page-orders">← Précédent</button>`;
+    }
+    
+    // Numéros de pages
+    const maxPagesToShow = 5;
+    let startPage = Math.max(1, this.currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    
+    if (endPage - startPage < maxPagesToShow - 1) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    // Première page
+    if (startPage > 1) {
+      html += `<button class="btn btn-secondary btn-sm" data-action="goto-page-order" data-page="1">1</button>`;
+      if (startPage > 2) {
+        html += `<span style="padding: 8px; color: var(--color-secondary);">...</span>`;
+      }
+    }
+
+    // Pages du milieu
+    for (let i = startPage; i <= endPage; i++) {
+      if (i === this.currentPage) {
+        html += `<button class="btn btn-primary btn-sm" disabled style="cursor: default;">${i}</button>`;
+      } else {
+        html += `<button class="btn btn-secondary btn-sm" data-action="goto-page-order" data-page="${i}">${i}</button>`;
+      }
+    }
+
+    // Dernière page
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        html += `<span style="padding: 8px; color: var(--color-secondary);">...</span>`;
+      }
+      html += `<button class="btn btn-secondary btn-sm" data-action="goto-page-order" data-page="${totalPages}">${totalPages}</button>`;
+    }
+    
+    // Bouton Suivant
+    if (this.currentPage < totalPages) {
+      html += `<button class="btn btn-secondary btn-sm" data-action="next-page-orders">Suivant →</button>`;
+    }
+
+    // Compteur
+    html += `<span style="padding: 8px 16px; color: var(--color-secondary); font-size: 13px; font-weight: 500;">
+      ${totalItems} commande${totalItems > 1 ? 's' : ''}
+    </span>`;
+    html += '</div>';
+    
+    container.innerHTML = html;
+
+    // Événements de pagination
+    AppUtils.on('[data-action="prev-page-orders"]', 'click', () => {
+      this.currentPage--;
+      this.renderFilteredOrders();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    
+    AppUtils.on('[data-action="next-page-orders"]', 'click', () => {
+      this.currentPage++;
+      this.renderFilteredOrders();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.querySelectorAll('[data-action="goto-page-order"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        this.currentPage = parseInt(e.target.dataset.page);
+        this.renderFilteredOrders();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+  },
+
+  updateSearchCount() {
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput ? searchInput.value.trim() : '';
+    
+    // Créer ou mettre à jour le compteur de résultats
+    let countDiv = document.getElementById('searchResultsCount');
+    if (!countDiv) {
+      countDiv = document.createElement('div');
+      countDiv.id = 'searchResultsCount';
+      countDiv.style.cssText = 'text-align: center; padding: 12px; color: var(--color-secondary); font-size: 14px;';
+      const tableContainer = document.getElementById('ordersTableBody')?.closest('.table-container');
+      if (tableContainer) {
+        tableContainer.insertAdjacentElement('beforebegin', countDiv);
+      }
+    }
+
+    if (searchTerm || this.currentStatus) {
+      const totalOrders = this.allOrders.length;
+      const filteredCount = this.filteredOrders.length;
+      
+      if (filteredCount === 0) {
+        countDiv.innerHTML = `
+          <div style="padding: 32px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+            <h3 style="font-size: 20px; font-weight: 700; color: var(--color-primary); margin-bottom: 8px;">
+              Aucun résultat
+            </h3>
+            <p style="color: var(--color-secondary); margin-bottom: 16px;">
+              ${searchTerm ? `Aucune commande ne correspond à "${searchTerm}"` : 'Aucune commande avec ce statut'}
+            </p>
+            <button onclick="document.getElementById('searchInput').value=''; document.querySelector('[data-filter=\\'order-status\\']').value=''; OrdersPage.currentStatus=null; OrdersPage.applyFilters();" class="btn btn-secondary btn-sm">
+              Réinitialiser les filtres
+            </button>
+          </div>
+        `;
+      } else if (filteredCount < totalOrders) {
+        countDiv.innerHTML = `
+          <div style="padding: 12px; background: var(--color-surface); border-radius: var(--radius-md); display: inline-block;">
+            <strong>${filteredCount}</strong> commande${filteredCount > 1 ? 's' : ''} trouvée${filteredCount > 1 ? 's' : ''} sur <strong>${totalOrders}</strong>
+          </div>
+        `;
+      } else {
+        countDiv.textContent = '';
+      }
+    } else {
+      countDiv.textContent = '';
+    }
+  },
+
+  normalizeString(str) {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
+      .trim();
   },
 
   renderOrderStats(stats) {
@@ -1062,35 +1429,6 @@ const OrdersPage = {
     `).join('');
   },
 
-  renderPagination(pagination) {
-    const container = document.getElementById('pagination');
-    if (!container) return;
-    
-    const { page, totalPages, total } = pagination;
-    
-    if (totalPages <= 1) {
-      container.innerHTML = '';
-      return;
-    }
-
-    let html = '';
-    
-    if (page > 1) {
-      html += `<button class="btn btn-secondary btn-sm" data-action="prev-page-orders">← Précédent</button>`;
-    }
-    
-    html += `<span style="padding: 8px 16px; color: var(--color-secondary);">Page ${page} sur ${totalPages} (${total} commandes)</span>`;
-    
-    if (page < totalPages) {
-      html += `<button class="btn btn-secondary btn-sm" data-action="next-page-orders">Suivant →</button>`;
-    }
-    
-    container.innerHTML = html;
-
-    AppUtils.on('[data-action="prev-page-orders"]', 'click', () => this.loadOrders(this.currentPage - 1));
-    AppUtils.on('[data-action="next-page-orders"]', 'click', () => this.loadOrders(this.currentPage + 1));
-  },
-
   async viewOrderDetails(id) {
     try {
       const data = await API.getOrder(id);
@@ -1172,7 +1510,15 @@ const OrdersPage = {
           </div>
         `;
 
+        AppUtils.delegate(document, 'click', '[data-action="change-status"]', (e) => {
+          this.openStatusModal(e.target.dataset.orderId, e.target.dataset.currentStatus);
+        });
+
+        AppUtils.delegate(document, 'click', '[data-action="contact-customer"]', (e) => {
+          this.contactCustomer(e.target.dataset.phone);
+        });
         ModalManager.openModal('orderDetailsModal');
+
       }
     } catch (error) {
       console.error('Erreur chargement commande:', error);
@@ -1196,8 +1542,10 @@ const OrdersPage = {
       await API.updateOrderStatus(orderId, newStatus);
       UI.showNotification('Succès', 'Statut mis à jour', 'success');
       ModalManager.closeModal('statusModal');
-      this.loadOrders(this.currentPage);
-      this.loadOrderStats();
+      
+      // Recharger les commandes et stats
+      await this.loadOrders(this.currentPage);
+      await this.loadOrderStats();
     } catch (error) {
       console.error('Erreur mise à jour statut:', error);
     }
@@ -1208,7 +1556,6 @@ const OrdersPage = {
     window.open(`https://wa.me/${cleanPhone}`, '_blank');
   }
 };
-
 // ========================================
 // PAGE: PROFILE
 // ========================================
@@ -2100,6 +2447,8 @@ const PublicProductPage = {
 // PAGE: PUBLIC STORE
 // ========================================
 const PublicStorePage = {
+  allProducts: [], // Stocke tous les produits pour la recherche
+
   init() {
     const storeSlug = this.getSlugFromURL();
     if (storeSlug && document.getElementById('storeInfo')) {
@@ -2124,6 +2473,7 @@ const PublicStorePage = {
         }
 
         this.renderStore(data.data);
+        this.initSearch(); // Initialiser la recherche
       } else {
         this.showError('Boutique introuvable');
       }
@@ -2170,11 +2520,19 @@ const PublicStorePage = {
       .product-name {
         color: var(--custom-text) !important;
       }
+
+      .search-input:focus {
+        border-color: var(--custom-primary) !important;
+        box-shadow: 0 0 0 3px ${customization.primary_color}20 !important;
+      }
     `;
   },
 
   renderStore(data) {
     const { vendor, products, customization, integrations } = data;
+
+    // Stocker les produits pour la recherche
+    this.allProducts = products || [];
 
     document.title = `${vendor.business_name} | AURA`;
 
@@ -2211,7 +2569,17 @@ const PublicStorePage = {
 
     document.getElementById('storeInfo').innerHTML = headerContent;
 
+    // Afficher la barre de recherche si au moins 3 produits
+    if (products && products.length >= 3) {
+      document.getElementById('searchContainer').style.display = 'block';
+      this.updateSearchCount(products.length, products.length);
+    }
+
     // Afficher les produits
+    this.renderProducts(products, integrations, customization);
+  },
+
+  renderProducts(products, integrations, customization) {
     const grid = document.getElementById('productsGridStore');
     if (!grid) return;
 
@@ -2239,7 +2607,7 @@ const PublicStorePage = {
       }
 
       return `
-        <div class="product-card">
+        <div class="product-card" data-product-name="${product.name.toLowerCase()}" data-product-id="${product.id}">
           <a href="/p/${product.share_token}" style="text-decoration: none; color: inherit;">
             ${product.image_url ? 
               `<img src="${product.image_url}" alt="${product.name}" class="product-image">` :
@@ -2255,13 +2623,19 @@ const PublicStorePage = {
               }
             </div>
           </a>
-          <button class="product-cta commanderWhatsapp" data-link-product='${orderUrl}'">
+          <button class="product-cta commanderWhatsapp" data-link-product="${orderUrl}">
             💬 Commander
           </button>
         </div>
       `;
     }).join('');
-    grid.querySelectorAll('.commanderWhatsapp').forEach(e => e.addEventListener('click', e => window.location.href= e.target.dataset.linkProduct));
+
+    grid.querySelectorAll('.commanderWhatsapp').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        window.location.href = e.target.dataset.linkProduct;
+      });
+    });
+
     // Afficher le message personnalisé si disponible
     if (customization && customization.order_message) {
       const messageDiv = document.createElement('div');
@@ -2286,10 +2660,92 @@ const PublicStorePage = {
     }
   },
 
+  initSearch() {
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) return;
+
+    // Recherche en temps réel avec debounce
+    let searchTimeout;
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        this.filterProducts(e.target.value);
+      }, 300);
+    });
+  },
+
+  filterProducts(searchTerm) {
+    const grid = document.getElementById('productsGridStore');
+    const productCards = grid.querySelectorAll('.product-card');
+    const normalizedSearch = this.normalizeString(searchTerm);
+
+    let visibleCount = 0;
+
+    productCards.forEach(card => {
+      const productName = card.dataset.productName;
+      const normalizedName = this.normalizeString(productName);
+
+      if (normalizedName.includes(normalizedSearch)) {
+        card.classList.remove('hidden');
+        visibleCount++;
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+
+    // Afficher message si aucun résultat
+    this.showNoResultsMessage(visibleCount, searchTerm);
+    this.updateSearchCount(visibleCount, this.allProducts.length);
+  },
+
+  normalizeString(str) {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
+      .trim();
+  },
+
+  showNoResultsMessage(visibleCount, searchTerm) {
+    const grid = document.getElementById('productsGridStore');
+    let noResultsDiv = grid.querySelector('.no-results');
+
+    if (visibleCount === 0) {
+      if (!noResultsDiv) {
+        noResultsDiv = document.createElement('div');
+        noResultsDiv.className = 'no-results';
+        grid.appendChild(noResultsDiv);
+      }
+
+      noResultsDiv.innerHTML = `
+        <div style="font-size: 64px; margin-bottom: 16px;">🔍</div>
+        <h3 style="font-size: 24px; font-weight: 700; color: var(--color-primary); margin-bottom: 8px;">
+          Aucun résultat
+        </h3>
+        <p style="color: var(--color-secondary);">
+          Aucun produit ne correspond à "${searchTerm}"
+        </p>
+      `;
+    } else if (noResultsDiv) {
+      noResultsDiv.remove();
+    }
+  },
+
+  updateSearchCount(visible, total) {
+    const countDiv = document.getElementById('searchResultsCount');
+    if (!countDiv) return;
+
+    if (visible === total) {
+      countDiv.textContent = '';
+    } else {
+      countDiv.textContent = `${visible} produit${visible > 1 ? 's' : ''} trouvé${visible > 1 ? 's' : ''} sur ${total}`;
+    }
+  },
+
   renderSocialLinks(integrations) {
     const links = [];
     if (integrations.whatsapp && integrations.whatsapp.enabled) {
-      let whatsapp_url = `https://wa.me/${integrations.whatsapp.number.split(' ').join('').replace('+', '')}`
+      let whatsapp_url = `https://wa.me/${integrations.whatsapp.number.split(' ').join('').replace('+', '')}`;
       links.push(`
         <a href="${whatsapp_url || '#'}" target="_blank" style="
           display: inline-flex;

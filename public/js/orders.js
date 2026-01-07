@@ -11,7 +11,8 @@ const OrdersManager = {
   currentSearch: '',
   products: [],
   editingOrderId: null,
-  filterOrders: [],
+  allOrders: [],
+  itemsPerPage: 20,
 
   init() {
     this.attachEventListeners();
@@ -39,12 +40,11 @@ const OrdersManager = {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
       searchInput.addEventListener('keyup', () => {
-        this.currentSearch = searchInput.value.trim();
-        // Debounce simple
+        this.currentSearch = searchInput.value.trim().toLowerCase();
         clearTimeout(this.searchTimeout);
         this.searchTimeout = setTimeout(() => {
           this.currentPage = 1;
-          this.loadOrders();
+          this.applyFiltersAndPagination();
         }, 500);
       });
     }
@@ -97,32 +97,71 @@ const OrdersManager = {
     }
   },
 
-  async loadOrders(page = 1) {
-    this.currentPage = page;
-    
+  async loadOrders() {
     try {
-      let url = `/orders?page=${page}&limit=20`;
+      let url = `/orders?limit=1000`;
       if (this.currentStatus) url += `&status=${this.currentStatus}`;
       
       const data = await API.get(url, false);
       
       if (data && data.data) {
-        this.filterOrders = data.data.orders.filter(order => 
-          order.order_number.includes(this.currentSearch) ||
-          order.customer_name.includes(this.currentSearch) ||
-          order.product_name.includes(this.currentSearch) ||
-          order.product_price.includes(this.currentSearch) ||
-          order.status.includes(this.currentSearch) ||
-          order.status.includes(this.currentStatus)
-
-        );
-        this.renderOrdersTable(this.filterOrders);
-        this.renderPagination(data.data.pagination);
+        this.allOrders = data.data.orders || [];
+        this.applyFiltersAndPagination();
       }
     } catch (error) {
       console.error('Erreur chargement commandes:', error);
       UI.showNotification('Erreur', 'Impossible de charger les commandes', 'error');
     }
+  },
+
+  applyFiltersAndPagination() {
+    let filteredOrders = this.allOrders;
+
+    // Filtre par recherche
+    if (this.currentSearch) {
+      filteredOrders = filteredOrders.filter(order => {
+        const searchLower = this.currentSearch.toLowerCase();
+        return (
+          order.order_number.toLowerCase().includes(searchLower) ||
+          order.customer_name.toLowerCase().includes(searchLower) ||
+          order.product_name.toLowerCase().includes(searchLower) ||
+          order.customer_phone.includes(searchLower) ||
+          order.status.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    // Filtre par statut
+    if (this.currentStatus) {
+      filteredOrders = filteredOrders.filter(order => 
+        order.status === this.currentStatus
+      );
+    }
+
+    // Calculer la pagination
+    const totalOrders = filteredOrders.length;
+    const totalPages = Math.ceil(totalOrders / this.itemsPerPage);
+    
+    if (this.currentPage > totalPages && totalPages > 0) {
+      this.currentPage = totalPages;
+    }
+    if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+
+    // Extraire les commandes pour la page courante
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+    // Afficher les résultats
+    this.renderOrdersTable(paginatedOrders);
+    this.renderPagination({
+      page: this.currentPage,
+      limit: this.itemsPerPage,
+      total: totalOrders,
+      totalPages: totalPages
+    });
   },
 
   async loadOrderStats() {
@@ -176,7 +215,7 @@ const OrdersManager = {
           <span class="stat-label">En cours</span>
           <div class="stat-icon">🔄</div>
         </div>
-        <div class="stat-value">${stats.total_en_cours}</div>
+        <div class="stat-value">${stats.total_en_cours || 0}</div>
       </div>
 
       <div class="stat-card">
@@ -215,7 +254,6 @@ const OrdersManager = {
         </tr>
       `;
       
-      // Réattacher l'événement
       const btn = tbody.querySelector('[data-action="new-order"]');
       if (btn) {
         btn.addEventListener('click', () => this.openOrderModal());
@@ -284,7 +322,6 @@ const OrdersManager = {
       </tr>
     `).join('');
 
-    // Attacher événements
     this.attachTableActions();
   },
 
@@ -334,345 +371,458 @@ const OrdersManager = {
     const container = document.getElementById('pagination');
     if (!container) return;
     
-    const { page, limit, total } = pagination;
-    const totalPages = Math.ceil(total / limit);
+    const { page, totalPages, total } = pagination;
     
     if (totalPages <= 1) {
       container.innerHTML = '';
       return;
     }
 
-    let html = '';
+    const paginationWrapper = document.createElement('div');
+    paginationWrapper.style.cssText = 'display: flex; align-items: center; gap: 12px; justify-content: center; flex-wrap: wrap;';
     
+    // Bouton Première page
     if (page > 1) {
-      html += `<button class="btn btn-secondary btn-sm" id="prevPageOrders">← Précédent</button>`;
+      const firstBtn = this.createPaginationButton('⏮️', 1, false, 'Première page');
+      paginationWrapper.appendChild(firstBtn);
     }
     
-    html += `<span style="padding: 8px 16px; color: var(--color-secondary);">Page ${page} sur ${totalPages} (${total} commandes)</span>`;
+    // Bouton Précédent
+    if (page > 1) {
+      const prevBtn = this.createPaginationButton('← Précédent', page - 1, false);
+      paginationWrapper.appendChild(prevBtn);
+    }
     
+    // Numéros de pages
+    const pageNumbers = this.getPageNumbers(page, totalPages);
+    pageNumbers.forEach(pageNum => {
+      if (pageNum === '...') {
+        const dots = document.createElement('span');
+        dots.style.padding = '8px';
+        dots.textContent = '...';
+        paginationWrapper.appendChild(dots);
+      } else {
+        const isActive = pageNum === page;
+        const pageBtn = this.createPaginationButton(pageNum.toString(), pageNum, isActive);
+        if (isActive) {
+          pageBtn.disabled = true;
+        }
+        paginationWrapper.appendChild(pageBtn);
+      }
+    });
+    
+    // Bouton Suivant
     if (page < totalPages) {
-      html += `<button class="btn btn-secondary btn-sm" id="nextPageOrders">Suivant →</button>`;
+      const nextBtn = this.createPaginationButton('Suivant →', page + 1, false);
+      paginationWrapper.appendChild(nextBtn);
     }
     
-    container.innerHTML = html;
-
-    // Attacher événements pagination
-    const prevBtn = document.getElementById('prevPageOrders');
-    const nextBtn = document.getElementById('nextPageOrders');
-
-    if (prevBtn) {
-      prevBtn.addEventListener('click', () => this.loadOrders(this.currentPage - 1));
+    // Bouton Dernière page
+    if (page < totalPages) {
+      const lastBtn = this.createPaginationButton('⏭️', totalPages, false, 'Dernière page');
+      paginationWrapper.appendChild(lastBtn);
     }
-
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => this.loadOrders(this.currentPage + 1));
-    }
-  }
-};
-
-OrdersManager.populateProductSelect = function() {
-  const select = document.getElementById('productId');
-  if (!select || !this.products) return;
-
-  const options = this.products
-    .filter(p => p.is_available)
-    .map(p => `
-      <option value="${p.id}" data-price="${p.price}" data-currency="${p.currency}" data-stock="${p.stock_quantity}">
-        ${p.name} - ${UI.formatCurrency(p.price, p.currency)}
-      </option>
-    `).join('');
-
-  select.innerHTML = '<option value="">-- Sélectionner un produit --</option>' + options;
-};
-
-OrdersManager.openOrderModal = function(orderId = null) {
-  this.editingOrderId = orderId;
-  
-  const modal = document.getElementById('orderModal');
-  const title = document.getElementById('orderModalTitle');
-  const submitBtn = document.getElementById('submitOrderBtn');
-  const statusGroup = document.getElementById('statusGroup');
-  const form = document.getElementById('orderForm');
-  
-  form.reset();
-  document.getElementById('orderId').value = '';
-  document.getElementById('totalAmountDisplay').style.display = 'none';
-  document.getElementById('productInfo').textContent = '';
-  document.getElementById('stockInfo').textContent = '';
-  
-  if (orderId) {
-    title.textContent = 'Modifier la commande';
-    submitBtn.textContent = 'Enregistrer les modifications';
-    statusGroup.style.display = 'block';
-    this.loadOrderForEdit(orderId);
-  } else {
-    title.textContent = 'Nouvelle commande';
-    submitBtn.textContent = 'Créer la commande';
-    statusGroup.style.display = 'none';
-  }
-  
-  ModalManager.openModal('orderModal');
-};
-
-OrdersManager.loadOrderForEdit = async function(id) {
-  try {
-    const data = await API.get(`/orders/${id}`, true);
     
-    if (data && data.data && data.data.order) {
-      const order = data.data.order;
-      
-      document.getElementById('orderId').value = order.id;
-      document.getElementById('productId').value = order.product_id;
-      document.getElementById('customerName').value = order.customer_name;
-      document.getElementById('customerPhone').value = order.customer_phone;
-      document.getElementById('customerAddress').value = order.customer_address || '';
-      document.getElementById('quantity').value = order.quantity;
-      document.getElementById('orderStatus').value = order.status;
-      document.getElementById('orderNotes').value = order.notes || '';
-      
-      this.updateProductInfo();
-      this.calculateTotal();
-    }
-  } catch (error) {
-    console.error('Erreur chargement commande:', error);
-    UI.showNotification('Erreur', 'Impossible de charger la commande', 'error');
-  }
-};
+    // Informations de pagination
+    const startItem = ((page - 1) * this.itemsPerPage) + 1;
+    const endItem = Math.min(page * this.itemsPerPage, total);
+    const infoDiv = document.createElement('div');
+    infoDiv.style.cssText = 'text-align: center; margin-top: 12px; color: var(--color-secondary); font-size: 14px;';
+    infoDiv.textContent = `Affichage de ${startItem} à ${endItem} sur ${total} commande${total > 1 ? 's' : ''}`;
+    
+    container.innerHTML = '';
+    container.appendChild(paginationWrapper);
+    container.appendChild(infoDiv);
+  },
 
-OrdersManager.updateProductInfo = function() {
-  const select = document.getElementById('productId');
-  const selectedOption = select.options[select.selectedIndex];
-  
-  if (!selectedOption || !selectedOption.value) {
+  createPaginationButton(text, pageNum, isActive = false, title = '') {
+    const btn = document.createElement('button');
+    btn.className = `btn ${isActive ? 'btn-primary' : 'btn-secondary'} btn-sm`;
+    btn.textContent = text;
+    btn.dataset.page = pageNum;
+    
+    if (title) {
+      btn.title = title;
+    }
+    
+    if (text.match(/^\d+$/)) {
+      btn.style.minWidth = '40px';
+    }
+    
+    btn.addEventListener('click', () => this.goToPage(pageNum));
+    
+    return btn;
+  },
+
+  getPageNumbers(currentPage, totalPages) {
+    const pages = [];
+    const maxVisible = 7;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+
+      if (currentPage > 3) {
+        pages.push('...');
+      }
+
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+
+      if (currentPage < totalPages - 2) {
+        pages.push('...');
+      }
+
+      pages.push(totalPages);
+    }
+
+    return pages;
+  },
+
+  goToPage(page) {
+    this.currentPage = page;
+    this.applyFiltersAndPagination();
+    
+    const tableBody = document.getElementById('ordersTableBody');
+    if (tableBody) {
+      tableBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  },
+
+  populateProductSelect() {
+    const select = document.getElementById('productId');
+    if (!select || !this.products) return;
+
+    const options = this.products
+      .filter(p => p.is_available)
+      .map(p => `
+        <option value="${p.id}" data-price="${p.price}" data-currency="${p.currency}" data-stock="${p.stock_quantity}">
+          ${p.name} - ${UI.formatCurrency(p.price, p.currency)}
+        </option>
+      `).join('');
+
+    select.innerHTML = '<option value="">-- Sélectionner un produit --</option>' + options;
+  },
+
+  openOrderModal(orderId = null) {
+    this.editingOrderId = orderId;
+    
+    const modal = document.getElementById('orderModal');
+    const title = document.getElementById('orderModalTitle');
+    const submitBtn = document.getElementById('submitOrderBtn');
+    const statusGroup = document.getElementById('statusGroup');
+    const form = document.getElementById('orderForm');
+    
+    form.reset();
+    document.getElementById('orderId').value = '';
+    document.getElementById('totalAmountDisplay').style.display = 'none';
     document.getElementById('productInfo').textContent = '';
     document.getElementById('stockInfo').textContent = '';
-    document.getElementById('totalAmountDisplay').style.display = 'none';
-    return;
-  }
-
-  const price = parseFloat(selectedOption.dataset.price);
-  const currency = selectedOption.dataset.currency;
-  const stock = parseInt(selectedOption.dataset.stock);
-
-  document.getElementById('productInfo').textContent = `Prix: ${UI.formatCurrency(price, currency)}`;
-  
-  if (stock > 0) {
-    document.getElementById('stockInfo').textContent = `Stock disponible: ${stock} unité(s)`;
-  } else {
-    document.getElementById('stockInfo').textContent = 'Stock illimité';
-  }
-
-  this.calculateTotal();
-};
-
-OrdersManager.calculateTotal = function() {
-  const select = document.getElementById('productId');
-  const selectedOption = select.options[select.selectedIndex];
-  const quantity = parseInt(document.getElementById('quantity').value) || 1;
-
-  if (!selectedOption || !selectedOption.value) return;
-
-  const price = parseFloat(selectedOption.dataset.price);
-  const currency = selectedOption.dataset.currency;
-  const total = price * quantity;
-
-  document.getElementById('totalAmount').textContent = UI.formatCurrency(total, currency);
-  document.getElementById('totalAmountDisplay').style.display = 'flex';
-};
-
-OrdersManager.handleSubmitOrder = async function(e) {
-  e.preventDefault();
-
-  const orderId = document.getElementById('orderId').value;
-  const isEdit = !!orderId;
-
-  const formData = {
-    product_id: parseInt(document.getElementById('productId').value),
-    customer_name: document.getElementById('customerName').value.trim(),
-    customer_phone: document.getElementById('customerPhone').value.trim(),
-    customer_address: document.getElementById('customerAddress').value.trim(),
-    quantity: parseInt(document.getElementById('quantity').value),
-    notes: document.getElementById('orderNotes').value.trim()
-  };
-
-  if (isEdit) {
-    formData.status = document.getElementById('orderStatus').value;
-  }
-
-  // Validation
-  if (!formData.product_id || !formData.customer_name || !formData.customer_phone || !formData.quantity) {
-    UI.showNotification('Erreur', 'Veuillez remplir tous les champs obligatoires', 'error');
-    return;
-  }
-
-  try {
-    let data;
     
-    if (isEdit) {
-      // Mise à jour complète
-      data = await API.put(`/orders/${orderId}`, formData, true);
+    if (orderId) {
+      title.textContent = 'Modifier la commande';
+      submitBtn.textContent = 'Enregistrer les modifications';
+      statusGroup.style.display = 'block';
+      this.loadOrderForEdit(orderId);
     } else {
-      // Création manuelle
-      data = await API.post('/orders/manual', formData, true);
+      title.textContent = 'Nouvelle commande';
+      submitBtn.textContent = 'Créer la commande';
+      statusGroup.style.display = 'none';
     }
-
-    if (data && data.success) {
-      UI.showNotification('Succès', isEdit ? 'Commande modifiée' : 'Commande créée', 'success');
-      ModalManager.closeModal('orderModal');
-      this.loadAllData();
-    }
-  } catch (error) {
-    console.error('Erreur sauvegarde commande:', error);
-  }
-};
-
-OrdersManager.viewOrderDetails = async function(id) {
-  try {
-    const data = await API.get(`/orders/${id}`, true);
     
-    if (data && data.data && data.data.order) {
-      const order = data.data.order;
-      this.renderOrderDetails(order);
-      ModalManager.openModal('orderDetailsModal');
-    }
-  } catch (error) {
-    console.error('Erreur détails commande:', error);
-  }
-};
+    ModalManager.openModal('orderModal');
+  },
 
-OrdersManager.renderOrderDetails = function(order) {
-  const body = document.getElementById('orderDetailsBody');
-
-  const statusColors = {
-    'nouvelle': 'info',
-    'confirmee': 'success',
-    'en_preparation': 'warning',
-    'en_livraison': 'warning',
-    'livree': 'success',
-    'annulee': 'error'
-  };
-
-  body.innerHTML = `
-    <div style="display: grid; gap: 24px;">
-      <div style="padding: 20px; background: linear-gradient(135deg, var(--color-accent), var(--color-surface)); border-radius: var(--radius-md);">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-          <div>
-            <div style="font-size: 13px; color: var(--color-secondary); margin-bottom: 4px;">Commande</div>
-            <h3 style="font-size: 24px; font-weight: 700; color: var(--color-primary);">${order.order_number}</h3>
-          </div>
-          <span class="badge badge-${statusColors[order.status]}" style="font-size: 14px; padding: 8px 16px;">
-            ${order.status}
-          </span>
-        </div>
-        <div style="font-size: 13px; color: var(--color-secondary);">
-          Créée le ${UI.formatDate(order.created_at)}
-        </div>
-      </div>
-
-      <div>
-        <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">👤 Informations client</h4>
-        <div style="padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm);">
-          <div style="margin-bottom: 8px;"><strong>Nom :</strong> ${order.customer_name}</div>
-          <div style="margin-bottom: 8px;"><strong>Téléphone :</strong> ${order.customer_phone}</div>
-          ${order.customer_address ? `<div><strong>Adresse :</strong> ${order.customer_address}</div>` : ''}
-        </div>
-      </div>
-
-      <div>
-        <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">📦 Produit commandé</h4>
-        <div style="padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm);">
-          <div style="margin-bottom: 8px;"><strong>Produit :</strong> ${order.product_name}</div>
-          <div style="margin-bottom: 8px;"><strong>Prix unitaire :</strong> ${UI.formatCurrency(order.product_price)}</div>
-          <div style="margin-bottom: 12px;"><strong>Quantité :</strong> ${order.quantity}</div>
-          <div style="padding-top: 12px; border-top: 2px solid var(--color-primary);">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <strong style="font-size: 18px;">Total :</strong>
-              <strong style="font-size: 24px; color: var(--color-primary);">
-                ${UI.formatCurrency(order.total_amount)}
-              </strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      ${order.notes ? `
-        <div>
-          <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">📝 Notes</h4>
-          <div style="padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm);">
-            ${order.notes}
-          </div>
-        </div>
-      ` : ''}
-
-      <div style="display: flex; gap: 12px;">
-        <button class="btn btn-primary" style="flex: 1;" onclick="OrdersManager.contactCustomer('${order.customer_phone}')">
-          💬 Contacter client
-        </button>
-        <button class="btn btn-secondary" onclick="OrdersManager.editOrder(${order.id})">
-          ✏️ Modifier
-        </button>
-      </div>
-    </div>
-  `;
-};
-
-OrdersManager.editOrder = function(id) {
-  ModalManager.closeModal('orderDetailsModal');
-  this.openOrderModal(id);
-};
-
-OrdersManager.openStatusModal = function(orderId, currentStatus) {
-  document.getElementById('statusOrderId').value = orderId;
-  document.getElementById('newStatus').value = currentStatus;
-  ModalManager.openModal('statusModal');
-};
-
-OrdersManager.handleStatusChange = async function(e) {
-  e.preventDefault();
-  
-  const orderId = document.getElementById('statusOrderId').value;
-  const newStatus = document.getElementById('newStatus').value;
-  
-  if (!newStatus) {
-    UI.showNotification('Erreur', 'Veuillez sélectionner un statut', 'error');
-    return;
-  }
-
-  try {
-    await API.patch(`/orders/${orderId}/status`, { status: newStatus }, true);
-    UI.showNotification('Succès', 'Statut mis à jour', 'success');
-    ModalManager.closeModal('statusModal');
-    this.loadOrders(this.currentPage);
-    this.loadOrderStats();
-  } catch (error) {
-    console.error('Erreur mise à jour statut:', error);
-  }
-};
-
-OrdersManager.deleteOrder = async function(id) {
-  const confirmed = await UI.confirm(
-    'Supprimer la commande',
-    'Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.'
-  );
-  
-  if (confirmed) {
+  async loadOrderForEdit(id) {
     try {
-      await API.delete(`/orders/${id}`, true);
-      UI.showNotification('Succès', 'Commande supprimée', 'success');
-      this.loadAllData();
+      const data = await API.get(`/orders/${id}`, true);
+      
+      if (data && data.data && data.data.order) {
+        const order = data.data.order;
+        
+        document.getElementById('orderId').value = order.id;
+        document.getElementById('productId').value = order.product_id;
+        document.getElementById('customerName').value = order.customer_name;
+        document.getElementById('customerPhone').value = order.customer_phone;
+        document.getElementById('customerAddress').value = order.customer_address || '';
+        document.getElementById('quantity').value = order.quantity;
+        document.getElementById('orderStatus').value = order.status;
+        document.getElementById('orderNotes').value = order.notes || '';
+        
+        this.updateProductInfo();
+        this.calculateTotal();
+      }
     } catch (error) {
-      console.error('Erreur suppression commande:', error);
+      console.error('Erreur chargement commande:', error);
+      UI.showNotification('Erreur', 'Impossible de charger la commande', 'error');
     }
+  },
+
+  updateProductInfo() {
+    const select = document.getElementById('productId');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (!selectedOption || !selectedOption.value) {
+      document.getElementById('productInfo').textContent = '';
+      document.getElementById('stockInfo').textContent = '';
+      document.getElementById('totalAmountDisplay').style.display = 'none';
+      return;
+    }
+
+    const price = parseFloat(selectedOption.dataset.price);
+    const currency = selectedOption.dataset.currency;
+    const stock = parseInt(selectedOption.dataset.stock);
+
+    document.getElementById('productInfo').textContent = `Prix: ${UI.formatCurrency(price, currency)}`;
+    
+    if (stock > 0) {
+      document.getElementById('stockInfo').textContent = `Stock disponible: ${stock} unité(s)`;
+    } else {
+      document.getElementById('stockInfo').textContent = 'Stock illimité';
+    }
+
+    this.calculateTotal();
+  },
+
+  calculateTotal() {
+    const select = document.getElementById('productId');
+    const selectedOption = select.options[select.selectedIndex];
+    const quantity = parseInt(document.getElementById('quantity').value) || 1;
+
+    if (!selectedOption || !selectedOption.value) return;
+
+    const price = parseFloat(selectedOption.dataset.price);
+    const currency = selectedOption.dataset.currency;
+    const total = price * quantity;
+
+    document.getElementById('totalAmount').textContent = UI.formatCurrency(total, currency);
+    document.getElementById('totalAmountDisplay').style.display = 'flex';
+  },
+
+  async handleSubmitOrder(e) {
+    e.preventDefault();
+
+    const orderId = document.getElementById('orderId').value;
+    const isEdit = !!orderId;
+
+    const formData = {
+      product_id: parseInt(document.getElementById('productId').value),
+      customer_name: document.getElementById('customerName').value.trim(),
+      customer_phone: document.getElementById('customerPhone').value.trim(),
+      customer_address: document.getElementById('customerAddress').value.trim(),
+      quantity: parseInt(document.getElementById('quantity').value),
+      notes: document.getElementById('orderNotes').value.trim()
+    };
+
+    if (isEdit) {
+      formData.status = document.getElementById('orderStatus').value;
+    }
+
+    if (!formData.product_id || !formData.customer_name || !formData.customer_phone || !formData.quantity) {
+      UI.showNotification('Erreur', 'Veuillez remplir tous les champs obligatoires', 'error');
+      return;
+    }
+
+    try {
+      let data;
+      
+      if (isEdit) {
+        data = await API.put(`/orders/${orderId}`, formData, true);
+      } else {
+        data = await API.post('/orders/manual', formData, true);
+      }
+
+      if (data && data.success) {
+        UI.showNotification('Succès', isEdit ? 'Commande modifiée' : 'Commande créée', 'success');
+        ModalManager.closeModal('orderModal');
+        this.loadAllData();
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde commande:', error);
+    }
+  },
+
+  async viewOrderDetails(id) {
+    try {
+      const data = await API.get(`/orders/${id}`, true);
+      
+      if (data && data.data && data.data.order) {
+        const order = data.data.order;
+        this.renderOrderDetails(order);
+        ModalManager.openModal('orderDetailsModal');
+      }
+    } catch (error) {
+      console.error('Erreur détails commande:', error);
+    }
+  },
+
+  renderOrderDetails(order) {
+    const body = document.getElementById('orderDetailsBody');
+    if (!body) return;
+
+    const statusColors = {
+      'nouvelle': 'info',
+      'confirmee': 'success',
+      'en_preparation': 'warning',
+      'en_livraison': 'warning',
+      'livree': 'success',
+      'annulee': 'error'
+    };
+
+    const detailsContainer = document.createElement('div');
+    detailsContainer.style.cssText = 'display: grid; gap: 24px;';
+    
+    // En-tête commande
+    const header = document.createElement('div');
+    header.style.cssText = 'padding: 20px; background: linear-gradient(135deg, var(--color-accent), var(--color-surface)); border-radius: var(--radius-md);';
+    header.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+        <div>
+          <div style="font-size: 13px; color: var(--color-secondary); margin-bottom: 4px;">Commande</div>
+          <h3 style="font-size: 24px; font-weight: 700; color: var(--color-primary);">${order.order_number}</h3>
+        </div>
+        <span class="badge badge-${statusColors[order.status]}" style="font-size: 14px; padding: 8px 16px;">
+          ${order.status}
+        </span>
+      </div>
+      <div style="font-size: 13px; color: var(--color-secondary);">
+        Créée le ${UI.formatDate(order.created_at)}
+      </div>
+    `;
+    detailsContainer.appendChild(header);
+
+    // Informations client
+    const clientInfo = document.createElement('div');
+    clientInfo.innerHTML = `
+      <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">👤 Informations client</h4>
+      <div style="padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm);">
+        <div style="margin-bottom: 8px;"><strong>Nom :</strong> ${order.customer_name}</div>
+        <div style="margin-bottom: 8px;"><strong>Téléphone :</strong> ${order.customer_phone}</div>
+        ${order.customer_address ? `<div><strong>Adresse :</strong> ${order.customer_address}</div>` : ''}
+      </div>
+    `;
+    detailsContainer.appendChild(clientInfo);
+
+    // Produit commandé
+    const productInfo = document.createElement('div');
+    productInfo.innerHTML = `
+      <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">📦 Produit commandé</h4>
+      <div style="padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm);">
+        <div style="margin-bottom: 8px;"><strong>Produit :</strong> ${order.product_name}</div>
+        <div style="margin-bottom: 8px;"><strong>Prix unitaire :</strong> ${UI.formatCurrency(order.product_price)}</div>
+        <div style="margin-bottom: 12px;"><strong>Quantité :</strong> ${order.quantity}</div>
+        <div style="padding-top: 12px; border-top: 2px solid var(--color-primary);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 18px;">Total :</strong>
+            <strong style="font-size: 24px; color: var(--color-primary);">
+              ${UI.formatCurrency(order.total_amount)}
+            </strong>
+          </div>
+        </div>
+      </div>
+    `;
+    detailsContainer.appendChild(productInfo);
+
+    // Notes
+    if (order.notes) {
+      const notesDiv = document.createElement('div');
+      notesDiv.innerHTML = `
+        <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">📝 Notes</h4>
+        <div style="padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm);">
+          ${order.notes}
+        </div>
+      `;
+      detailsContainer.appendChild(notesDiv);
+    }
+
+    // Boutons d'actions
+    const actionsDiv = document.createElement('div');
+    actionsDiv.style.cssText = 'display: flex; gap: 12px;';
+    
+    const contactBtn = document.createElement('button');
+    contactBtn.className = 'btn btn-primary';
+    contactBtn.style.flex = '1';
+    contactBtn.textContent = '💬 Contacter client';
+    contactBtn.addEventListener('click', () => this.contactCustomer(order.customer_phone));
+    
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-secondary';
+    editBtn.textContent = '✏️ Modifier';
+    editBtn.addEventListener('click', () => this.editOrder(order.id));
+    
+    actionsDiv.appendChild(contactBtn);
+    actionsDiv.appendChild(editBtn);
+    detailsContainer.appendChild(actionsDiv);
+
+    body.innerHTML = '';
+    body.appendChild(detailsContainer);
+  },
+
+  editOrder(id) {
+    ModalManager.closeModal('orderDetailsModal');
+    this.openOrderModal(id);
+  },
+
+  openStatusModal(orderId, currentStatus) {
+    document.getElementById('statusOrderId').value = orderId;
+    document.getElementById('newStatus').value = currentStatus;
+    ModalManager.openModal('statusModal');
+  },
+
+  async handleStatusChange(e) {
+    e.preventDefault();
+    
+    const orderId = document.getElementById('statusOrderId').value;
+    const newStatus = document.getElementById('newStatus').value;
+    
+    if (!newStatus) {
+      UI.showNotification('Erreur', 'Veuillez sélectionner un statut', 'error');
+      return;
+    }
+
+    try {
+      await API.patch(`/orders/${orderId}/status`, { status: newStatus }, true);
+      UI.showNotification('Succès', 'Statut mis à jour', 'success');
+      ModalManager.closeModal('statusModal');
+      this.loadOrders();
+      this.loadOrderStats();
+    } catch (error) {
+      console.error('Erreur mise à jour statut:', error);
+    }
+  },
+
+  async deleteOrder(id) {
+    const confirmed = await UI.confirm(
+      'Supprimer la commande',
+      'Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.'
+    );
+    
+    if (confirmed) {
+      try {
+        await API.delete(`/orders/${id}`, true);
+        UI.showNotification('Succès', 'Commande supprimée', 'success');
+        this.loadAllData();
+      } catch (error) {
+        console.error('Erreur suppression commande:', error);
+      }
+    }
+  },
+
+  contactCustomer(phone) {
+    const cleanPhone = phone.replace(/[^\d+]/g, '');
+    window.open(`https://wa.me/${cleanPhone}`, '_blank');
+  },
+
+  exportOrders() {
+    API.exportOrdersExcel();
   }
-};
-
-OrdersManager.contactCustomer = function(phone) {
-  const cleanPhone = phone.replace(/[^\d+]/g, '');
-  window.open(`https://wa.me/${cleanPhone}`, '_blank');
-};
-
-OrdersManager.exportOrders = function() {
-  API.exportOrdersExcel();
 };
 
 // Export global
