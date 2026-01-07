@@ -15,11 +15,13 @@ const CustomizationPage = {
         this.showAccessDenied();
         return;
       }
+      this.loadCustomization();
     }, 1000);
     
+    setTimeout(() => {
+      this.attachEventListeners();
+    }, 1000);
 
-    this.attachEventListeners();
-    this.loadCustomization();
   },
 
   attachEventListeners() {
@@ -51,18 +53,6 @@ const CustomizationPage = {
     const bannerInput = document.getElementById('bannerUpload');
     if (bannerInput) {
       bannerInput.addEventListener('change', (e) => this.handleBannerUpload(e));
-    }
-
-    // Supprimer logo
-    const deleteLogoBtn = document.querySelector('[data-action="delete-logo"]');
-    if (deleteLogoBtn) {
-      deleteLogoBtn.addEventListener('click', () => console.log('delete logo'));
-    }
-
-    // Supprimer bannière
-    const deleteBannerBtn = document.querySelector('[data-action="delete-banner"]');
-    if (deleteBannerBtn) {
-      deleteBannerBtn.addEventListener('click', () => this.deleteBanner());
     }
 
     // Réinitialiser
@@ -115,20 +105,34 @@ const CustomizationPage = {
     if (this.currentConfig.logo_url) {
       document.getElementById('logoPreview').innerHTML = `
         <img src="${this.currentConfig.logo_url}" alt="Logo" style="max-width: 200px; border-radius: var(--radius-sm);">
-        <button type="button" class="btn btn-danger btn-sm" data-action="delete-logo" style="margin-top: 8px;">
-          🗑️ Supprimer le logo
-        </button>
       `;
+      document.getElementById('deleteLogo').innerHTML = `
+      <button type="button" class="btn btn-danger btn-sm" id="deleteLogoBtn" data-action="delete-logo" style="margin-top: 8px;">
+          🗑️ Supprimer le logo
+        </button>`;
+      // Supprimer logo
+        const deleteLogoBtn = document.querySelector('#deleteLogoBtn');
+      if (deleteLogoBtn) {
+        deleteLogoBtn.addEventListener('click', () => this.deleteLogo());
+      }
     }
 
     // Bannière
     if (this.currentConfig.banner_url) {
       document.getElementById('bannerPreview').innerHTML = `
         <img src="${this.currentConfig.banner_url}" alt="Bannière" style="max-width: 100%; max-height: 200px; border-radius: var(--radius-sm);">
-        <button type="button" class="btn btn-danger btn-sm" data-action="delete-banner" style="margin-top: 8px;">
-          🗑️ Supprimer la bannière
-        </button>
       `;
+      document.getElementById('deleteBanner').innerHTML = `
+      <button type="button" class="btn btn-danger btn-sm" data-action="delete-banner" style="margin-top: 8px;">
+          🗑️ Supprimer la bannière
+        </button>`;
+      
+      // Supprimer bannière
+      const deleteBannerBtn = document.querySelector('[data-action="delete-banner"]');
+      if (deleteBannerBtn) {
+
+        deleteBannerBtn.addEventListener('click', () => this.deleteBanner());
+      }
     }
 
     this.updatePreview();

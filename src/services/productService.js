@@ -262,7 +262,7 @@ class ProductService {
    */
   async getProductByShareToken(token) {
     const [products] = await pool.execute(
-      `SELECT p.*, u.business_name, u.whatsapp_number,u.id, u.store_slug, pl.click_count
+      `SELECT p.*, u.business_name, u.whatsapp_number,u.id, u.store_slug, pl.click_count, pl.product_id
        FROM products p
        JOIN users u ON p.user_id = u.id
        JOIN product_links pl ON p.id = pl.product_id
@@ -275,6 +275,7 @@ class ProductService {
     }
 
     const product = products[0];
+    
      const [isPlanBusiness] = await pool.execute(`SELECT user_id FROM v_user_plan_access WHERE user_id = ? AND plan_name = 'Business' AND (subscription_status = 'active' OR subscription_status = 'trial')`, [product.id]);
     let customMessage = null;
     if (isPlanBusiness.length !== 0){
@@ -287,10 +288,9 @@ class ProductService {
       `UPDATE product_links SET click_count = click_count + 1, last_clicked_at = NOW() WHERE token = ?`,
       [token]
     );
-
     await pool.execute(
-      'UPDATE products SET view_count = view_count + 1 WHERE id = ?',
-      [product.id]
+      `UPDATE products SET view_count = view_count + 1 WHERE id = ?`,
+      [product.product_id]
     );
 
     return {product, customMessage};
