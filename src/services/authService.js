@@ -167,7 +167,7 @@ class AuthService {
         FROM users u
         JOIN subscriptions s ON u.id = s.user_id
         JOIN subscription_plans sp ON s.plan_id = sp.id
-        WHERE u.id = ? AND status = 'active';`,
+        WHERE u.id = ? AND (s.status = 'active' OR s.status = 'trial');`,
         [userId]
       );
     }
