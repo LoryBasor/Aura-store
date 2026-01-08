@@ -593,7 +593,7 @@ const ProductsPage = {
     this.loadProducts();
 
     // Bouton nouveau produit
-    AppUtils.on('[data-action="new-product"]', 'click', () => this.openProductModal());
+    AppUtils.on('[data-action="new-product"]', 'click', () => this.openProductModal(null));
 
     // Formulaire produit
     const form = document.getElementById('productForm');
@@ -906,6 +906,7 @@ const ProductsPage = {
       title.textContent = 'Modifier le produit';
       this.loadProductForEdit(productId);
     } else {
+      document.getElementById('productId').value = '';
       title.textContent = 'Nouveau produit';
     }
     
