@@ -13,7 +13,7 @@ async function requireActiveSubscription(req, res, next) {
       return next();
     }
 
-    const [subscriptions] = await pool.execute(
+    const [subscriptions] = await pool.execute( 
       `SELECT s.*, sp.name as plan_name
        FROM subscriptions s
        JOIN subscription_plans sp ON s.plan_id = sp.id
