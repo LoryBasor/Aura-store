@@ -13,6 +13,7 @@ const { checkAccountStatus } = require('../middlewares/authorization');
 const { requireActiveSubscription } = require('../middlewares/subscriptionCheck');
 const { attachUserPlan } = require('../middlewares/checkPlanAccess'); // ✨ NOUVEAU
 const { apiLimiter, publicLimiter } = require('../middlewares/rateLimiter');
+const categoryRoutes = require('./categoryRoutes');
 
 const router = express.Router();
 
@@ -35,6 +36,11 @@ router.use(
   productRoutes
 );
 
+router.use(
+  '/categories',
+  authenticate,
+  categoryRoutes
+);
 // Routes de gestion des commandes
 router.use(
   '/orders',

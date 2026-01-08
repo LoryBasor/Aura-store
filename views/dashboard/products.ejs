@@ -9,7 +9,7 @@
   </div>
   <button class="btn btn-primary" data-action="new-product">
     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
     </svg>
     Nouveau produit
   </button>
@@ -19,17 +19,16 @@
 <div class="card" style="margin-bottom: 24px;">
   <div style="display: flex; gap: 16px; align-items: center;">
     <div style="flex: 1;">
-      <input 
-        type="search" 
-        id="searchInput" 
-        class="form-input" 
-        placeholder="Rechercher un produit..."
-      >
+      <input type="search" id="searchInput" class="form-input" placeholder="Rechercher un produit...">
     </div>
     <select class="form-select" style="width: 200px;" data-filter="status">
       <option value="undefined" selected>Tous les statuts</option>
       <option value="true">Disponible</option>
       <option value="false">Indisponible</option>
+    </select>
+    <select class="form-select" style="width: 200px;" data-filter="category" id="categoryFilter">
+      <option value="all">Toutes les catégories</option>
+      <!-- Options chargées dynamiquement -->
     </select>
   </div>
 </div>
@@ -57,39 +56,27 @@
 
         <div class="form-group">
           <label for="name" class="form-label required">Nom du produit</label>
-          <input 
-            type="text" 
-            id="name" 
-            name="name" 
-            class="form-input" 
-            placeholder="Ex: iPhone 15 Pro Max"
-            required
-          >
+          <input type="text" id="name" name="name" class="form-input" placeholder="Ex: iPhone 15 Pro Max" required>
         </div>
 
         <div class="form-group">
           <label for="description" class="form-label">Description</label>
-          <textarea 
-            id="description" 
-            name="description" 
-            class="form-textarea" 
-            placeholder="Décrivez votre produit en détail..."
-          ></textarea>
+          <textarea id="description" name="description" class="form-textarea"
+            placeholder="Décrivez votre produit en détail..."></textarea>
         </div>
-
+        <!-- Avant le champ Prix -->
+        <div class="form-group">
+          <label for="category_id" class="form-label">Catégorie</label>
+          <select id="category_id" name="category_id" class="form-select">
+            <option value="">Aucune catégorie</option>
+            <!-- Options chargées dynamiquement -->
+          </select>
+        </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="form-group">
             <label for="price" class="form-label required">Prix</label>
-            <input 
-              type="number" 
-              id="price" 
-              name="price" 
-              class="form-input" 
-              placeholder="50000"
-              step="0.01"
-              min="0"
-              required
-            >
+            <input type="number" id="price" name="price" class="form-input" placeholder="50000" step="0.01" min="0"
+              required>
           </div>
 
           <div class="form-group">
@@ -99,22 +86,15 @@
               <!-- <option value="XOF">FCFA (XOF)</option>
               <option value="USD">Dollar ($)</option>
               <option value="EUR">Euro (€)</option> -->
-            </select> 
+            </select>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="form-group">
             <label for="stock_quantity" class="form-label">Quantité en stock</label>
-            <input 
-              type="number" 
-              id="stock_quantity" 
-              name="stock_quantity" 
-              class="form-input" 
-              placeholder="0"
-              min="0"
-              value="0"
-            >
+            <input type="number" id="stock_quantity" name="stock_quantity" class="form-input" placeholder="0" min="0"
+              value="0">
             <p class="form-help">Laisser à 0 pour stock illimité</p>
           </div>
 
@@ -129,13 +109,8 @@
 
         <div class="form-group">
           <label for="image" class="form-label">Image du produit</label>
-          <input 
-            type="file" 
-            id="image" 
-            name="image" 
-            class="form-input" 
-            accept="image/jpeg,image/png,image/gif,image/webp"
-          >
+          <input type="file" id="image" name="image" class="form-input"
+            accept="image/jpeg,image/png,image/gif,image/webp">
           <p class="form-help">Format acceptés: JPG, PNG, GIF, WEBP (max 5MB)</p>
           <div id="imagePreview" style="margin-top: 12px;"></div>
         </div>

@@ -277,6 +277,15 @@ app.get('/products', authenticateView, (req, res) => {
   });
 });
 
+app.get('/categories', authenticateView, (req, res) => {
+  res.render('dashboard/categories', {
+    title: 'Catégories | AURA',
+    pageTitle: 'Catégories',
+    currentPage: 'categories',
+    user: req.user
+  });
+});
+
 // Gestion des commandes
 app.get('/orders', authenticateView, (req, res) => {
   res.render('dashboard/orders', {

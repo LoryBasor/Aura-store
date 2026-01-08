@@ -790,6 +790,213 @@ body {
   flex-wrap: wrap;
 }
 
+.category-filter-btn {
+  padding: 10px 20px;
+  border: 2px solid var(--custom-primary, #253337);
+  background: white;
+  color: var(--custom-primary, #253337);
+  border-radius: 100px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.category-filter-btn:hover {
+  background: var(--custom-primary, #253337);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.category-filter-btn.active {
+  background: var(--custom-primary, #253337);
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .category-filter-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
+/* 
+  Ajoutez ces styles dans votre fichier CSS principal (public/css/style.css)
+  ou directement dans categories.ejs dans une balise <style>
+*/
+
+/* ========================================
+   STYLES POUR LA PAGE CATÉGORIES
+   ======================================== */
+
+.category-item {
+  padding: 20px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: var(--transition);
+  border: 2px solid transparent;
+}
+
+.category-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.category-drag-handle {
+  cursor: grab;
+  color: var(--color-secondary);
+  font-size: 24px;
+  padding: 8px;
+  user-select: none;
+}
+
+.category-drag-handle:active {
+  cursor: grabbing;
+}
+
+.category-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.category-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 6px;
+}
+
+.category-description {
+  font-size: 14px;
+  color: var(--color-secondary);
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.category-stats {
+  font-size: 13px;
+  color: var(--color-tertiary);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.category-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.category-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* États vides */
+.empty-categories {
+  text-align: center;
+  padding: 80px 24px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+}
+
+.empty-categories-icon {
+  font-size: 80px;
+  margin-bottom: 24px;
+  opacity: 0.8;
+}
+
+.empty-categories-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 12px;
+}
+
+.empty-categories-text {
+  font-size: 16px;
+  color: var(--color-secondary);
+  margin-bottom: 32px;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Badge compteur */
+.category-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--color-accent);
+  color: var(--color-primary);
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .category-item {
+    flex-wrap: wrap;
+    padding: 16px;
+  }
+
+  .category-drag-handle {
+    display: none;
+  }
+
+  .category-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .category-actions button {
+    flex: 1;
+  }
+
+  .empty-categories {
+    padding: 48px 16px;
+  }
+
+  .empty-categories-icon {
+    font-size: 64px;
+  }
+
+  .empty-categories-title {
+    font-size: 20px;
+  }
+}
+
+/* Animation d'apparition */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.category-item {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.category-item:nth-child(1) { animation-delay: 0.05s; }
+.category-item:nth-child(2) { animation-delay: 0.1s; }
+.category-item:nth-child(3) { animation-delay: 0.15s; }
+.category-item:nth-child(4) { animation-delay: 0.2s; }
+.category-item:nth-child(5) { animation-delay: 0.25s; }
+
 /* ========================================
    NOTIFICATIONS
    ======================================== */

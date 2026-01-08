@@ -5,7 +5,7 @@
 
 const API = {
   baseURL: '/api',
-  
+
   getToken() {
     return localStorage.getItem('aura_token');
   },
@@ -210,7 +210,7 @@ const API = {
       this.setToken(data.data.token);
       this.setUser(data.data.user);
       UI.showNotification('Connexion réussie', 'Bienvenue sur AURA', 'success');
-      
+
       setTimeout(() => {
         if (data.data.user.role === 'SUPER_ADMIN') {
           window.location.replace('/admin/dashboard');
@@ -224,14 +224,14 @@ const API = {
 
   async register(formData) {
     const data = await this.post('/auth/register', formData);
-    
+
     if (data && data.data) {
       UI.showNotification('Inscription réussie', 'Bienvenue sur AURA', 'success');
       setTimeout(() => {
         window.location.replace('/login');
       }, 100);
     }
-    
+
     return data;
   },
 
@@ -252,8 +252,14 @@ const API = {
   // PRODUITS
   // ========================================
 
-  async getProducts(page = 1, search, limit = 20, is_available = null) {
-    return await this.get(`/products/search=${search}/${is_available}`);
+  async getProducts(page = 1, search, limit = 20, is_available = null, category_id = 'all') {
+    let url = `/products/search=${search}/${is_available}`;
+    if(category_id && category_id !== 'all'){
+      url += `?category=${category_id}`;
+    }
+    
+    return await this.get(url);
+    
   },
 
   async getProduct(id) {
@@ -270,6 +276,34 @@ const API = {
 
   async deleteProduct(id) {
     return await this.delete(`/products/${id}`);
+  },
+
+  // ========================================
+  // CATÉGORIES
+  // ========================================
+
+  async getCategories() {
+    return await this.get('/categories');
+  },
+
+  async getCategory(id) {
+    return await this.get(`/categories/${id}`);
+  },
+
+  async createCategory(categoryData) {
+    return await this.post('/categories', categoryData);
+  },
+
+  async updateCategory(id, updates) {
+    return await this.put(`/categories/${id}`, updates);
+  },
+
+  async deleteCategory(id) {
+    return await this.delete(`/categories/${id}`);
+  },
+
+  async reorderCategories(orders) {
+    return await this.post('/categories/reorder', { orders });
   },
 
   // ========================================
@@ -355,9 +389,9 @@ const API = {
 
   async exportOrdersExcel() {
     const data = await this.getProfile();
-    if(data && data.data) {
-      const {plan_name} = data.data.user;
-      if(plan_name.toLowerCase() === 'gratuit'){
+    if (data && data.data) {
+      const { plan_name } = data.data.user;
+      if (plan_name.toLowerCase() === 'gratuit') {
         UI.showNotification('Fonctionnalité réservée', 'L\'export des commandes est disponible pour les plans payants. Veuillez mettre à niveau votre abonnement pour accéder à cette fonctionnalité.', 'info');
         return;
       }

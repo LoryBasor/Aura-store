@@ -23,6 +23,7 @@ const PlanManager = {
   async init() {
     try {
       const data = await API.getProfile();
+      console.log('Données utilisateur pour plan:', data); 
       if (data && data.data && data.data.user) {
         this.currentPlan = (data.data.user.plan_name || 'free').toLowerCase();
         this.updateUIBasedOnPlan();
