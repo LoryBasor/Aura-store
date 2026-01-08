@@ -354,8 +354,18 @@ const API = {
   },
 
   async exportOrdersExcel() {
-    window.open(`${this.baseURL}/features/export/orders/excel`, '_blank');
-    UI.showNotification('Export', 'Exportation réussi ', 'info');
+    const data = await this.getProfile();
+    if(data && data.data) {
+      const {plan_name} = data.data.user;
+      if(plan_name.toLowerCase() === 'gratuit'){
+        UI.showNotification('Fonctionnalité réservée', 'L\'export des commandes est disponible pour les plans payants. Veuillez mettre à niveau votre abonnement pour accéder à cette fonctionnalité.', 'info');
+        return;
+      }
+    }
+    setTimeout(() => {
+      window.open(`${this.baseURL}/features/export/orders/excel`, '_blank');
+      UI.showNotification('Export', 'Exportation réussi ', 'info');
+    }, 500);
   },
 
   async exportProductsExcel() {
