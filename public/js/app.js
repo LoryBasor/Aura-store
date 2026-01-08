@@ -1797,7 +1797,7 @@ const SubscriptionPage = {
           </div>
           <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Pro</h3>
           <div style="font-size: 36px; font-weight: 700; color: var(--color-primary); margin-bottom: 4px;">
-            5,000 <span style="font-size: 18px; font-weight: 400;">FCFA</span>
+            4,000 <span style="font-size: 18px; font-weight: 400;">FCFA</span>
           </div>
           <div style="font-size: 13px; color: var(--color-secondary); margin-bottom: 24px;">par mois</div>
           
@@ -1814,10 +1814,6 @@ const SubscriptionPage = {
               <span style="color: var(--color-success); font-size: 18px;">✓</span>
               Statistiques avancées
             </li>
-            <li style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
-              <span style="color: var(--color-success); font-size: 18px;">✓</span>
-              Support prioritaire
-            </li>
           </ul>
           
           <button class="btn btn-primary w-full" data-action="contact-support" data-plan="Pro">
@@ -1828,7 +1824,7 @@ const SubscriptionPage = {
         <div style="border: 2px solid var(--color-primary); border-radius: var(--radius-lg); padding: 24px; background: linear-gradient(135deg, rgba(224, 252, 252, 0.1), rgba(194, 224, 227, 0.1));">
           <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Business</h3>
           <div style="font-size: 36px; font-weight: 700; color: var(--color-primary); margin-bottom: 4px;">
-            15,000 <span style="font-size: 18px; font-weight: 400;">FCFA</span>
+            8,000 <span style="font-size: 18px; font-weight: 400;">FCFA</span>
           </div>
           <div style="font-size: 13px; color: var(--color-secondary); margin-bottom: 24px;">par mois</div>
           
