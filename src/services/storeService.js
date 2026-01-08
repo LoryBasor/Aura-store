@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { AppError } = require('../middlewares/errorHandler');
 const storeCustomizationService = require('./storeCustomizationService');
 const socialIntegrationsService = require('./socialIntegrationsService');
+const { SUBSCRIPTION_STATUS } = require('../config/constants');
 
 /**
  * Service de gestion des boutiques publiques
@@ -26,6 +27,27 @@ class StoreService {
     }
 
     const vendor = vendors[0];
+
+    const [subscriptions] = await pool.execute(
+      `SELECT s.*, sp.name as plan_name
+       FROM subscriptions s
+       JOIN subscription_plans sp ON s.plan_id = sp.id
+       WHERE s.user_id = ? AND s.status IN (?, ?)
+       ORDER BY s.id DESC LIMIT 1`,
+      [vendor.id, SUBSCRIPTION_STATUS.TRIAL, SUBSCRIPTION_STATUS.ACTIVE]
+    );
+
+    if (subscriptions.length === 0) {
+      throw new AppError('Boutique inactive', 403);
+    }
+
+    const subscription = subscriptions[0];
+
+    // Vérifier expiration
+    if (subscription.expires_at && new Date(subscription.expires_at) < new Date()) {
+      throw new AppError('Boutique inactive', 403);
+    }
+
     const planSlug = vendor.plan_slug || 'free';
     
     let query = `

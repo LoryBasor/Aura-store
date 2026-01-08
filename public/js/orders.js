@@ -830,7 +830,7 @@ window.OrdersManager = OrdersManager;
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('ordersTableBody')) {
+  if (document.getElementById('ordersTableBody')) { 
     OrdersManager.init();
   }
 });

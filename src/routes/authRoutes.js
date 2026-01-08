@@ -2,6 +2,7 @@
 const express = require('express');
 const authController = require('../controllers/authController');
 const { authenticate } = require('../middlewares/auth');
+const { requireActiveSubscription } = require('../middlewares/subscriptionCheck');
 const validateRequest = require('../middlewares/validateRequest');
 const { authLimiter } = require('../middlewares/rateLimiter');
 const { registerSchema, loginSchema } = require('../utils/validators');
@@ -35,6 +36,7 @@ router.post(
 router.get(
   '/profile',
   authenticate,
+  requireActiveSubscription,
   authController.getProfile
 );
 
