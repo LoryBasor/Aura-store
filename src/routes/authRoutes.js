@@ -36,7 +36,6 @@ router.post(
 router.get(
   '/profile',
   authenticate,
-  requireActiveSubscription,
   authController.getProfile
 );
 
