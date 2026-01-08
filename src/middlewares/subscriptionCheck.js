@@ -25,7 +25,7 @@ async function requireActiveSubscription(req, res, next) {
     if (subscriptions.length === 0) {
       return forbiddenResponse(
         res,
-        'Aucun abonnement actif. Veuillez contacter le support pour activer votre compte.'
+        'Aucun abonnement actif. Veuillez contacter le support pour activer votre compte au +237 671646335.'
       );
     }
 
@@ -35,7 +35,7 @@ async function requireActiveSubscription(req, res, next) {
     if (subscription.expires_at && new Date(subscription.expires_at) < new Date()) {
       return forbiddenResponse(
         res,
-        'Votre abonnement a expiré. Veuillez le renouveler pour continuer.'
+        'Votre abonnement a expiré. Veuillez le renouveler pour continuer au +237 671646335.'
       );
     }
 
