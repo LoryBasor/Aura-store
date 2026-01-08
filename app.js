@@ -95,8 +95,6 @@ async function authenticateView(req, res, next) {
       // Pas de token, rediriger vers login
       console.error('Pas de token');
       return res.redirect('/login');
-    }else{
-      console.log(authHeader);
     }
 
     const token = authHeader;
