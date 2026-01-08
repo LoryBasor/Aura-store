@@ -584,7 +584,8 @@ const DashboardPage = {
 const ProductsPage = {
   currentPage: 1,
   currentFilter: 'undefined',
-  allProducts: [], // Stocke tous les produits pour la recherche
+  currentCategory: 'all',
+  allProducts: [], // Stocke tous les produits pour la recherche et le filtrage
 
   init() {
     if (!document.getElementById('productsGrid')) return;
@@ -609,7 +610,7 @@ const ProductsPage = {
     AppUtils.on('#searchInput', 'keyup', (e) => {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
-        this.filterProductsLocally(e.target.value);
+        this.applyFilters();
       }, 300);
     });
 
@@ -617,6 +618,12 @@ const ProductsPage = {
     AppUtils.on('[data-filter="status"]', 'change', (e) => {
       this.currentFilter = e.target.value;
       this.loadProducts(1, '');
+    });
+
+    // Filtre catégorie - côté navigateur
+    AppUtils.on('[data-filter="category"]', 'change', (e) => {
+      this.currentCategory = e.target.value;
+      this.applyFilters();
     });
 
     // Délégation pour actions sur produits
@@ -636,50 +643,55 @@ const ProductsPage = {
     });
 
     this.loadCategoriesFilter();
-
-    AppUtils.on('[data-filter="category"]', 'change', (e) => {
-      this.currentCategory = e.target.value;
-      this.loadProducts(1, '');
-    });
   },
 
   async loadProducts(page = 1, search) {
     this.currentPage = page;
     try {
-      const data = await API.getProducts(page, search, 1, this.currentFilter);
+      // Charger tous les produits sans filtre de catégorie (filtrage côté navigateur)
+      const data = await API.getProducts(page, search, 1, this.currentFilter, 'all');
 
       if (data && data.data) {
-        this.allProducts = data.data.products; // Stocker les produits
-        this.renderProducts(data.data.products);
+        this.allProducts = data.data.products; // Stocker tous les produits
+        this.applyFilters(); // Appliquer les filtres côté navigateur
       }
     } catch (error) {
       console.error('Erreur chargement produits:', error);
     }
   },
 
-  filterProductsLocally(searchTerm) {
-    if (!searchTerm || searchTerm.trim() === '') {
-      // Afficher tous les produits
-      this.currentPage = 1;
-      this.renderProductsWithPagination(this.allProducts);
-      return;
+  // Nouvelle méthode qui applique à la fois la recherche et le filtre catégorie
+  applyFilters() {
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput ? searchInput.value : '';
+    
+    let filteredProducts = [...this.allProducts];
+
+    // Filtre par catégorie
+    if (this.currentCategory && this.currentCategory !== 'all') {
+      filteredProducts = filteredProducts.filter(product => 
+        product.category_id === parseInt(this.currentCategory)
+      );
     }
 
-    const normalizedSearch = this.normalizeString(searchTerm);
+    // Filtre par recherche
+    if (searchTerm && searchTerm.trim() !== '') {
+      const normalizedSearch = this.normalizeString(searchTerm);
+      filteredProducts = filteredProducts.filter(product => {
+        const name = this.normalizeString(product.name);
+        const description = this.normalizeString(product.description || '');
+        const price = product.price.toString();
 
-    const filteredProducts = this.allProducts.filter(product => {
-      const name = this.normalizeString(product.name);
-      const description = this.normalizeString(product.description || '');
-      const price = product.price.toString();
-
-      return name.includes(normalizedSearch) ||
-        description.includes(normalizedSearch) ||
-        price.includes(normalizedSearch);
-    });
+        return name.includes(normalizedSearch) ||
+          description.includes(normalizedSearch) ||
+          price.includes(normalizedSearch);
+      });
+    }
 
     this.currentPage = 1;
     this.renderProductsWithPagination(filteredProducts, searchTerm);
   },
+
   async loadCategoriesFilter() {
     try {
       const data = await API.getCategories();
@@ -700,22 +712,6 @@ const ProductsPage = {
       }
     } catch (error) {
       console.error('Erreur chargement catégories:', error);
-    }
-  },
-
-  // Modifier loadProducts pour inclure category_id
-  async loadProducts(page = 1, search) {
-    this.currentPage = page;
-    try {
-      // Ajouter currentCategory dans les paramètres
-      const data = await API.getProducts(page, search, 1, this.currentFilter, this.currentCategory || 'all');
-
-      if (data && data.data) {
-        this.allProducts = data.data.products;
-        this.renderProducts(data.data.products);
-      }
-    } catch (error) {
-      console.error('Erreur chargement produits:', error);
     }
   },
 
@@ -788,23 +784,20 @@ const ProductsPage = {
     // Événements de pagination
     AppUtils.on('[data-action="prev-page-products"]', 'click', () => {
       this.currentPage--;
-      const searchInput = document.getElementById('searchInput');
-      this.filterProductsLocally(searchInput ? searchInput.value : '');
+      this.applyFilters();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     AppUtils.on('[data-action="next-page-products"]', 'click', () => {
       this.currentPage++;
-      const searchInput = document.getElementById('searchInput');
-      this.filterProductsLocally(searchInput ? searchInput.value : '');
+      this.applyFilters();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     document.querySelectorAll('[data-action="goto-page"]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         this.currentPage = parseInt(e.target.dataset.page);
-        const searchInput = document.getElementById('searchInput');
-        this.filterProductsLocally(searchInput ? searchInput.value : '');
+        this.applyFilters();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     });
@@ -823,15 +816,17 @@ const ProductsPage = {
     if (!grid) return;
 
     if (!products || products.length === 0) {
-      if (searchTerm) {
-        // Message pour recherche sans résultat
+      const hasActiveFilters = searchTerm || (this.currentCategory && this.currentCategory !== 'all');
+      
+      if (hasActiveFilters) {
+        // Message pour recherche/filtre sans résultat
         grid.innerHTML = `
           <div class="empty-state" style="grid-column: 1 / -1;">
             <div class="empty-state-icon">🔍</div>
             <h3 class="empty-state-title">Aucun résultat</h3>
-            <p class="empty-state-text">Aucun produit ne correspond à "${searchTerm}"</p>
-            <button class="btn btn-secondary" onclick="document.getElementById('searchInput').value = ''; ProductsPage.filterProductsLocally('');">
-              Effacer la recherche
+            <p class="empty-state-text">Aucun produit ne correspond aux filtres sélectionnés</p>
+            <button class="btn btn-secondary" onclick="document.getElementById('searchInput').value = ''; document.getElementById('categoryFilter').value = 'all'; ProductsPage.currentCategory = 'all'; ProductsPage.applyFilters();">
+              Réinitialiser les filtres
             </button>
           </div>
         `;
@@ -898,43 +893,13 @@ const ProductsPage = {
       </div>
     `).join('');
 
-    // Afficher le nombre de résultats si recherche active
-    if (searchTerm) {
+    // Afficher le nombre de résultats si filtres actifs
+    if (searchTerm || (this.currentCategory && this.currentCategory !== 'all')) {
       const resultCount = document.createElement('div');
       resultCount.style.cssText = 'grid-column: 1 / -1; text-align: center; padding: 12px; color: var(--color-secondary); font-size: 14px;';
       resultCount.textContent = `${products.length} produit${products.length > 1 ? 's' : ''} trouvé${products.length > 1 ? 's' : ''}`;
       grid.insertBefore(resultCount, grid.firstChild);
     }
-  },
-
-  renderPagination(pagination) {
-    const container = document.getElementById('pagination');
-    if (!container) return;
-
-    const { page, totalPages } = pagination;
-
-    if (totalPages <= 1) {
-      container.innerHTML = '';
-      return;
-    }
-
-    let html = '';
-
-    if (page > 1) {
-      html += `<button class="btn btn-secondary btn-sm" data-action="prev-page">← Précédent</button>`;
-    }
-
-    html += `<span style="padding: 8px 16px; color: var(--color-secondary);">Page ${page} sur ${totalPages}</span>`;
-
-    if (page < totalPages) {
-      html += `<button class="btn btn-secondary btn-sm" data-action="next-page">Suivant →</button>`;
-    }
-
-    container.innerHTML = html;
-
-    // Attacher les événements de pagination
-    AppUtils.on('[data-action="prev-page"]', 'click', () => this.loadProducts(this.currentPage - 1));
-    AppUtils.on('[data-action="next-page"]', 'click', () => this.loadProducts(this.currentPage + 1));
   },
 
   async openProductModal(productId = null) {
@@ -991,6 +956,12 @@ const ProductsPage = {
         document.getElementById('currency').value = product.currency;
         document.getElementById('stock_quantity').value = product.stock_quantity;
         document.getElementById('is_available').value = product.is_available.toString();
+        
+        // Sélectionner la catégorie
+        const categorySelect = document.getElementById('category_id');
+        if (categorySelect && product.category_id) {
+          categorySelect.value = product.category_id;
+        }
  
         if (product.image_url) {
           document.getElementById('imagePreview').innerHTML = `

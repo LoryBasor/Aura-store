@@ -4,7 +4,7 @@
 -- Description: Ajout des catégories par vendeur
 -- ============================================
 
-USE saas_vendor_db;
+USE defaultdb;
 
 -- ============================================
 -- 1. Table des catégories
