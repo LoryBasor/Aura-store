@@ -3,12 +3,13 @@
      ======================================== -->
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title id="pageTitle">Boutique | AURA</title>
   <link rel="stylesheet" href="/css/style.css">
-  
+
   <style>
     body {
       background: #F5F7F9;
@@ -161,13 +162,261 @@
       padding: 64px 24px;
     }
 
+    /* ========================================
+   PAGINATION - BOUTIQUE PUBLIQUE
+   ======================================== */
+
+    #storePagination {
+      width: 100%;
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 24px;
+    }
+
+    /* Container principal */
+    .pagination-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+    }
+
+    /* Wrapper des boutons */
+    .pagination-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* Boutons de pagination */
+    .pagination-btn {
+      padding: 10px 16px;
+      border: 2px solid var(--custom-primary, --color-primary, #4F46E5);
+      background: white;
+      color: var(--custom-primary, --color-primary, #4F46E5);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+      background: var(--custom-primary, --color-primary, #4F46E5);
+      color: var(--custom-secondary ,--color-secondary, white);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+    }
+
+    .pagination-btn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Bouton actif */
+    .pagination-btn.active {
+      background: var(--custom-primary, --color-primary, #4F46E5);
+      color: white;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+
+    /* Bouton désactivé */
+    .pagination-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Points de suspension */
+    .pagination-buttons span {
+      padding: 8px 12px;
+      color: var(--custom-text, #1F2937);
+      font-weight: 600;
+      opacity: 0.5;
+      user-select: none;
+    }
+
+    /* Informations de pagination */
+    .pagination-info {
+      color: var(--custom-text, #6B7280);
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      opacity: 0.8;
+      letter-spacing: 0.3px;
+    }
+
+    /* ========================================
+   RESPONSIVE
+   ======================================== */
+
+    /* Tablettes */
+    @media (max-width: 768px) {
+      #storePagination {
+        padding: 0 16px;
+        margin: 24px auto;
+      }
+
+      .pagination-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+        min-width: 40px;
+      }
+
+      .pagination-buttons {
+        gap: 6px;
+      }
+
+      .pagination-info {
+        font-size: 13px;
+      }
+    }
+
+    /* Mobiles */
+    @media (max-width: 480px) {
+      #storePagination {
+        padding: 0 12px;
+        margin: 20px auto;
+      }
+
+      .pagination-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        min-width: 36px;
+        border-width: 1.5px;
+      }
+
+      .pagination-buttons {
+        gap: 4px;
+      }
+
+      .pagination-buttons span {
+        padding: 6px 8px;
+        font-size: 12px;
+      }
+
+      .pagination-info {
+        font-size: 12px;
+        padding: 0 8px;
+      }
+
+      /* Masquer les boutons première/dernière page sur mobile */
+      .pagination-btn[title="Première page"],
+      .pagination-btn[title="Dernière page"] {
+        display: none;
+      }
+    }
+
+    /* Très petits écrans */
+    @media (max-width: 360px) {
+      .pagination-btn {
+        padding: 6px 8px;
+        font-size: 11px;
+        min-width: 32px;
+      }
+
+      /* Afficher moins de numéros de pages */
+      .pagination-buttons {
+        max-width: 100%;
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+
+      .pagination-buttons::-webkit-scrollbar {
+        height: 4px;
+      }
+
+      .pagination-buttons::-webkit-scrollbar-thumb {
+        background: var(--custom-primary, #4F46E5);
+        border-radius: 2px;
+      }
+    }
+
+    /* ========================================
+   ANIMATIONS
+   ======================================== */
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .pagination-container {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    /* ========================================
+   DARK MODE (Optionnel)
+   ======================================== */
+
+    @media (prefers-color-scheme: dark) {
+      .pagination-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--custom-primary, #818CF8);
+        color: var(--custom-primary, #818CF8);
+      }
+
+      .pagination-btn:hover:not(:disabled) {
+        background: var(--custom-primary, --color-primary, #818CF8);
+        color: white;
+      }
+
+      .pagination-btn.active {
+        background: var(--custom-primary, --color-primary, #818CF8);
+      }
+
+      .pagination-info {
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .pagination-buttons span {
+        color: rgba(255, 255, 255, 0.5);
+      }
+    }
+
+    /* ========================================
+   ÉTATS DE FOCUS (Accessibilité)
+   ======================================== */
+
+    .pagination-btn:focus-visible {
+      outline: 3px solid var(--custom-primary, --color-primary, #4F46E5);
+      outline-offset: 2px;
+    }
+
+    /* ========================================
+   LOADING STATE (Optionnel)
+   ======================================== */
+
+    .pagination-container.loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .pagination-container.loading .pagination-btn {
+      cursor: wait;
+    }
     @media (max-width: 768px) {
       .store-name {
         font-size: 32px;
       }
 
       .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        grid-template-columns: 1fr;
         gap: 16px;
       }
 
@@ -182,6 +431,7 @@
     }
   </style>
 </head>
+
 <body>
   <!-- Header Boutique -->
   <div class="store-header">
@@ -195,13 +445,8 @@
     <!-- Barre de recherche -->
     <div id="searchContainer" class="search-container" style="display: none;">
       <div class="search-wrapper">
-        <input 
-          type="text" 
-          id="searchInput" 
-          class="search-input" 
-          placeholder="🔍 Rechercher un produit..."
-          autocomplete="off"
-        >
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Rechercher un produit..."
+          autocomplete="off">
         <span class="search-icon">🔍</span>
       </div>
       <div id="searchResultsCount" class="search-results-count"></div>
@@ -210,11 +455,13 @@
     <div id="productsGridStore" class="products-grid">
       <!-- Produits chargés dynamiquement -->
     </div>
+    <div id="storePagination"></div>
   </div>
-  
+
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/planManager.js"></script>
   <script src="/js/app.js"></script>
 </body>
+
 </html>

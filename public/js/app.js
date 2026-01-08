@@ -2444,7 +2444,10 @@ const PublicProductPage = {
 // PAGE: PUBLIC STORE
 // ========================================
 const PublicStorePage = {
-  allProducts: [], // Stocke tous les produits pour la recherche
+  allProducts: [],
+  filteredProducts: [],
+  currentPage: 1,
+  itemsPerPage: 6,
 
   init() {
     const storeSlug = this.getSlugFromURL();
@@ -2464,13 +2467,12 @@ const PublicStorePage = {
       const response = await fetch(`/api/store/${storeSlug}`);
       const data = await response.json();
       if (data && data.data) {
-        // Appliquer la personnalisation si disponible
         if (data.data.customization) {
           this.applyCustomization(data.data.customization);
         }
 
         this.renderStore(data.data);
-        this.initSearch(); // Initialiser la recherche
+        this.initSearch();
       } else {
         this.showError('Boutique introuvable');
       }
@@ -2481,7 +2483,6 @@ const PublicStorePage = {
   },
 
   applyCustomization(customization) {
-    // Créer styles dynamiques
     const styleId = 'dynamic-store-styles';
     let styleElement = document.getElementById(styleId);
     
@@ -2522,18 +2523,80 @@ const PublicStorePage = {
         border-color: var(--custom-primary) !important;
         box-shadow: 0 0 0 3px ${customization.primary_color}20 !important;
       }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .pagination-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        margin: 32px 0;
+        padding: 0 24px;
+      }
+
+      .pagination-buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .pagination-btn {
+        padding: 8px 16px;
+        border: 2px solid var(--custom-primary);
+        background: white;
+        color: var(--custom-primary);
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        min-width: 40px;
+      }
+
+      .pagination-btn:hover:not(:disabled) {
+        background: var(--custom-primary);
+        color: white;
+        transform: translateY(-2px);
+      }
+
+      .pagination-btn.active {
+        background: var(--custom-primary);
+        color: white;
+      }
+
+      .pagination-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      .pagination-info {
+        color: var(--custom-text);
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      .no-results {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 64px 24px;
+      }
     `;
   },
 
   renderStore(data) {
     const { vendor, products, customization, integrations } = data;
 
-    // Stocker les produits pour la recherche
     this.allProducts = products || [];
+    this.filteredProducts = [...this.allProducts];
+    this.storeIntegrations = integrations;
+    this.storeCustomization = customization;
 
     document.title = `${vendor.business_name} | AURA`;
 
-    // Header avec logo et bannière si disponibles
     let headerContent = '';
     
     if (customization && customization.banner_url) {
@@ -2547,42 +2610,41 @@ const PublicStorePage = {
     headerContent += `
       <div style="padding: 48px 24px; text-align: center;">
         ${customization && customization.logo_url ? 
-          `<div style="display: inline-block; position: relative; bottom: 80px; width:102px; max-height: 102px; border: 1.5px solid ${customization.text_color}; border-radius: 50%"><img src="${customization.logo_url}" alt="Logo" style="width: 100px;  max-height: 100px; margin-bottom: 16px; border-radius: 50%;"> </div>` : 
+          `<div style="display: inline-block; position: relative; bottom: 80px; width:102px; max-height: 102px; border: 1.5px solid ${customization.text_color}; border-radius: 50%">
+            <img src="${customization.logo_url}" alt="Logo" style="width: 100px; max-height: 100px; margin-bottom: 16px; border-radius: 50%;">
+          </div>` : 
           ''
         }
-          <div style="position: relative; bouttom: -60px;">
-            <div class="store-name">${vendor.business_name}</div>
-            <div class="store-subtitle">
-              ✨ ${customization && customization.show_product_count ? 
-                `${products.length} produit${products.length > 1 ? 's' : ''} disponible${products.length > 1 ? 's' : ''}` :
-                'Découvrez nos produits'
-              }
-            </div>
-
-            ${integrations && customization && customization.show_social_links ? this.renderSocialLinks(integrations) : ''}
+        <div style="position: relative; bottom: -60px;">
+          <div class="store-name">${vendor.business_name}</div>
+          <div class="store-subtitle">
+            ✨ ${customization && customization.show_product_count ? 
+              `${products.length} produit${products.length > 1 ? 's' : ''} disponible${products.length > 1 ? 's' : ''}` :
+              'Découvrez nos produits'
+            }
+          </div>
+          ${integrations && customization && customization.show_social_links ? this.renderSocialLinks(integrations) : ''}
         </div>
       </div>
     `;
 
     document.getElementById('storeInfo').innerHTML = headerContent;
 
-    // Afficher la barre de recherche si au moins 3 produits
     if (products && products.length >= 3) {
       document.getElementById('searchContainer').style.display = 'block';
       this.updateSearchCount(products.length, products.length);
     }
 
-    // Afficher les produits
-    this.renderProducts(products, integrations, customization);
+    this.renderProducts();
   },
 
-  renderProducts(products, integrations, customization) {
+  renderProducts() {
     const grid = document.getElementById('productsGridStore');
     if (!grid) return;
 
-    if (!products || products.length === 0) {
+    if (!this.filteredProducts || this.filteredProducts.length === 0) {
       grid.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 64px 24px;">
+        <div class="no-results">
           <div style="font-size: 64px; margin-bottom: 16px;">🛒</div>
           <h3 style="font-size: 24px; font-weight: 700; color: var(--color-primary); margin-bottom: 8px;">
             Aucun produit disponible
@@ -2592,15 +2654,35 @@ const PublicStorePage = {
           </p>
         </div>
       `;
+      
+      // Supprimer la pagination si elle existe
+      const paginationContainer = document.getElementById('storePagination');
+      if (paginationContainer) {
+        paginationContainer.innerHTML = '';
+      }
       return;
     }
 
-    grid.innerHTML = products.map(product => {
-      // Construire l'URL WhatsApp si l'intégration est active
+    // Calculer la pagination
+    const totalPages = Math.ceil(this.filteredProducts.length / this.itemsPerPage);
+    
+    if (this.currentPage > totalPages && totalPages > 0) {
+      this.currentPage = totalPages;
+    }
+    if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    const paginatedProducts = this.filteredProducts.slice(startIndex, endIndex);
+
+    grid.innerHTML = paginatedProducts.map(product => {
       let orderUrl = `/p/${product.share_token}`;
       
-      if (integrations && integrations.whatsapp && integrations.whatsapp.enabled && integrations.whatsapp.url) {
-        orderUrl = integrations.whatsapp.url;
+      if (this.storeIntegrations && this.storeIntegrations.whatsapp && 
+          this.storeIntegrations.whatsapp.enabled && this.storeIntegrations.whatsapp.url) {
+        orderUrl = this.storeIntegrations.whatsapp.url;
       }
 
       return `
@@ -2633,35 +2715,150 @@ const PublicStorePage = {
       });
     });
 
-    // Afficher le message personnalisé si disponible
-    if (customization && customization.order_message) {
-      const messageDiv = document.createElement('div');
-      messageDiv.style.cssText = 'max-width: 1200px; margin: 0 auto 48px; padding: 0 24px;';
-      messageDiv.innerHTML = `
-        <div style="
-          padding: 24px;
-          margin: 24px 0;
-          background: rgba(255, 255, 255, 0.95);
-          border-radius: var(--radius-lg);
-          text-align: center;
-          box-shadow: var(--shadow-md);
-        ">
-          <div style="font-size: 20px; margin-bottom: 8px;">💬</div>
-          <p style="color: var(--color-secondary); margin: 0;">
-            ${customization.order_message}
-          </p>
-        </div>
-      `;
-      
-      grid.parentElement.appendChild(messageDiv);
+    // Afficher la pagination
+    this.renderPagination(totalPages);
+
+    // Afficher le message personnalisé
+    if (this.storeCustomization && this.storeCustomization.order_message) {
+      this.renderCustomMessage();
     }
+
+    // Scroll vers le haut de la grille
+    if (this.currentPage > 1) {
+      grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  },
+
+  renderPagination(totalPages) {
+    const container = document.getElementById('storePagination');
+    if (!container) return;
+
+    if (totalPages <= 1) {
+      container.innerHTML = '';
+      return;
+    }
+
+    const paginationWrapper = document.createElement('div');
+    paginationWrapper.className = 'pagination-container';
+
+    const buttonsWrapper = document.createElement('div');
+    buttonsWrapper.className = 'pagination-buttons';
+
+    // Bouton Première page
+    if (this.currentPage > 1) {
+      const firstBtn = this.createPaginationButton('⏮️', 1, false, 'Première page');
+      buttonsWrapper.appendChild(firstBtn);
+    }
+
+    // Bouton Précédent
+    if (this.currentPage > 1) {
+      const prevBtn = this.createPaginationButton('←', this.currentPage - 1, false, 'Page précédente');
+      buttonsWrapper.appendChild(prevBtn);
+    }
+
+    // Numéros de pages
+    const pageNumbers = this.getPageNumbers(this.currentPage, totalPages);
+    pageNumbers.forEach(pageNum => {
+      if (pageNum === '...') {
+        const dots = document.createElement('span');
+        dots.style.padding = '8px';
+        dots.textContent = '...';
+        buttonsWrapper.appendChild(dots);
+      } else {
+        const isActive = pageNum === this.currentPage;
+        const pageBtn = this.createPaginationButton(pageNum.toString(), pageNum, isActive);
+        buttonsWrapper.appendChild(pageBtn);
+      }
+    });
+
+    // Bouton Suivant
+    if (this.currentPage < totalPages) {
+      const nextBtn = this.createPaginationButton('→', this.currentPage + 1, false, 'Page suivante');
+      buttonsWrapper.appendChild(nextBtn);
+    }
+
+    // Bouton Dernière page
+    if (this.currentPage < totalPages) {
+      const lastBtn = this.createPaginationButton('⏭️', totalPages, false, 'Dernière page');
+      buttonsWrapper.appendChild(lastBtn);
+    }
+
+    paginationWrapper.appendChild(buttonsWrapper);
+
+    // Informations
+    const startItem = ((this.currentPage - 1) * this.itemsPerPage) + 1;
+    const endItem = Math.min(this.currentPage * this.itemsPerPage, this.filteredProducts.length);
+    
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'pagination-info';
+    infoDiv.textContent = `Affichage de ${startItem} à ${endItem} sur ${this.filteredProducts.length} produit${this.filteredProducts.length > 1 ? 's' : ''}`;
+    
+    paginationWrapper.appendChild(infoDiv);
+
+    container.innerHTML = '';
+    container.appendChild(paginationWrapper);
+  },
+
+  createPaginationButton(text, pageNum, isActive = false, title = '') {
+    const btn = document.createElement('button');
+    btn.className = `pagination-btn ${isActive ? 'active' : ''}`;
+    btn.textContent = text;
+    btn.dataset.page = pageNum;
+    
+    if (title) {
+      btn.title = title;
+    }
+    
+    if (isActive) {
+      btn.disabled = true;
+    }
+    
+    btn.addEventListener('click', () => this.goToPage(pageNum));
+    
+    return btn;
+  },
+
+  getPageNumbers(currentPage, totalPages) {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+
+      if (currentPage > 3) {
+        pages.push('...');
+      }
+
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+
+      if (currentPage < totalPages - 2) {
+        pages.push('...');
+      }
+
+      pages.push(totalPages);
+    }
+
+    return pages;
+  },
+
+  goToPage(page) {
+    this.currentPage = page;
+    this.renderProducts();
   },
 
   initSearch() {
     const searchInput = document.getElementById('searchInput');
     if (!searchInput) return;
 
-    // Recherche en temps réel avec debounce
     let searchTimeout;
     searchInput.addEventListener('input', (e) => {
       clearTimeout(searchTimeout);
@@ -2672,49 +2869,38 @@ const PublicStorePage = {
   },
 
   filterProducts(searchTerm) {
-    const grid = document.getElementById('productsGridStore');
-    const productCards = grid.querySelectorAll('.product-card');
     const normalizedSearch = this.normalizeString(searchTerm);
 
-    let visibleCount = 0;
+    if (!normalizedSearch) {
+      this.filteredProducts = [...this.allProducts];
+    } else {
+      this.filteredProducts = this.allProducts.filter(product => {
+        const normalizedName = this.normalizeString(product.name);
+        return normalizedName.includes(normalizedSearch);
+      });
+    }
 
-    productCards.forEach(card => {
-      const productName = card.dataset.productName;
-      const normalizedName = this.normalizeString(productName);
+    this.currentPage = 1;
+    this.updateSearchCount(this.filteredProducts.length, this.allProducts.length);
+    this.renderProducts();
 
-      if (normalizedName.includes(normalizedSearch)) {
-        card.classList.remove('hidden');
-        visibleCount++;
-      } else {
-        card.classList.add('hidden');
-      }
-    });
-
-    // Afficher message si aucun résultat
-    this.showNoResultsMessage(visibleCount, searchTerm);
-    this.updateSearchCount(visibleCount, this.allProducts.length);
+    if (this.filteredProducts.length === 0 && searchTerm) {
+      this.showNoResultsMessage(searchTerm);
+    }
   },
 
   normalizeString(str) {
     return str
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
+      .replace(/[\u0300-\u036f]/g, '')
       .trim();
   },
 
-  showNoResultsMessage(visibleCount, searchTerm) {
+  showNoResultsMessage(searchTerm) {
     const grid = document.getElementById('productsGridStore');
-    let noResultsDiv = grid.querySelector('.no-results');
-
-    if (visibleCount === 0) {
-      if (!noResultsDiv) {
-        noResultsDiv = document.createElement('div');
-        noResultsDiv.className = 'no-results';
-        grid.appendChild(noResultsDiv);
-      }
-
-      noResultsDiv.innerHTML = `
+    grid.innerHTML = `
+      <div class="no-results">
         <div style="font-size: 64px; margin-bottom: 16px;">🔍</div>
         <h3 style="font-size: 24px; font-weight: 700; color: var(--color-primary); margin-bottom: 8px;">
           Aucun résultat
@@ -2722,10 +2908,8 @@ const PublicStorePage = {
         <p style="color: var(--color-secondary);">
           Aucun produit ne correspond à "${searchTerm}"
         </p>
-      `;
-    } else if (noResultsDiv) {
-      noResultsDiv.remove();
-    }
+      </div>
+    `;
   },
 
   updateSearchCount(visible, total) {
@@ -2739,8 +2923,39 @@ const PublicStorePage = {
     }
   },
 
+  renderCustomMessage() {
+    const grid = document.getElementById('productsGridStore');
+    const existingMessage = document.querySelector('.custom-order-message');
+    
+    if (existingMessage) {
+      existingMessage.remove();
+    }
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'custom-order-message';
+    messageDiv.style.cssText = 'max-width: 1200px; margin: 0 auto 48px; padding: 0 24px;';
+    messageDiv.innerHTML = `
+      <div style="
+        padding: 24px;
+        margin: 24px 0;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: var(--radius-lg);
+        text-align: center;
+        box-shadow: var(--shadow-md);
+      ">
+        <div style="font-size: 20px; margin-bottom: 8px;">💬</div>
+        <p style="color: var(--color-secondary); margin: 0;">
+          ${this.storeCustomization.order_message}
+        </p>
+      </div>
+    `;
+    
+    grid.parentElement.appendChild(messageDiv);
+  },
+
   renderSocialLinks(integrations) {
     const links = [];
+    
     if (integrations.whatsapp && integrations.whatsapp.enabled) {
       let whatsapp_url = `https://wa.me/${integrations.whatsapp.number.split(' ').join('').replace('+', '')}`;
       links.push(`
@@ -2823,6 +3038,8 @@ const PublicStorePage = {
     document.getElementById('productsGridStore').innerHTML = '';
   }
 };
+
+
 
 const PublicOrderManager = {
   currentProduct: null,
