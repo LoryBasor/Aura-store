@@ -49,7 +49,7 @@ class StoreService {
     }
 
     const planSlug = vendor.plan_slug || 'free';
-    
+
     let query = `
       SELECT p.*, pl.token as share_token
       FROM products p
@@ -57,16 +57,16 @@ class StoreService {
       WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
       ORDER BY p.created_at DESC
     `;
-    
-    const [isPlanFree] = await pool.execute(
-      "SELECT plan_name FROM v_active_subscriptions WHERE user_id = ? AND plan_slug = 'free'", 
-      [vendor.id]
-    ); 
 
-    if(isPlanFree.length > 0) {
+    const [isPlanFree] = await pool.execute(
+      "SELECT plan_name FROM v_active_subscriptions WHERE user_id = ? AND plan_slug = 'free'",
+      [vendor.id]
+    );
+
+    if (isPlanFree.length > 0) {
       query += ' LIMIT 5';
     }
-    
+
     // Récupérer tous les produits disponibles du vendeur
     const [products] = await pool.execute(query, [vendor.id]);
 
@@ -80,19 +80,26 @@ class StoreService {
       integrations = await socialIntegrationsService.getPublicIntegrations(storeSlug);
     }
 
+    const categoryService = require('./categoryService');
+    let categories = [];
+    if (planSlug !== 'free') {
+      categories = await categoryService.getPublicCategories(storeSlug);
+    }
+
     return {
       vendor: {
         business_name: vendor.business_name,
-        store_slug: vendor.store_slug, whatsapp_number: vendor.whatsapp_number,
+        store_slug: vendor.store_slug,
+        whatsapp_number: vendor.whatsapp_number,
         plan: planSlug
       },
       products,
-      customization, 
-      integrations, 
-      has_more: planSlug === 'free' && products.length === 5 // Indicateur si plan limité
+      categories,
+      customization,
+      integrations,
+      has_more: planSlug === 'free' && products.length === 5
     };
   }
-
   /**
    * Récupère un produit avec les intégrations pour la page produit
    */
@@ -143,7 +150,7 @@ class StoreService {
         store_slug: product.store_slug,
         whatsapp_number: product.whatsapp_number
       },
-      integrations 
+      integrations
     };
   }
 }
