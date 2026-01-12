@@ -1,0 +1,363 @@
+// src/services/marketplaceService.js
+const { pool } = require('../config/database');
+const { AppError } = require('../middlewares/errorHandler');
+const { getImageUrl } = require('../config/upload');
+
+/**
+ * Service pour le marketplace public
+ */
+class MarketplaceService {
+  /**
+   * Récupère les données pour la page principale marketplace
+   */
+  async getMarketplaceHome() {
+    // Produits populaires (par view_count)
+    const [popularProducts] = await pool.execute(`
+      SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug,
+             u.business_name, u.store_slug, u.city, u.country,
+             pl.token as share_token,
+             p.view_count, p.order_count
+      FROM products p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN product_links pl ON p.id = pl.product_id
+      WHERE p.is_available = 1 AND p.deleted_at IS NULL
+        AND u.is_active = 1 AND u.deleted_at IS NULL
+      ORDER BY p.view_count DESC
+      LIMIT 12
+    `);
+
+    // Produits récents
+    const [recentProducts] = await pool.execute(`
+      SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug,
+             u.business_name, u.store_slug, u.city, u.country,
+             pl.token as share_token
+      FROM products p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN product_links pl ON p.id = pl.product_id
+      WHERE p.is_available = 1 AND p.deleted_at IS NULL
+        AND u.is_active = 1 AND u.deleted_at IS NULL
+      ORDER BY p.created_at DESC
+      LIMIT 12
+    `);
+
+    // Boutiques recommandées (par nombre de produits)
+    const [recommendedStores] = await pool.execute(`
+      SELECT u.id, u.business_name, u.store_slug, u.city, u.country,
+             COUNT(p.id) as product_count,
+             SUM(p.view_count) as total_views,
+             sc.logo_url
+      FROM users u
+      LEFT JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      LEFT JOIN store_customization sc ON u.id = sc.user_id
+      WHERE u.is_active = 1 AND u.deleted_at IS NULL
+      GROUP BY u.id
+      HAVING product_count > 0
+      ORDER BY product_count DESC, total_views DESC
+      LIMIT 8
+    `);
+
+    // Récupérer les produits pour chaque boutique
+    for (let store of recommendedStores) {
+      const [storeProducts] = await pool.execute(`
+        SELECT p.id, p.name, p.price, p.currency, p.image_url,
+               pl.token as share_token
+        FROM products p
+        LEFT JOIN product_links pl ON p.id = pl.product_id
+        WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
+        ORDER BY p.view_count DESC
+        LIMIT 4
+      `, [store.id]);
+      
+      store.products = storeProducts.map(p => ({
+        ...p,
+        image_url: getImageUrl(p.image_url)
+      }));
+    }
+
+    // Catégories tendances (par nombre de produits)
+    const [trendingCategories] = await pool.execute(`
+      SELECT c.name, c.slug, COUNT(p.id) as product_count
+      FROM categories c
+      LEFT JOIN products p ON c.id = p.category_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE c.is_active = 1 AND c.deleted_at IS NULL
+      GROUP BY c.id
+      HAVING product_count > 0
+      ORDER BY product_count DESC
+      LIMIT 10
+    `);
+
+    // Formater les images
+    popularProducts.forEach(p => p.image_url = getImageUrl(p.image_url));
+    recentProducts.forEach(p => p.image_url = getImageUrl(p.image_url));
+
+    return {
+      popularProducts,
+      recentProducts,
+      recommendedStores,
+      trendingCategories
+    };
+  }
+
+  /**
+   * Récupère la liste des produits avec filtres
+   */
+  async getProducts(filters = {}) {
+    let whereConditions = [
+      'p.is_available = 1',
+      'p.deleted_at IS NULL',
+      'u.is_active = 1',
+      'u.deleted_at IS NULL'
+    ];
+    let params = [];
+    let orderBy = 'p.created_at DESC';
+
+    // Filtre par recherche
+    if (filters.search) {
+      whereConditions.push('(p.name LIKE ? OR p.description LIKE ?)');
+      params.push(`%${filters.search}%`, `%${filters.search}%`);
+    }
+
+    // Filtre par catégorie
+    if (filters.category) {
+      whereConditions.push('c.slug = ?');
+      params.push(filters.category);
+    }
+
+    // Filtre par ville
+    if (filters.city) {
+      whereConditions.push('u.city LIKE ?');
+      params.push(`%${filters.city}%`);
+    }
+
+    // Filtre par pays
+    if (filters.country) {
+      whereConditions.push('u.country = ?');
+      params.push(filters.country);
+    }
+
+    // Filtre par prix min
+    if (filters.minPrice) {
+      whereConditions.push('p.price >= ?');
+      params.push(filters.minPrice);
+    }
+
+    // Filtre par prix max
+    if (filters.maxPrice) {
+      whereConditions.push('p.price <= ?');
+      params.push(filters.maxPrice);
+    }
+
+    // Tri
+    if (filters.sort === 'popular') {
+      orderBy = 'p.view_count DESC';
+    } else if (filters.sort === 'recent') {
+      orderBy = 'p.created_at DESC';
+    } else if (filters.sort === 'price_low') {
+      orderBy = 'p.price ASC';
+    } else if (filters.sort === 'price_high') {
+      orderBy = 'p.price DESC';
+    } else if (filters.sort === 'rating') {
+      // Pour l'instant, pas de rating, utiliser view_count
+      orderBy = 'p.view_count DESC';
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+
+    const query = `
+      SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug, p.description,
+             u.business_name, u.store_slug, u.city, u.country,
+             pl.token as share_token,
+             c.name as category_name, c.slug as category_slug,
+             p.view_count, p.order_count, p.created_at
+      FROM products p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN product_links pl ON p.id = pl.product_id
+      WHERE ${whereClause}
+      ORDER BY ${orderBy}
+      LIMIT ? OFFSET ?
+    `;
+
+    const limit = filters.limit || 20;
+    const offset = filters.offset || 0;
+    params.push(limit, offset);
+
+    const [products] = await pool.execute(query, params);
+
+    // Formater les images
+    products.forEach(p => p.image_url = getImageUrl(p.image_url));
+
+    // Compter le total pour pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM products p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE ${whereClause}
+    `;
+    const [countResult] = await pool.execute(countQuery, params.slice(0, -2)); // Enlever limit et offset
+
+    return {
+      products,
+      total: countResult[0].total,
+      limit,
+      offset
+    };
+  }
+
+  /**
+   * Récupère la liste des boutiques avec filtres
+   */
+  async getStores(filters = {}) {
+    let whereConditions = [
+      'u.is_active = 1',
+      'u.deleted_at IS NULL'
+    ];
+    let params = [];
+    let orderBy = 'u.created_at DESC';
+
+    // Filtre par ville
+    if (filters.city) {
+      whereConditions.push('u.city LIKE ?');
+      params.push(`%${filters.city}%`);
+    }
+
+    // Filtre par pays
+    if (filters.country) {
+      whereConditions.push('u.country = ?');
+      params.push(filters.country);
+    }
+
+    // Tri
+    if (filters.sort === 'recent') {
+      orderBy = 'u.created_at DESC';
+    } else if (filters.sort === 'popular') {
+      orderBy = 'total_views DESC';
+    } else if (filters.sort === 'verified') {
+      // Pour l'instant, pas de vérification, utiliser nombre de produits
+      orderBy = 'product_count DESC';
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+
+    const query = `
+      SELECT u.id, u.business_name, u.store_slug, u.city, u.country, u.created_at,
+             sc.logo_url,
+             COUNT(p.id) as product_count,
+             SUM(p.view_count) as total_views,
+             GROUP_CONCAT(DISTINCT p.image_url LIMIT 3) as sample_images
+      FROM users u
+      LEFT JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      LEFT JOIN store_customization sc ON u.id = sc.user_id
+      WHERE ${whereClause}
+      GROUP BY u.id
+      HAVING product_count > 0
+      ORDER BY ${orderBy}
+      LIMIT ? OFFSET ?
+    `;
+
+    const limit = filters.limit || 20;
+    const offset = filters.offset || 0;
+    params.push(limit, offset);
+
+    const [stores] = await pool.execute(query, params);
+
+    // Récupérer les produits pour chaque boutique
+    for (let store of stores) {
+      const [storeProducts] = await pool.execute(`
+        SELECT p.id, p.name, p.price, p.currency, p.image_url,
+               pl.token as share_token
+        FROM products p
+        LEFT JOIN product_links pl ON p.id = pl.product_id
+        WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
+        ORDER BY p.view_count DESC
+        LIMIT 4
+      `, [store.id]);
+      
+      store.products = storeProducts.map(p => ({
+        ...p,
+        image_url: getImageUrl(p.image_url)
+      }));
+    }
+
+    // Formater les images d'aperçu
+    stores.forEach(store => {
+      if (store.sample_images) {
+        store.sample_images = store.sample_images
+          .split(',')
+          .map(img => getImageUrl(img))
+          .join(',');
+      }
+    });
+
+    // Compter le total
+    const countQuery = `
+      SELECT COUNT(DISTINCT u.id) as total
+      FROM users u
+      LEFT JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE ${whereClause}
+      GROUP BY u.id
+      HAVING COUNT(p.id) > 0
+    `;
+    const [countResult] = await pool.execute(countQuery, params.slice(0, -2));
+
+    return {
+      stores,
+      total: countResult[0].total,
+      limit,
+      offset
+    };
+  }
+
+  /**
+   * Récupère les catégories disponibles
+   */
+  async getCategories() {
+    const [categories] = await pool.execute(`
+      SELECT c.name, c.slug, COUNT(p.id) as product_count
+      FROM categories c
+      LEFT JOIN products p ON c.id = p.category_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE c.is_active = 1 AND c.deleted_at IS NULL
+      GROUP BY c.id
+      HAVING product_count > 0
+      ORDER BY c.name ASC
+    `);
+
+    return categories;
+  }
+
+  /**
+   * Récupère les villes disponibles
+   */
+  async getCities() {
+    const [cities] = await pool.execute(`
+      SELECT DISTINCT u.city, COUNT(p.id) as product_count
+      FROM users u
+      JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE u.city IS NOT NULL AND u.city != '' AND u.is_active = 1 AND u.deleted_at IS NULL
+      GROUP BY u.city
+      ORDER BY product_count DESC
+      LIMIT 50
+    `);
+
+    return cities;
+  }
+
+  /**
+   * Récupère les pays disponibles
+   */
+  async getCountries() {
+    const [countries] = await pool.execute(`
+      SELECT DISTINCT u.country, COUNT(p.id) as product_count
+      FROM users u
+      JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE u.country IS NOT NULL AND u.country != '' AND u.is_active = 1 AND u.deleted_at IS NULL
+      GROUP BY u.country
+      ORDER BY product_count DESC
+    `);
+
+    return countries;
+  }
+}
+
+module.exports = new MarketplaceService();

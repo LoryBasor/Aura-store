@@ -95,8 +95,6 @@ async function authenticateView(req, res, next) {
       // Pas de token, rediriger vers login
       console.error('Pas de token');
       return res.redirect('/login');
-    }else{
-      console.log(authHeader);
     }
 
     const token = authHeader;
@@ -183,9 +181,7 @@ app.use('/api', apiRoutes);
 
 // Page d'accueil - redirection intelligente
 app.get('/', (req, res) => {
-  res.render('index', {
-    layout: false
-  });
+  res.redirect('/marketplace')
 });
 
 // Page de connexion
@@ -223,6 +219,84 @@ app.get('/store/:storeSlug', (req, res) => {
     layout: false,
     storeSlug: req.params.storeSlug
   });
+});
+
+// ==================== MARKETPLACE PUBLIQUE ====================
+
+// Page principale marketplace
+const marketplaceService = require('./src/services/marketplaceService');
+app.get('/marketplace', async (req, res) => {
+  res.render('marketplace/home', {
+    title: 'Marketplace - Aura',
+    data: await marketplaceService.getMarketplaceHome(),
+    showSidebar: false,
+    showHeader: false,
+    layout: false
+  });
+});
+
+// Page liste produits marketplace
+app.get('/marketplace/products', async (req, res, next) => {
+  try {
+    const marketplaceService = require('./src/services/marketplaceService');
+    const marketplaceController = require('./src/controllers/marketplaceController');
+    
+    const filters = {
+      search: req.query.search,
+      category: req.query.category,
+      city: req.query.city,
+      country: req.query.country,
+      minPrice: req.query.minPrice ? parseFloat(req.query.minPrice) : null,
+      maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice) : null,
+      sort: req.query.sort || 'recent',
+      limit: req.query.limit ? parseInt(req.query.limit) : 20,
+      offset: req.query.offset ? parseInt(req.query.offset) : 0
+    };
+
+    const productData = await marketplaceService.getProducts(filters);
+    const categories = await marketplaceService.getCategories();
+    const cities = await marketplaceService.getCities();
+    const countries = await marketplaceService.getCountries();
+
+    res.render('marketplace/products', {
+      title: 'Produits - Marketplace Aura',
+      data: { ...productData, filters, categories, cities, countries },
+      showSidebar: false,
+      showHeader: false,
+      layout: false
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Page liste boutiques marketplace
+app.get('/marketplace/stores', async (req, res, next) => {
+  try {
+    const marketplaceService = require('./src/services/marketplaceService');
+    
+    const filters = {
+      city: req.query.city,
+      country: req.query.country,
+      sort: req.query.sort || 'recent',
+      limit: req.query.limit ? parseInt(req.query.limit) : 20,
+      offset: req.query.offset ? parseInt(req.query.offset) : 0
+    };
+
+    const storesData = await marketplaceService.getStores(filters);
+    const cities = await marketplaceService.getCities();
+    const countries = await marketplaceService.getCountries();
+
+    res.render('marketplace/stores', {
+      title: 'Boutiques - Marketplace Aura',
+      data: { ...storesData, filters, cities, countries },
+      showSidebar: false,
+      showHeader: false,
+      layout: false
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // ==================== ESPACE VENDEUR (Protected) ====================
@@ -273,6 +347,15 @@ app.get('/products', authenticateView, (req, res) => {
     title: 'Mes Produits',
     pageTitle: 'Mes Produits',
     currentPage: 'products',
+    user: req.user
+  });
+});
+
+app.get('/categories', authenticateView, (req, res) => {
+  res.render('dashboard/categories', {
+    title: 'Catégories | AURA',
+    pageTitle: 'Catégories',
+    currentPage: 'categories',
     user: req.user
   });
 });
@@ -436,6 +519,10 @@ async function startServer() {
       console.log('=================================');
       console.log('');
       console.log('📍 Routes disponibles:');
+      console.log('   - http://localhost:' + PORT + '/ (Accueil)');
+      console.log('   - http://localhost:' + PORT + '/marketplace (Marketplace)');
+      console.log('   - http://localhost:' + PORT + '/marketplace/products (Produits)');
+      console.log('   - http://localhost:' + PORT + '/marketplace/stores (Boutiques)');
       console.log('   - http://localhost:' + PORT + '/login (Connexion)');
       console.log('   - http://localhost:' + PORT + '/register (Inscription)');
       console.log('   - http://localhost:' + PORT + '/dashboard (Vendeur)');

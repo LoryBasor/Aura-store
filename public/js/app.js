@@ -49,10 +49,10 @@ const SidebarManager = {
   init() {
     // Toggle sidebar mobile
     AppUtils.on('#mobileMenuBtn', 'click', this.toggleSidebar);
-    
+
     // Fermer sidebar au clic sur overlay
     AppUtils.on('.sidebar-overlay', 'click', this.closeSidebar);
-    
+
     // Responsive check
     window.addEventListener('resize', this.handleResize.bind(this));
   },
@@ -271,7 +271,7 @@ const DashboardPage = {
   async loadDashboard() {
     try {
       const data = await API.getDashboard();
-      
+
       if (data && data.data) {
         // Vérifier le plan
         const plan = PlanManager.currentPlan;
@@ -282,7 +282,7 @@ const DashboardPage = {
           this.renderStats(data.data.overview);
           this.renderRecentOrders(data.data.recent_orders);
           this.renderTopProducts(data.data.top_products);
-          
+
           // Ajouter section export pour PRO/BUSINESS
           if (PlanManager.hasAccess('export_data')) {
             this.addExportSection();
@@ -302,7 +302,7 @@ const DashboardPage = {
   renderFreeStats(stats) {
     const statsGrid = document.getElementById('statsGrid');
     if (!statsGrid) return;
-    
+
     statsGrid.innerHTML = `
       <div class="stat-card">
         <div class="stat-header">
@@ -376,7 +376,7 @@ const DashboardPage = {
           Découvrir les plans
         </a>
       `;
-      
+
       const statsGridElement = document.getElementById('statsGrid');
       if (statsGridElement && statsGridElement.parentNode) {
         statsGridElement.parentNode.insertBefore(upgradeCard, statsGridElement.nextSibling);
@@ -387,7 +387,7 @@ const DashboardPage = {
   renderStats(stats) {
     const statsGrid = document.getElementById('statsGrid');
     if (!statsGrid) return;
-    
+
     statsGrid.innerHTML = `
       <div class="stat-card">
         <div class="stat-header">
@@ -430,7 +430,7 @@ const DashboardPage = {
   renderRecentOrders(orders) {
     const container = document.getElementById('recentOrders');
     if (!container) return;
-    
+
     if (!orders || orders.length === 0) {
       container.innerHTML = '<div class="empty-state"><p class="empty-state-text">Aucune commande récente</p></div>';
       return;
@@ -487,7 +487,7 @@ const DashboardPage = {
   renderTopProducts(products) {
     const container = document.getElementById('topProducts');
     if (!container) return;
-    
+
     if (!products || products.length === 0) {
       container.innerHTML = '<div class="empty-state"><p class="empty-state-text">Aucun produit</p></div>';
       return;
@@ -584,7 +584,8 @@ const DashboardPage = {
 const ProductsPage = {
   currentPage: 1,
   currentFilter: 'undefined',
-  allProducts: [], // Stocke tous les produits pour la recherche
+  currentCategory: 'all',
+  allProducts: [], // Stocke tous les produits pour la recherche et le filtrage
 
   init() {
     if (!document.getElementById('productsGrid')) return;
@@ -609,7 +610,7 @@ const ProductsPage = {
     AppUtils.on('#searchInput', 'keyup', (e) => {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
-        this.filterProductsLocally(e.target.value);
+        this.applyFilters();
       }, 300);
     });
 
@@ -617,6 +618,12 @@ const ProductsPage = {
     AppUtils.on('[data-filter="status"]', 'change', (e) => {
       this.currentFilter = e.target.value;
       this.loadProducts(1, '');
+    });
+
+    // Filtre catégorie - côté navigateur
+    AppUtils.on('[data-filter="category"]', 'change', (e) => {
+      this.currentCategory = e.target.value;
+      this.applyFilters();
     });
 
     // Délégation pour actions sur produits
@@ -634,44 +641,78 @@ const ProductsPage = {
       const link = e.target.dataset.shareLink;
       this.copyShareLink(link);
     });
+
+    this.loadCategoriesFilter();
   },
 
   async loadProducts(page = 1, search) {
     this.currentPage = page;
     try {
-      const data = await API.getProducts(page, search, 1, this.currentFilter);
-      
+      // Charger tous les produits sans filtre de catégorie (filtrage côté navigateur)
+      const data = await API.getProducts(page, search, 1, this.currentFilter, 'all');
+
       if (data && data.data) {
-        this.allProducts = data.data.products; // Stocker les produits
-        this.renderProducts(data.data.products);
+        this.allProducts = data.data.products; // Stocker tous les produits
+        this.applyFilters(); // Appliquer les filtres côté navigateur
       }
     } catch (error) {
       console.error('Erreur chargement produits:', error);
     }
   },
 
-  filterProductsLocally(searchTerm) {
-    if (!searchTerm || searchTerm.trim() === '') {
-      // Afficher tous les produits
-      this.currentPage = 1;
-      this.renderProductsWithPagination(this.allProducts);
-      return;
+  // Nouvelle méthode qui applique à la fois la recherche et le filtre catégorie
+  applyFilters() {
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput ? searchInput.value : '';
+    
+    let filteredProducts = [...this.allProducts];
+
+    // Filtre par catégorie
+    if (this.currentCategory && this.currentCategory !== 'all') {
+      filteredProducts = filteredProducts.filter(product => 
+        product.category_id === parseInt(this.currentCategory)
+      );
     }
 
-    const normalizedSearch = this.normalizeString(searchTerm);
-    
-    const filteredProducts = this.allProducts.filter(product => {
-      const name = this.normalizeString(product.name);
-      const description = this.normalizeString(product.description || '');
-      const price = product.price.toString();
-      
-      return name.includes(normalizedSearch) || 
-             description.includes(normalizedSearch) ||
-             price.includes(normalizedSearch);
-    });
+    // Filtre par recherche
+    if (searchTerm && searchTerm.trim() !== '') {
+      const normalizedSearch = this.normalizeString(searchTerm);
+      filteredProducts = filteredProducts.filter(product => {
+        const name = this.normalizeString(product.name);
+        const description = this.normalizeString(product.description || '');
+        const price = product.price.toString();
+
+        return name.includes(normalizedSearch) ||
+          description.includes(normalizedSearch) ||
+          price.includes(normalizedSearch);
+      });
+    }
 
     this.currentPage = 1;
     this.renderProductsWithPagination(filteredProducts, searchTerm);
+  },
+
+  async loadCategoriesFilter() {
+    try {
+      const data = await API.getCategories();
+      const select = document.getElementById('categoryFilter');
+
+      if (data && data.data && select) {
+        const categories = data.data.categories;
+
+        // Garder "Toutes les catégories"
+        select.innerHTML = '<option value="all">Toutes les catégories</option>';
+
+        categories.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat.id;
+          option.textContent = `${cat.name} (${cat.product_count || 0})`;
+          select.appendChild(option);
+        });
+      }
+    } catch (error) {
+      console.error('Erreur chargement catégories:', error);
+    }
   },
 
   renderProductsWithPagination(products, searchTerm = '') {
@@ -690,24 +731,24 @@ const ProductsPage = {
   renderProductsPagination(totalPages, totalItems) {
     const container = document.getElementById('pagination');
     if (!container) return;
-    
+
     if (totalPages <= 1) {
       container.innerHTML = '';
       return;
     }
 
     let html = '<div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 32px;">';
-    
+
     // Bouton Précédent
     if (this.currentPage > 1) {
       html += `<button class="btn btn-secondary btn-sm" data-action="prev-page-products">← Précédent</button>`;
     }
-    
+
     // Numéros de pages
     const maxPagesToShow = 5;
     let startPage = Math.max(1, this.currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-    
+
     if (endPage - startPage < maxPagesToShow - 1) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
@@ -729,7 +770,7 @@ const ProductsPage = {
       if (endPage < totalPages - 1) html += `<span style="padding: 8px; color: var(--color-secondary);">...</span>`;
       html += `<button class="btn btn-secondary btn-sm" data-action="goto-page" data-page="${totalPages}">${totalPages}</button>`;
     }
-    
+
     // Bouton Suivant
     if (this.currentPage < totalPages) {
       html += `<button class="btn btn-secondary btn-sm" data-action="next-page-products">Suivant →</button>`;
@@ -737,29 +778,26 @@ const ProductsPage = {
 
     html += `<span style="padding: 8px 16px; color: var(--color-secondary); font-size: 13px;">${totalItems} produit${totalItems > 1 ? 's' : ''}</span>`;
     html += '</div>';
-    
+
     container.innerHTML = html;
 
     // Événements de pagination
     AppUtils.on('[data-action="prev-page-products"]', 'click', () => {
       this.currentPage--;
-      const searchInput = document.getElementById('searchInput');
-      this.filterProductsLocally(searchInput ? searchInput.value : '');
+      this.applyFilters();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
-    
+
     AppUtils.on('[data-action="next-page-products"]', 'click', () => {
       this.currentPage++;
-      const searchInput = document.getElementById('searchInput');
-      this.filterProductsLocally(searchInput ? searchInput.value : '');
+      this.applyFilters();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     document.querySelectorAll('[data-action="goto-page"]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         this.currentPage = parseInt(e.target.dataset.page);
-        const searchInput = document.getElementById('searchInput');
-        this.filterProductsLocally(searchInput ? searchInput.value : '');
+        this.applyFilters();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     });
@@ -776,17 +814,19 @@ const ProductsPage = {
   renderProducts(products, searchTerm = '') {
     const grid = document.getElementById('productsGrid');
     if (!grid) return;
-    
+
     if (!products || products.length === 0) {
-      if (searchTerm) {
-        // Message pour recherche sans résultat
+      const hasActiveFilters = searchTerm || (this.currentCategory && this.currentCategory !== 'all');
+      
+      if (hasActiveFilters) {
+        // Message pour recherche/filtre sans résultat
         grid.innerHTML = `
           <div class="empty-state" style="grid-column: 1 / -1;">
             <div class="empty-state-icon">🔍</div>
             <h3 class="empty-state-title">Aucun résultat</h3>
-            <p class="empty-state-text">Aucun produit ne correspond à "${searchTerm}"</p>
-            <button class="btn btn-secondary" onclick="document.getElementById('searchInput').value = ''; ProductsPage.filterProductsLocally('');">
-              Effacer la recherche
+            <p class="empty-state-text">Aucun produit ne correspond aux filtres sélectionnés</p>
+            <button class="btn btn-secondary" onclick="document.getElementById('searchInput').value = ''; document.getElementById('categoryFilter').value = 'all'; ProductsPage.currentCategory = 'all'; ProductsPage.applyFilters();">
+              Réinitialiser les filtres
             </button>
           </div>
         `;
@@ -807,10 +847,10 @@ const ProductsPage = {
 
     grid.innerHTML = products.map(product => `
       <div class="card" style="padding: 0; overflow: hidden;" data-product-id="${product.id}">
-        ${product.image_url ? 
-          `<img src="${product.image_url}" alt="${product.name}" style="width: 100%; height: 200px; object-fit: cover;">` :
-          `<div style="width: 100%; height: 200px; background: linear-gradient(135deg, var(--color-surface), var(--color-accent)); display: flex; align-items: center; justify-content: center; font-size: 48px;">📦</div>`
-        }
+        ${product.image_url ?
+        `<img src="${product.image_url}" alt="${product.name}" style="width: 100%; height: 200px; object-fit: cover;">` :
+        `<div style="width: 100%; height: 200px; background: linear-gradient(135deg, var(--color-surface), var(--color-accent)); display: flex; align-items: center; justify-content: center; font-size: 48px;">📦</div>`
+      }
         <div style="padding: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
             <h3 style="font-size: 18px; font-weight: 700; color: var(--color-primary); flex: 1;">${product.name}</h3>
@@ -819,18 +859,18 @@ const ProductsPage = {
             </span>
           </div>
           
-          ${product.description ? 
-            `<p style="font-size: 14px; color: var(--color-secondary); margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${product.description}</p>` :
-            ''
-          }
+          ${product.description ?
+        `<p style="font-size: 14px; color: var(--color-secondary); margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${product.description}</p>` :
+        ''
+      }
           
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <div>
               <div style="font-size: 24px; font-weight: 700; color: var(--color-primary);">${UI.formatCurrency(product.price, product.currency)}</div>
-              ${product.stock_quantity > 0 ? 
-                `<div style="font-size: 13px; color: var(--color-secondary);">Stock: ${product.stock_quantity}</div>` :
-                ''
-              }
+              ${product.stock_quantity > 0 ?
+        `<div style="font-size: 13px; color: var(--color-secondary);">Stock: ${product.stock_quantity}</div>` :
+        ''
+      }
             </div>
             <div style="text-align: right;">
               <div style="font-size: 13px; color: var(--color-secondary);">${product.order_count || 0} ventes</div>
@@ -853,8 +893,8 @@ const ProductsPage = {
       </div>
     `).join('');
 
-    // Afficher le nombre de résultats si recherche active
-    if (searchTerm) {
+    // Afficher le nombre de résultats si filtres actifs
+    if (searchTerm || (this.currentCategory && this.currentCategory !== 'all')) {
       const resultCount = document.createElement('div');
       resultCount.style.cssText = 'grid-column: 1 / -1; text-align: center; padding: 12px; color: var(--color-secondary); font-size: 14px;';
       resultCount.textContent = `${products.length} produit${products.length > 1 ? 's' : ''} trouvé${products.length > 1 ? 's' : ''}`;
@@ -862,46 +902,16 @@ const ProductsPage = {
     }
   },
 
-  renderPagination(pagination) {
-    const container = document.getElementById('pagination');
-    if (!container) return;
-    
-    const { page, totalPages } = pagination;
-    
-    if (totalPages <= 1) {
-      container.innerHTML = '';
-      return;
-    }
-
-    let html = '';
-    
-    if (page > 1) {
-      html += `<button class="btn btn-secondary btn-sm" data-action="prev-page">← Précédent</button>`;
-    }
-    
-    html += `<span style="padding: 8px 16px; color: var(--color-secondary);">Page ${page} sur ${totalPages}</span>`;
-    
-    if (page < totalPages) {
-      html += `<button class="btn btn-secondary btn-sm" data-action="next-page">Suivant →</button>`;
-    }
-    
-    container.innerHTML = html;
-
-    // Attacher les événements de pagination
-    AppUtils.on('[data-action="prev-page"]', 'click', () => this.loadProducts(this.currentPage - 1));
-    AppUtils.on('[data-action="next-page"]', 'click', () => this.loadProducts(this.currentPage + 1));
-  },
-
-  openProductModal(productId = null) {
+  async openProductModal(productId = null) {
     const modal = document.getElementById('productModal');
     const form = document.getElementById('productForm');
     const title = document.getElementById('modalTitle');
-    
+
     if (!modal) return;
-    
+
     form.reset();
     document.getElementById('imagePreview').innerHTML = '';
-    
+
     if (productId) {
       title.textContent = 'Modifier le produit';
       this.loadProductForEdit(productId);
@@ -909,8 +919,29 @@ const ProductsPage = {
       document.getElementById('productId').value = '';
       title.textContent = 'Nouveau produit';
     }
-    
+    await this.loadCategoriesInModal();
     ModalManager.openModal('productModal');
+  },
+
+  async loadCategoriesInModal() {
+    try {
+      const data = await API.getCategories();
+      const select = document.getElementById('category_id');
+
+      if (data && data.data && select) {
+        // Garder l'option "Aucune catégorie"
+        select.innerHTML = '<option value="">Aucune catégorie</option>';
+
+        data.data.categories.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat.id;
+          option.textContent = cat.name;
+          select.appendChild(option);
+        });
+      }
+    } catch (error) {
+      console.error('Erreur chargement catégories:', error);
+    }
   },
 
   async loadProductForEdit(id) {
@@ -926,6 +957,12 @@ const ProductsPage = {
         document.getElementById('stock_quantity').value = product.stock_quantity;
         document.getElementById('is_available').value = product.is_available.toString();
         
+        // Sélectionner la catégorie
+        const categorySelect = document.getElementById('category_id');
+        if (categorySelect && product.category_id) {
+          categorySelect.value = product.category_id;
+        }
+ 
         if (product.image_url) {
           document.getElementById('imagePreview').innerHTML = `
             <img src="${product.image_url}" alt="Image actuelle" style="max-width: 200px; border-radius: var(--radius-sm);">
@@ -939,26 +976,25 @@ const ProductsPage = {
 
   async handleProductSubmit(e) {
     e.preventDefault();
-    
+
     const formData = new FormData();
     const productId = document.getElementById('productId').value;
-    
     formData.append('name', document.getElementById('name').value);
     formData.append('description', document.getElementById('description').value);
     formData.append('price', document.getElementById('price').value);
     formData.append('currency', document.getElementById('currency').value);
+    formData.append('category_id', document.getElementById('category_id').value);
     formData.append('stock_quantity', document.getElementById('stock_quantity').value);
     formData.append('is_available', document.getElementById('is_available').value.toLowerCase() === 'true');
-    
+
     const imageFile = document.getElementById('image').files[0];
     if (imageFile) {
       formData.append('image', imageFile);
     }
-    
+
     try {
       const url = productId ? `/api/products/${productId}` : '/api/products';
       const method = productId ? 'PUT' : 'POST';
-      
       const response = await fetch(url, {
         method: method,
         headers: {
@@ -966,9 +1002,9 @@ const ProductsPage = {
         },
         body: formData
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         UI.showNotification('Succès', productId ? 'Produit modifié' : 'Produit créé', 'success');
         ModalManager.closeModal('productModal');
@@ -987,7 +1023,7 @@ const ProductsPage = {
       'Supprimer le produit',
       'Êtes-vous sûr de vouloir supprimer ce produit ? Cette action est irréversible.'
     );
-    
+
     if (confirmed) {
       try {
         await API.deleteProduct(id);
@@ -1023,10 +1059,178 @@ const ProductsPage = {
   }
 };
 
+// ========================================
+// PAGE: CATEGORIES
+// ========================================
+const CategoriesPage = {
+  init() {
+    if (!document.getElementById('categoriesList')) return;
 
-// ========================================
-// PAGE: ORDERS
-// ========================================
+    this.loadCategories();
+
+    // Bouton nouvelle catégorie
+    AppUtils.on('[data-action="new-category"]', 'click', () => this.openCategoryModal(null));
+
+    // Formulaire catégorie
+    const form = document.getElementById('categoryForm');
+    if (form) {
+      form.addEventListener('submit', this.handleCategorySubmit.bind(this));
+    }
+
+    // Délégation événements
+    AppUtils.delegate(document, 'click', '[data-action="edit-category"]', (e) => {
+      this.editCategory(e.target.dataset.categoryId);
+    });
+
+    AppUtils.delegate(document, 'click', '[data-action="delete-category"]', (e) => {
+      this.deleteCategory(e.target.dataset.categoryId);
+    });
+  },
+
+  async loadCategories() {
+    try {
+      const data = await API.getCategories();
+
+      if (data && data.data) {
+        this.renderCategories(data.data.categories);
+      }
+    } catch (error) {
+      console.error('Erreur chargement catégories:', error);
+    }
+  },
+
+  renderCategories(categories) {
+    const container = document.getElementById('categoriesList');
+    if (!container) return;
+
+    if (!categories || categories.length === 0) {
+      container.innerHTML = `
+        <div class="empty-categories">
+          <div class="empty-categories-icon">🏷️</div>
+          <h3 class="empty-categories-title">Aucune catégorie</h3>
+          <p class="empty-categories-text">Créez des catégories pour organiser vos produits</p>
+          <button class="btn btn-primary" data-action="new-category">Créer une catégorie</button>
+        </div>
+      `;
+      container.querySelector('[data-action="new-category"]')?.addEventListener('click', () => this.openCategoryModal());
+      return;
+    }
+
+    container.innerHTML = categories.map(category => `
+      <div class="category-item" data-category-id="${category.id}">
+        <div class="category-drag-handle" title="Glisser pour réorganiser">☰</div>
+        <div class="category-info">
+          <div class="category-name">${category.name}</div>
+          ${category.description ?
+        `<div class="category-description">${category.description}</div>` : ''
+      }
+          <div class="category-stats">
+            ${category.product_count || 0} produit${category.product_count > 1 ? 's' : ''} 
+            ${category.available_products > 0 ?
+        `• ${category.available_products} disponible${category.available_products > 1 ? 's' : ''}` : ''
+      }
+          </div>
+        </div>
+        <div class="category-actions">
+          <button class="btn btn-sm btn-secondary" data-action="edit-category" data-category-id="${category.id}">
+            ✏️ Modifier
+          </button>
+          <button class="btn btn-sm btn-danger" data-action="delete-category" data-category-id="${category.id}">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `).join('');
+  },
+
+  openCategoryModal(categoryId = null) {
+    const modal = document.getElementById('categoryModal');
+    const form = document.getElementById('categoryForm');
+    const title = document.getElementById('modalTitle');
+
+    if (!modal) return;
+
+    form.reset();
+
+    if (categoryId) {
+      title.textContent = 'Modifier la catégorie';
+      this.loadCategoryForEdit(categoryId);
+    } else {
+      document.getElementById('categoryId').value = '';
+      title.textContent = 'Nouvelle catégorie';
+    }
+
+    ModalManager.openModal('categoryModal');
+  },
+
+  async loadCategoryForEdit(id) {
+    try {
+      const data = await API.getCategory(id);
+      if (data && data.data && data.data.category) {
+        const category = data.data.category;
+        document.getElementById('categoryId').value = category.id;
+        document.getElementById('categoryName').value = category.name;
+        document.getElementById('categoryDescription').value = category.description || '';
+      }
+    } catch (error) {
+      console.error('Erreur chargement catégorie:', error);
+    }
+  },
+
+  async handleCategorySubmit(e) {
+    e.preventDefault();
+
+    const categoryId = document.getElementById('categoryId').value;
+    const formData = {
+      name: document.getElementById('categoryName').value.trim(),
+      description: document.getElementById('categoryDescription').value.trim()
+    };
+
+    // Validation
+    if (!formData.name || formData.name.length < 2) {
+      document.getElementById('nameError').textContent = 'Le nom doit contenir au moins 2 caractères';
+      return;
+    }
+
+    try {
+      if (categoryId) {
+        await API.updateCategory(categoryId, formData);
+        UI.showNotification('Succès', 'Catégorie modifiée', 'success');
+      } else {
+        await API.createCategory(formData);
+        UI.showNotification('Succès', 'Catégorie créée', 'success');
+      }
+
+      ModalManager.closeModal('categoryModal');
+      this.loadCategories();
+    } catch (error) {
+      console.error('Erreur sauvegarde catégorie:', error);
+    }
+  },
+
+  async deleteCategory(id) {
+    const confirmed = await UI.confirm(
+      'Supprimer la catégorie',
+      'Êtes-vous sûr ? Cette action est irréversible. Les produits de cette catégorie ne seront pas supprimés.'
+    );
+
+    if (confirmed) {
+      try {
+        await API.deleteCategory(id);
+        UI.showNotification('Succès', 'Catégorie supprimée', 'success');
+        this.loadCategories();
+      } catch (error) {
+        console.error('Erreur suppression catégorie:', error);
+      }
+    }
+  },
+
+  editCategory(id) {
+    this.openCategoryModal(id);
+  }
+};
+
+
 // ========================================
 // PAGE: ORDERS
 // ========================================
@@ -1090,7 +1294,7 @@ const OrdersPage = {
     try {
       // Charger toutes les commandes sans limite pour la recherche côté client
       const data = await API.getOrders(1, 1000, null);
-      
+
       if (data && data.data) {
         this.allOrders = data.data.orders || [];
         this.applyFilters();
@@ -1103,7 +1307,7 @@ const OrdersPage = {
   async loadOrderStats() {
     try {
       const data = await API.getOrderStats();
-      
+
       if (data && data.data && data.data.stats) {
         this.renderOrderStats(data.data.stats);
       }
@@ -1153,7 +1357,7 @@ const OrdersPage = {
 
     // Mettre à jour l'affichage
     this.renderOrdersTable(paginatedOrders);
-    
+
     // Mettre à jour la pagination
     const totalPages = Math.ceil(this.filteredOrders.length / itemsPerPage);
     this.renderOrdersPagination(totalPages, this.filteredOrders.length);
@@ -1165,24 +1369,24 @@ const OrdersPage = {
   renderOrdersPagination(totalPages, totalItems) {
     const container = document.getElementById('pagination');
     if (!container) return;
-    
+
     if (totalPages <= 1) {
       container.innerHTML = '';
       return;
     }
 
     let html = '<div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 32px; flex-wrap: wrap;">';
-    
+
     // Bouton Précédent
     if (this.currentPage > 1) {
       html += `<button class="btn btn-secondary btn-sm" data-action="prev-page-orders">← Précédent</button>`;
     }
-    
+
     // Numéros de pages
     const maxPagesToShow = 5;
     let startPage = Math.max(1, this.currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-    
+
     if (endPage - startPage < maxPagesToShow - 1) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
@@ -1211,7 +1415,7 @@ const OrdersPage = {
       }
       html += `<button class="btn btn-secondary btn-sm" data-action="goto-page-order" data-page="${totalPages}">${totalPages}</button>`;
     }
-    
+
     // Bouton Suivant
     if (this.currentPage < totalPages) {
       html += `<button class="btn btn-secondary btn-sm" data-action="next-page-orders">Suivant →</button>`;
@@ -1222,7 +1426,7 @@ const OrdersPage = {
       ${totalItems} commande${totalItems > 1 ? 's' : ''}
     </span>`;
     html += '</div>';
-    
+
     container.innerHTML = html;
 
     // Événements de pagination
@@ -1231,7 +1435,7 @@ const OrdersPage = {
       this.renderFilteredOrders();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
-    
+
     AppUtils.on('[data-action="next-page-orders"]', 'click', () => {
       this.currentPage++;
       this.renderFilteredOrders();
@@ -1250,7 +1454,7 @@ const OrdersPage = {
   updateSearchCount() {
     const searchInput = document.getElementById('searchInput');
     const searchTerm = searchInput ? searchInput.value.trim() : '';
-    
+
     // Créer ou mettre à jour le compteur de résultats
     let countDiv = document.getElementById('searchResultsCount');
     if (!countDiv) {
@@ -1266,7 +1470,7 @@ const OrdersPage = {
     if (searchTerm || this.currentStatus) {
       const totalOrders = this.allOrders.length;
       const filteredCount = this.filteredOrders.length;
-      
+
       if (filteredCount === 0) {
         countDiv.innerHTML = `
           <div style="padding: 32px; text-align: center;">
@@ -1307,7 +1511,7 @@ const OrdersPage = {
   renderOrderStats(stats) {
     const container = document.getElementById('orderStats');
     if (!container) return;
-    
+
     container.innerHTML = `
       <div class="stat-card">
         <div class="stat-header">
@@ -1354,7 +1558,7 @@ const OrdersPage = {
   renderOrdersTable(orders) {
     const tbody = document.getElementById('ordersTableBody');
     if (!tbody) return;
-    
+
     if (!orders || orders.length === 0) {
       tbody.innerHTML = `
         <tr>
@@ -1433,7 +1637,7 @@ const OrdersPage = {
   async viewOrderDetails(id) {
     try {
       const data = await API.getOrder(id);
-      
+
       if (data && data.data && data.data.order) {
         const order = data.data.order;
         const modal = document.getElementById('orderDetailsModal');
@@ -1535,15 +1739,15 @@ const OrdersPage = {
 
   async handleStatusChange(e) {
     e.preventDefault();
-    
+
     const orderId = document.getElementById('statusOrderId').value;
     const newStatus = document.getElementById('newStatus').value;
-    
+
     try {
       await API.updateOrderStatus(orderId, newStatus);
       UI.showNotification('Succès', 'Statut mis à jour', 'success');
       ModalManager.closeModal('statusModal');
-      
+
       // Recharger les commandes et stats
       await this.loadOrders(this.currentPage);
       await this.loadOrderStats();
@@ -1580,14 +1784,14 @@ const ProfilePage = {
   async loadProfile() {
     try {
       const data = await API.getProfile();
-      
+
       if (data && data.data && data.data.user) {
         const user = data.data.user;
         document.getElementById('business_name').value = user.business_name || '';
         document.getElementById('email').value = user.email || '';
         document.getElementById('phone').value = user.phone || '';
         document.getElementById('whatsapp_number').value = user.whatsapp_number || '';
-        
+
         const storeLink = `${window.location.origin}/store/${user.store_slug}`;
         document.getElementById('store_link').value = storeLink;
       }
@@ -1599,22 +1803,22 @@ const ProfilePage = {
 
   async handleProfileSubmit(e) {
     e.preventDefault();
-    
+
     const formData = {
       business_name: document.getElementById('business_name').value,
       phone: document.getElementById('phone').value,
       whatsapp_number: document.getElementById('whatsapp_number').value
     };
-    
+
     try {
       await API.updateProfile(formData);
       UI.showNotification('Succès', 'Profil mis à jour', 'success');
-      
+
       // Mettre à jour localStorage
       const currentUser = API.getUser();
       currentUser.business_name = formData.business_name;
       API.setUser(currentUser);
-      
+
       setTimeout(() => location.reload(), 1000);
     } catch (error) {
       console.error('Erreur mise à jour profil:', error);
@@ -1623,27 +1827,27 @@ const ProfilePage = {
 
   async handlePasswordSubmit(e) {
     e.preventDefault();
-    
+
     const oldPassword = document.getElementById('old_password').value;
     const newPassword = document.getElementById('new_password').value;
     const confirmPassword = document.getElementById('confirm_password').value;
-    
+
     if (newPassword !== confirmPassword) {
       UI.showNotification('Erreur', 'Les mots de passe ne correspondent pas', 'error');
       return;
     }
-    
+
     if (newPassword.length < 8) {
       UI.showNotification('Erreur', 'Le mot de passe doit faire au moins 8 caractères', 'error');
       return;
     }
-    
+
     try {
       await API.post('/auth/change-password', {
         old_password: oldPassword,
         new_password: newPassword
       });
-      
+
       UI.showNotification('Succès', 'Mot de passe modifié', 'success');
       document.getElementById('passwordForm').reset();
     } catch (error) {
@@ -1691,7 +1895,7 @@ const SubscriptionPage = {
   renderCurrentSubscription(data) {
     const container = document.getElementById('currentSubscription');
     if (!container) return;
-    
+
     container.innerHTML = `
       <div style="padding: 32px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: white; border-radius: var(--radius-lg);">
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
@@ -1709,11 +1913,11 @@ const SubscriptionPage = {
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
             <div>
               <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Produits</div>
-              <div style="font-size: 24px; font-weight: 700;"> ${data.plan_name.toLowerCase() === 'gratuit'? '5 max': '∞'}</div>
+              <div style="font-size: 24px; font-weight: 700;"> ${data.plan_name.toLowerCase() === 'gratuit' ? '5 max' : '∞'}</div>
             </div>
             <div>
               <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Commandes/mois</div>
-              <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'gratuit'? '20 max': '∞'}</div>
+              <div style="font-size: 24px; font-weight: 700;">${data.plan_name.toLowerCase() === 'gratuit' ? '20 max' : '∞'}</div>
             </div>
           </div>
         </div>
@@ -1732,7 +1936,7 @@ const SubscriptionPage = {
     try {
       const data = await API.getDashboard();
       const user = await API.getProfile();
-      
+
       if (data && data.data && data.data.overview && user.data.user) {
         this.renderUsageStats(data.data.overview, user.data.user);
       }
@@ -1744,7 +1948,7 @@ const SubscriptionPage = {
   renderUsageStats(stats, user) {
     const container = document.getElementById('usageStats');
     if (!container) return;
-    
+
     container.innerHTML = `
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px;">
         <div>
@@ -1753,10 +1957,10 @@ const SubscriptionPage = {
             <div style="font-size: 28px; font-weight: 700; color: var(--color-primary);">
               ${stats.products.total || 0}
             </div>
-            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit'? '5' : '∞' } </div>
+            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit' ? '5' : '∞'} </div>
           </div>
           <div style="width: 100%; height: 8px; background: var(--color-surface); border-radius: 100px; overflow: hidden;">
-            <div style="width: ${user.plan_name.toLowerCase() === 'gratuit'? Math.min(((stats.products.total || 0) / 5) * 100, 100): 100}%; height: 100%; background: var(--color-primary);"></div>
+            <div style="width: ${user.plan_name.toLowerCase() === 'gratuit' ? Math.min(((stats.products.total || 0) / 5) * 100, 100) : 100}%; height: 100%; background: var(--color-primary);"></div>
           </div>
         </div>
         
@@ -1766,10 +1970,10 @@ const SubscriptionPage = {
             <div style="font-size: 28px; font-weight: 700; color: var(--color-primary);">
               ${stats.orders.this_month || 0}
             </div>
-            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit'? '20' : '∞' }</div>
+            <div style="font-size: 14px; color: var(--color-secondary);">/ ${user.plan_name.toLowerCase() === 'gratuit' ? '20' : '∞'}</div>
           </div>
           <div style="width: 100%; height: 8px; background: var(--color-surface); border-radius: 100px; overflow: hidden;">
-            <div style="width: ${user.plan_name.toLowerCase() === 'gratuit'? Math.min(((stats.orders.this_month || 0) / 20) * 100, 100) : 100}%; height: 100%; background: var(--color-success);"></div>
+            <div style="width: ${user.plan_name.toLowerCase() === 'gratuit' ? Math.min(((stats.orders.this_month || 0) / 20) * 100, 100) : 100}%; height: 100%; background: var(--color-success);"></div>
           </div>
         </div>
         
@@ -1789,7 +1993,7 @@ const SubscriptionPage = {
   loadAvailablePlans() {
     const container = document.getElementById('availablePlans');
     if (!container) return;
-    
+
     container.innerHTML = `
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
         <div style="border: 2px solid var(--color-surface); border-radius: var(--radius-lg); padding: 24px; position: relative;">
@@ -1898,7 +2102,7 @@ const AdminDashboardPage = {
   async loadAdminDashboard() {
     try {
       const data = await API.getAdminDashboard();
-      
+
       if (data && data.data) {
         this.renderGlobalStats(data.data.stats);
         this.renderConversionStats(data.data.conversion);
@@ -1913,7 +2117,7 @@ const AdminDashboardPage = {
   renderGlobalStats(stats) {
     const container = document.getElementById('globalStats');
     if (!container) return;
-    
+
     container.innerHTML = `
       <div class="stat-card">
         <div class="stat-header">
@@ -1974,7 +2178,7 @@ const AdminDashboardPage = {
   renderConversionStats(conversion) {
     const container = document.getElementById('conversionStats');
     if (!container) return;
-    
+
     container.innerHTML = `
       <div style="padding: 24px; text-align: center;">
         <div style="font-size: 48px; font-weight: 700; color: var(--color-primary); margin-bottom: 8px;">
@@ -2000,7 +2204,7 @@ const AdminDashboardPage = {
   renderTopVendors(vendors) {
     const container = document.getElementById('topVendors');
     if (!container) return;
-    
+
     if (!vendors || vendors.length === 0) {
       container.innerHTML = '<div class="empty-state"><p class="empty-state-text">Aucun vendeur</p></div>';
       return;
@@ -2027,7 +2231,7 @@ const AdminDashboardPage = {
   renderRecentVendors(vendors) {
     const container = document.getElementById('recentActivity');
     if (!container) return;
-    
+
     if (!vendors || vendors.length === 0) {
       container.innerHTML = '<div class="empty-state"><p class="empty-state-text">Aucune activité</p></div>';
       return;
@@ -2130,7 +2334,7 @@ const AdminVendorsPage = {
   renderVendorsTable(vendors) {
     const tbody = document.getElementById('vendorsTableBody');
     if (!tbody) return;
-    
+
     if (!vendors || vendors.length === 0) {
       tbody.innerHTML = `
         <tr>
@@ -2165,10 +2369,10 @@ const AdminVendorsPage = {
           ${vendor.phone ? `<div style="font-size: 13px; color: var(--color-secondary);">${vendor.phone}</div>` : ''}
         </td>
         <td>
-          ${vendor.plan_name ? 
-            `<span class="badge badge-info">${vendor.plan_name}</span>` :
-            `<span class="badge badge-neutral">Aucun</span>`
-          }
+          ${vendor.plan_name ?
+        `<span class="badge badge-info">${vendor.plan_name}</span>` :
+        `<span class="badge badge-neutral">Aucun</span>`
+      }
         </td>
         <td style="text-align: center;">${vendor.products_count || 0}</td>
         <td style="text-align: center;">${vendor.orders_count || 0}</td>
@@ -2192,26 +2396,26 @@ const AdminVendorsPage = {
   renderPagination(pagination) {
     const container = document.getElementById('pagination');
     if (!container) return;
-    
+
     const { page, totalPages, total } = pagination;
-    
+
     if (totalPages <= 1) {
       container.innerHTML = '';
       return;
     }
 
     let html = '';
-    
+
     if (page > 1) {
       html += `<button class="btn btn-secondary btn-sm" data-action="prev-page-vendors">← Précédent</button>`;
     }
-    
+
     html += `<span style="padding: 8px 16px; color: var(--color-secondary);">Page ${page} sur ${totalPages} (${total} vendeurs)</span>`;
-    
+
     if (page < totalPages) {
       html += `<button class="btn btn-secondary btn-sm" data-action="next-page-vendors">Suivant →</button>`;
     }
-    
+
     container.innerHTML = html;
 
     AppUtils.on('[data-action="prev-page-vendors"]', 'click', () => this.loadVendors(this.currentPage - 1));
@@ -2221,15 +2425,15 @@ const AdminVendorsPage = {
   async openVendorActions(id) {
     try {
       const data = await API.getVendor(id);
-      
+
       if (data && data.data) {
         const vendor = data.data.user;
         const modal = document.getElementById('vendorActionsModal');
         const body = document.getElementById('vendorActionsBody');
-        
+
         const isSuspended = vendor.account_status === 'suspended';
         const isDeactivated = vendor.account_status === 'deactivated';
-        
+
         body.innerHTML = `
           <div style="margin-bottom: 24px; padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm);">
             <h4 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">${vendor.business_name}</h4>
@@ -2238,24 +2442,24 @@ const AdminVendorsPage = {
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 12px;">
-            ${!isSuspended && !isDeactivated ? 
-              `<button class="btn btn-danger w-full" data-action="suspend-vendor" data-vendor-id="${id}">
+            ${!isSuspended && !isDeactivated ?
+            `<button class="btn btn-danger w-full" data-action="suspend-vendor" data-vendor-id="${id}">
                 ⛔ Suspendre le vendeur
               </button>` : ''
-            }
+          }
             
-            ${isSuspended ? 
-              `<button class="btn btn-success w-full" data-action="activate-vendor" data-vendor-id="${id}">
+            ${isSuspended ?
+            `<button class="btn btn-success w-full" data-action="activate-vendor" data-vendor-id="${id}">
                 ✅ Réactiver le vendeur
               </button>` : ''
-            }
+          }
             
             <button class="btn btn-secondary w-full" data-action="view-vendor" data-vendor-id="${id}">
               👁️ Voir tous les détails
             </button>
           </div>
         `;
-        
+
         ModalManager.openModal('vendorActionsModal');
       }
     } catch (error) {
@@ -2271,10 +2475,10 @@ const AdminVendorsPage = {
 
   async handleSuspend(e) {
     e.preventDefault();
-    
+
     const userId = document.getElementById('suspendUserId').value;
     const reason = document.getElementById('suspendReason').value;
-    
+
     try {
       await API.suspendVendor(userId, reason);
       UI.showNotification('Succès', 'Vendeur suspendu', 'success');
@@ -2290,7 +2494,7 @@ const AdminVendorsPage = {
       'Réactiver le vendeur',
       'Êtes-vous sûr de vouloir réactiver ce vendeur ?'
     );
-    
+
     if (confirmed) {
       try {
         await API.activateVendor(id);
@@ -2342,21 +2546,21 @@ const PublicProductPage = {
 
   renderProduct(data) {
     const { product, customMessage } = data;
-    const {whatsapp_number} = product;
-    let whatsapp_url = `https://wa.me/${whatsapp_number.split(' ').join('').replace('+','')}?text=`;
+    const { whatsapp_number } = product;
+    let whatsapp_url = `https://wa.me/${whatsapp_number.split(' ').join('').replace('+', '')}?text=`;
     let message = "Bonjour 👋 Je suis intéressé(e) par le produit {{product_name}} à {{product_price}} {{currency}}. Pouvez-vous me donner plus d'informations ?";
     const container = document.getElementById('productContainer');
     if (!container) return;
-    if(customMessage !== null){
+    if (customMessage !== null) {
       const { custom_order_message } = customMessage;
       message = custom_order_message;
     }
     whatsapp_url += encodeURI(message.replace('{{product_name}}', product.name).replace('{{product_price}}', product.price).replace('{{currency}}', product.currency).replace('{{quantity}}', product.stock_quantity));
     // Update meta tags
     document.title = `${product.name} | ${product.business_name}`;
-    
+
     container.innerHTML = `
-      ${product.image_url ? 
+      ${product.image_url ?
         `<img src="${product.image_url}" alt="${product.name}" class="product-image">` :
         `<div class="product-image" style="display: flex; align-items: center; justify-content: center; font-size: 120px;">📦</div>`
       }
@@ -2377,30 +2581,30 @@ const PublicProductPage = {
           </div>
         </div>
 
-        ${product.description ? 
-          `<div class="product-description">${product.description.replace(/\n/g, '<br>')}</div>` :
-          ''
-        }
+        ${product.description ?
+        `<div class="product-description">${product.description.replace(/\n/g, '<br>')}</div>` :
+        ''
+      }
 
-        ${product.stock_quantity > 0 ? 
-          `<div style="padding: 12px; background: rgba(76, 175, 80, 0.1); border-radius: var(--radius-sm); margin-bottom: 24px; text-align: center;">
+        ${product.stock_quantity > 0 ?
+        `<div style="padding: 12px; background: rgba(76, 175, 80, 0.1); border-radius: var(--radius-sm); margin-bottom: 24px; text-align: center;">
             <strong style="color: var(--color-success);">Stock disponible : ${product.stock_quantity} unité(s)</strong>
           </div>` :
-          ''
-        }
+        ''
+      }
 
         <div class="order-actions">
-          ${whatsapp_url && product.is_available ? 
-            `<button class="whatsapp-btn">
+          ${whatsapp_url && product.is_available ?
+        `<button class="whatsapp-btn">
               <svg width="28" height="28" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
               </svg>
               Commander via WhatsApp
             </button>` :
-            `<div style="padding: 20px; background: var(--color-surface); border-radius: var(--radius-md); text-align: center; color: var(--color-secondary);">
+        `<div style="padding: 20px; background: var(--color-surface); border-radius: var(--radius-md); text-align: center; color: var(--color-secondary);">
               ${product.is_available ? 'Contactez le vendeur pour commander' : 'Produit actuellement indisponible'}
             </div>`
-          }
+      }
         </div>
 
         <div class="product-stats">
@@ -2424,7 +2628,7 @@ const PublicProductPage = {
   showError(message) {
     const container = document.getElementById('productContainer');
     if (!container) return;
-    
+
     container.innerHTML = `
       <div style="text-align: center; padding: 64px;">
         <div style="font-size: 64px; margin-bottom: 24px;">😔</div>
@@ -2485,7 +2689,7 @@ const PublicStorePage = {
   applyCustomization(customization) {
     const styleId = 'dynamic-store-styles';
     let styleElement = document.getElementById(styleId);
-    
+
     if (!styleElement) {
       styleElement = document.createElement('style');
       styleElement.id = styleId;
@@ -2588,9 +2792,10 @@ const PublicStorePage = {
   },
 
   renderStore(data) {
-    const { vendor, products, customization, integrations } = data;
+    const { vendor, products, customization, categories, integrations } = data;
 
     this.allProducts = products || [];
+    this.allCategories = categories || [];
     this.filteredProducts = [...this.allProducts];
     this.storeIntegrations = integrations;
     this.storeCustomization = customization;
@@ -2598,7 +2803,7 @@ const PublicStorePage = {
     document.title = `${vendor.business_name} | AURA`;
 
     let headerContent = '';
-    
+
     if (customization && customization.banner_url) {
       headerContent += `
         <div style="width: 100%; height: 300px; overflow: hidden; border: 2px solid ${customization.primary_color}; border-radius: 10px;">
@@ -2609,19 +2814,19 @@ const PublicStorePage = {
 
     headerContent += `
       <div style="padding: 48px 24px; text-align: center;">
-        ${customization && customization.logo_url ? 
-          `<div style="display: inline-block; position: relative; bottom: 80px; width:102px; max-height: 102px; border: 1.5px solid ${customization.text_color}; border-radius: 50%">
+        ${customization && customization.logo_url ?
+        `<div style="display: inline-block; position: relative; bottom: 80px; width:102px; max-height: 102px; border: 1.5px solid ${customization.text_color}; border-radius: 50%">
             <img src="${customization.logo_url}" alt="Logo" style="width: 100px; max-height: 100px; margin-bottom: 16px; border-radius: 50%;">
-          </div>` : 
-          ''
-        }
+          </div>` :
+        ''
+      }
         <div style="position: relative; bottom: -60px;">
           <div class="store-name">${vendor.business_name}</div>
           <div class="store-subtitle">
-            ✨ ${customization && customization.show_product_count ? 
-              `${products.length} produit${products.length > 1 ? 's' : ''} disponible${products.length > 1 ? 's' : ''}` :
-              'Découvrez nos produits'
-            }
+            ✨ ${customization && customization.show_product_count ?
+        `${products.length} produit${products.length > 1 ? 's' : ''} disponible${products.length > 1 ? 's' : ''}` :
+        'Découvrez nos produits'
+      }
           </div>
           ${integrations && customization && customization.show_social_links ? this.renderSocialLinks(integrations) : ''}
         </div>
@@ -2635,6 +2840,68 @@ const PublicStorePage = {
       this.updateSearchCount(products.length, products.length);
     }
 
+    this.renderProducts();
+    if (this.allCategories.length > 0) {
+      this.renderCategoryFilter();
+    }
+  },
+  renderCategoryFilter() {
+    const container = document.getElementById('storeInfo');
+
+    const filterDiv = document.createElement('div');
+    filterDiv.id = 'categoryFilter';
+    filterDiv.style.cssText = `
+    max-width: 1200px;
+    margin: -16px auto 32px;
+    padding: 0 24px;
+  `;
+
+    filterDiv.innerHTML = `
+    <div style="
+    margin: 40px 0;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 16px;
+      background: white;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    ">
+      <button class="category-filter-btn active" data-category="all">
+        📦 Tous les produits (${this.allProducts.length})
+      </button>
+      ${this.allCategories.map(cat => `
+        <button class="category-filter-btn" data-category="${cat.id}">
+          ${cat.name} (${cat.product_count})
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+    container.after(filterDiv);
+
+    // Événements
+    filterDiv.querySelectorAll('.category-filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const categoryId = e.target.dataset.category;
+        this.filterByCategory(categoryId);
+
+        // Mettre à jour le bouton actif
+        filterDiv.querySelectorAll('.category-filter-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
+  },
+
+  filterByCategory(categoryId) {
+    if (categoryId === 'all') {
+      this.filteredProducts = [...this.allProducts];
+    } else {
+      this.filteredProducts = this.allProducts.filter(p => p.category_id == categoryId);
+    }
+
+    this.currentPage = 1;
     this.renderProducts();
   },
 
@@ -2654,7 +2921,7 @@ const PublicStorePage = {
           </p>
         </div>
       `;
-      
+
       // Supprimer la pagination si elle existe
       const paginationContainer = document.getElementById('storePagination');
       if (paginationContainer) {
@@ -2665,7 +2932,7 @@ const PublicStorePage = {
 
     // Calculer la pagination
     const totalPages = Math.ceil(this.filteredProducts.length / this.itemsPerPage);
-    
+
     if (this.currentPage > totalPages && totalPages > 0) {
       this.currentPage = totalPages;
     }
@@ -2679,27 +2946,27 @@ const PublicStorePage = {
 
     grid.innerHTML = paginatedProducts.map(product => {
       let orderUrl = `/p/${product.share_token}`;
-      
-      if (this.storeIntegrations && this.storeIntegrations.whatsapp && 
-          this.storeIntegrations.whatsapp.enabled && this.storeIntegrations.whatsapp.url) {
+
+      if (this.storeIntegrations && this.storeIntegrations.whatsapp &&
+        this.storeIntegrations.whatsapp.enabled && this.storeIntegrations.whatsapp.url) {
         orderUrl = this.storeIntegrations.whatsapp.url;
       }
 
       return `
         <div class="product-card" data-product-name="${product.name.toLowerCase()}" data-product-id="${product.id}">
           <a href="/p/${product.share_token}" style="text-decoration: none; color: inherit;">
-            ${product.image_url ? 
-              `<img src="${product.image_url}" alt="${product.name}" class="product-image">` :
-              `<div class="product-image" style="display: flex; align-items: center; justify-content: center; font-size: 80px;">📦</div>`
-            }
+            ${product.image_url ?
+          `<img src="${product.image_url}" alt="${product.name}" class="product-image">` :
+          `<div class="product-image" style="display: flex; align-items: center; justify-content: center; font-size: 80px;">📦</div>`
+        }
             <div class="product-info">
               <h3 class="product-name">${product.name}</h3>
               <div class="product-price">${UI.formatCurrency(product.price, product.currency)}</div>
-              ${product.stock_quantity > 0 ? 
-                `<div style="font-size: 13px; color: var(--color-success); margin-bottom: 12px;">
+              ${product.stock_quantity > 0 ?
+          `<div style="font-size: 13px; color: var(--color-success); margin-bottom: 12px;">
                   ✓ En stock (${product.stock_quantity})
                 </div>` : ''
-              }
+        }
             </div>
           </a>
           <button class="product-cta commanderWhatsapp" data-link-product="${orderUrl}">
@@ -2788,11 +3055,11 @@ const PublicStorePage = {
     // Informations
     const startItem = ((this.currentPage - 1) * this.itemsPerPage) + 1;
     const endItem = Math.min(this.currentPage * this.itemsPerPage, this.filteredProducts.length);
-    
+
     const infoDiv = document.createElement('div');
     infoDiv.className = 'pagination-info';
     infoDiv.textContent = `Affichage de ${startItem} à ${endItem} sur ${this.filteredProducts.length} produit${this.filteredProducts.length > 1 ? 's' : ''}`;
-    
+
     paginationWrapper.appendChild(infoDiv);
 
     container.innerHTML = '';
@@ -2804,17 +3071,17 @@ const PublicStorePage = {
     btn.className = `pagination-btn ${isActive ? 'active' : ''}`;
     btn.textContent = text;
     btn.dataset.page = pageNum;
-    
+
     if (title) {
       btn.title = title;
     }
-    
+
     if (isActive) {
       btn.disabled = true;
     }
-    
+
     btn.addEventListener('click', () => this.goToPage(pageNum));
-    
+
     return btn;
   },
 
@@ -2926,7 +3193,7 @@ const PublicStorePage = {
   renderCustomMessage() {
     const grid = document.getElementById('productsGridStore');
     const existingMessage = document.querySelector('.custom-order-message');
-    
+
     if (existingMessage) {
       existingMessage.remove();
     }
@@ -2949,13 +3216,13 @@ const PublicStorePage = {
         </p>
       </div>
     `;
-    
+
     grid.parentElement.appendChild(messageDiv);
   },
 
   renderSocialLinks(integrations) {
     const links = [];
-    
+
     if (integrations.whatsapp && integrations.whatsapp.enabled) {
       let whatsapp_url = `https://wa.me/${integrations.whatsapp.number.split(' ').join('').replace('+', '')}`;
       links.push(`
@@ -3047,8 +3314,8 @@ const PublicOrderManager = {
 
   init() {
     setTimeout(() => {
-        this.attachEventListeners();
-        this.loadSavedCustomerInfo();
+      this.attachEventListeners();
+      this.loadSavedCustomerInfo();
     }, 3000);
   },
 
@@ -3159,7 +3426,7 @@ const PublicOrderManager = {
     // Extraire depuis le DOM
     const titleEl = container.querySelector('.product-title');
     const priceEl = container.querySelector('.product-price');
-    
+
     // Extraire l'ID produit depuis l'URL (format: /p/:token)
     const pathParts = window.location.pathname.split('/');
     const token = pathParts[pathParts.length - 1];
@@ -3431,7 +3698,7 @@ const PublicOrderManager = {
       submitBtn.textContent = originalText;
     }
   },
-  
+
 
   getTokenFromURL() {
     const path = window.location.pathname;
@@ -3463,18 +3730,18 @@ const PublicOrderManager = {
     }
     const { product, customMessage } = dataResult.product;
     const { whatsapp_number } = product;
-    let whatsapp_url = `https://wa.me/${whatsapp_number.split(' ').join('').replace('+','')}?text=`;
+    let whatsapp_url = `https://wa.me/${whatsapp_number.split(' ').join('').replace('+', '')}?text=`;
     let message = "Bonjour 👋 Je suis intéressé(e) par le produit {{product_name}} à {{product_price}} {{currency}}. Pouvez-vous me donner plus d'informations ?";
-    if(customMessage !== null){
+    if (customMessage !== null) {
       const { custom_order_message } = customMessage;
       message = custom_order_message;
     }
-    if(customMessage !== null){
+    if (customMessage !== null) {
       const { custom_order_message } = customMessage;
       message = custom_order_message;
     }
     whatsapp_url += encodeURI(message.replace('{{product_name}}', product.name).replace('{{product_price}}', product.price).replace('{{currency}}', product.currency).replace('{{quantity}}', product.stock_quantity));
-    
+
 
     successOverlay.innerHTML = `
       <div class="order-modal" style="max-width: 500px; text-align: center;">
@@ -3523,6 +3790,7 @@ document.addEventListener('DOMContentLoaded', () => {
   RegisterPage.init();
   DashboardPage.init();
   ProductsPage.init();
+  CategoriesPage.init();
   ProfilePage.init();
   SubscriptionPage.init();
   AdminDashboardPage.init();
@@ -3530,7 +3798,7 @@ document.addEventListener('DOMContentLoaded', () => {
   PublicProductPage.init();
   PublicOrderManager.init();
   PublicStorePage.init();
-  
+
   // ✨ NOUVEAU - Initialiser les nouvelles pages
   if (typeof AdvancedStatsPage !== 'undefined') {
     AdvancedStatsPage.init();

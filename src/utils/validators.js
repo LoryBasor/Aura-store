@@ -77,6 +77,11 @@ const productSchema = Joi.object({
   currency: Joi.string()
     .valid('XAF', 'XOF', 'USD', 'EUR')
     .default('XAF'),
+  category_id: Joi.number()
+    .integer()
+    .positive()
+    .optional()
+    .allow(null),
   stock_quantity: Joi.number()
     .integer()
     .min(0)
