@@ -221,6 +221,16 @@ app.get('/store/:storeSlug', (req, res) => {
   });
 });
 
+// ==================== PAGES D'INFORMATION ====================
+app.get('/about', (req, res) => {
+  res.render('index', {
+    title: 'À propos d\'Aura',
+    showSidebar: false,
+    showHeader: false,
+    layout: false
+  });
+});
+
 // ==================== MARKETPLACE PUBLIQUE ====================
 
 // Page principale marketplace
