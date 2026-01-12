@@ -67,7 +67,7 @@ class MarketplaceService {
         ORDER BY p.view_count DESC
         LIMIT 4
       `, [store.id]);
-      
+
       store.products = storeProducts.map(p => ({
         ...p,
         image_url: getImageUrl(p.image_url)
@@ -110,6 +110,7 @@ class MarketplaceService {
     ];
     let params = [];
     let orderBy = 'p.created_at DESC';
+
 
     // Filtre par recherche
     if (filters.search) {
@@ -162,6 +163,8 @@ class MarketplaceService {
     }
 
     const whereClause = whereConditions.join(' AND ');
+    const limit = parseInt(filters.limit ?? 20, 10) || 20;
+    const offset = parseInt(filters.offset ?? 0, 10) || 0;
 
     const query = `
       SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug, p.description,
@@ -175,12 +178,8 @@ class MarketplaceService {
       LEFT JOIN product_links pl ON p.id = pl.product_id
       WHERE ${whereClause}
       ORDER BY ${orderBy}
-      LIMIT ? OFFSET ?
+      LIMIT ${limit} OFFSET ${offset};
     `;
-
-    const limit = filters.limit || 20;
-    const offset = filters.offset || 0;
-    params.push(limit, offset);
 
     const [products] = await pool.execute(query, params);
 
@@ -240,25 +239,43 @@ class MarketplaceService {
 
     const whereClause = whereConditions.join(' AND ');
 
+    const limit = filters.limit || 20;
+    const offset = filters.offset || 0;
+
     const query = `
-      SELECT u.id, u.business_name, u.store_slug, u.city, u.country, u.created_at,
-             sc.logo_url,
-             COUNT(p.id) as product_count,
-             SUM(p.view_count) as total_views,
-             GROUP_CONCAT(DISTINCT p.image_url LIMIT 3) as sample_images
+      SELECT 
+        u.id,
+        u.business_name,
+        u.store_slug,
+        u.city,
+        u.country,
+        u.created_at,
+        sc.logo_url,
+        COUNT(p.id) AS product_count,
+        SUM(p.view_count) AS total_views,
+        (
+          SELECT GROUP_CONCAT(image_url)
+          FROM (
+            SELECT image_url
+            FROM products p2
+            WHERE p2.user_id = u.id AND p2.is_available = 1 AND p2.deleted_at IS NULL
+            LIMIT 3
+          ) AS tmp
+        ) AS sample_images
       FROM users u
-      LEFT JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
-      LEFT JOIN store_customization sc ON u.id = sc.user_id
+      LEFT JOIN products p 
+        ON u.id = p.user_id 
+        AND p.is_available = 1 
+        AND p.deleted_at IS NULL
+      LEFT JOIN store_customization sc 
+        ON u.id = sc.user_id
       WHERE ${whereClause}
       GROUP BY u.id
       HAVING product_count > 0
       ORDER BY ${orderBy}
-      LIMIT ? OFFSET ?
-    `;
+      LIMIT ${limit} OFFSET ${offset};
 
-    const limit = filters.limit || 20;
-    const offset = filters.offset || 0;
-    params.push(limit, offset);
+    `;
 
     const [stores] = await pool.execute(query, params);
 
@@ -273,7 +290,7 @@ class MarketplaceService {
         ORDER BY p.view_count DESC
         LIMIT 4
       `, [store.id]);
-      
+
       store.products = storeProducts.map(p => ({
         ...p,
         image_url: getImageUrl(p.image_url)
