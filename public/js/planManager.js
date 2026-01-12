@@ -22,6 +22,14 @@ const PlanManager = {
    */
   async init() {
     try {
+      const isPublicPage = currentPath.startsWith('/p/');
+    const isPublicStore = currentPath.startsWith('/store/');
+
+
+    if (isPublicPage || isPublicStore) {
+      return;
+    }
+
       const data = await API.getProfile();
       if (data && data.data && data.data.user) {
         this.currentPlan = (data.data.user.plan_name || 'free').toLowerCase();

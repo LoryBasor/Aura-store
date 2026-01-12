@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="shortcut icon" href="/images/logo.png" type="image/png">
+  <meta name="description" content="Découvrez des milliers de produits et boutiques de vendeurs indépendants">
+
+  <style>
+    :root {
+      --color-primary: #253337;
+      --color-secondary: #5C6C73;
+      --color-accent: #E0FCFC;
+      --color-success: #4CAF50;
+      --color-white: #FFFFFF;
+      --color-text: #1a1a1a;
+      --color-text-light: #666666;
+      --color-border: rgba(37, 51, 55, 0.1);
+      --color-surface: #F5F7F9;
+
+      --gradient-primary: linear-gradient(135deg, #253337, #5C6C73);
+      --gradient-accent: linear-gradient(135deg, #E0FCFC, #C2E0E3);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--color-text);
+      background: var(--color-surface);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Header */
+    .header {
+      background: var(--color-white);
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--color-primary);
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+
+    .nav-link {
+      color: var(--color-text-light);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .nav-link:hover {
+      color: var(--color-primary);
+    }
+
+    /* Hero Section */
+    .hero {
+      background: var(--gradient-primary);
+      color: var(--color-white);
+      padding: 4rem 0;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+
+    .search-bar {
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex;
+      gap: 0;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 1rem;
+      border: none;
+      border-radius: var(--radius-md) 0 0 var(--radius-md);
+      font-size: 1rem;
+    }
+
+    .search-btn {
+      background: var(--color-accent);
+      color: var(--color-primary);
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .search-btn:hover {
+      background: #C2E0E3;
+    }
+
+    /* Sections */
+    .section {
+      padding: 4rem 0;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 3rem;
+      color: var(--color-primary);
+    }
+
+    /* Products Grid */
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .product-card {
+      background: var(--color-white);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .product-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .product-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background: var(--color-surface);
+    }
+
+    .product-info {
+      padding: 1.5rem;
+    }
+
+    .product-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--color-primary);
+    }
+
+    .product-price {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: var(--color-success);
+      margin-bottom: 0.5rem;
+    }
+
+    .product-vendor {
+      color: var(--color-text-light);
+      font-size: 0.9rem;
+    }
+
+    .product-location {
+      color: var(--color-text-light);
+      font-size: 0.9rem;
+    }
+
+    /* Stores Grid */
+    .stores-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .store-card {
+      background: var(--color-white);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .store-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .store-logo {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+      margin-bottom: 1rem;
+      background: var(--color-surface);
+    }
+
+    .store-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--color-primary);
+    }
+
+    .store-location {
+      color: var(--color-text-light);
+      margin-bottom: 1rem;
+    }
+
+    .store-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: var(--color-text-light);
+    }
+
+    /* Categories */
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .category-card {
+      background: var(--color-white);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .category-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .category-name {
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .category-count {
+      color: var(--color-text-light);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--color-primary);
+      color: var(--color-white);
+      padding: 2rem 0;
+      text-align: center;
+    }
+
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 2rem;
+    }
+
+    .footer-link {
+      color: var(--color-white);
+      text-decoration: none;
+      opacity: 0.8;
+      transition: var(--transition);
+    }
+
+    .footer-link:hover {
+      opacity: 1;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .nav-links {
+        gap: 1rem;
+      }
+
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .search-bar {
+        flex-direction: column;
+      }
+
+      .search-input {
+        border-radius: var(--radius-md);
+      }
+
+      .search-btn {
+        border-radius: var(--radius-md);
+      }
+
+      .products-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stores-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-content {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+    <% const { popularProducts, recentProducts, recommendedStores, trendingCategories } = data; %>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="/marketplace" class="logo">Aura Marketplace</a>
+        <nav class="nav-links">
+          <a href="/marketplace/products" class="nav-link">Produits</a>
+          <a href="/marketplace/stores" class="nav-link">Boutiques</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <h1>Découvrez des milliers de produits</h1>
+      <p>Explorez notre marketplace et trouvez ce dont vous avez besoin</p>
+      <div class="search-bar">
+        <input type="text" class="search-input" placeholder="Rechercher un produit..." id="searchInput">
+        <button class="search-btn" id="searchBtn">Rechercher</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Produits Populaires -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Produits Populaires</h2>
+      <div class="products-grid" id="popularProducts">
+        <% popularProducts.forEach(product => { %>
+        <a href="/p/<%= product.share_token %>" class="product-card">
+          <img src="<%= product.image_url || '/images/placeholder.png' %>" alt="<%= product.name %>" class="product-image">
+          <div class="product-info">
+            <div class="product-name"><%= product.name %></div>
+            <div class="product-price"><%= product.price %> <%= product.currency %></div>
+            <div class="product-vendor"><%= product.business_name %></div>
+            <% if (product.city) { %>
+            <div class="product-location"><%= product.city %>, <%= product.country || '' %></div>
+            <% } %>
+          </div>
+        </a>
+        <% }) %>
+      </div>
+      <div style="text-align: center;">
+        <a href="/marketplace/products?sort=popular" class="nav-link" style="font-size: 1.1rem;">Voir plus de produits populaires →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Produits Récents -->
+  <section class="section" style="background: var(--color-white);">
+    <div class="container">
+      <h2 class="section-title">Nouveautés</h2>
+      <div class="products-grid" id="recentProducts">
+        <% recentProducts.forEach(product => { %>
+        <a href="/p/<%= product.share_token %>" class="product-card">
+          <img src="<%= product.image_url || '/images/placeholder.png' %>" alt="<%= product.name %>" class="product-image">
+          <div class="product-info">
+            <div class="product-name"><%= product.name %></div>
+            <div class="product-price"><%= product.price %> <%= product.currency %></div>
+            <div class="product-vendor"><%= product.business_name %></div>
+            <% if (product.city) { %>
+            <div class="product-location"><%= product.city %>, <%= product.country || '' %></div>
+            <% } %>
+          </div>
+        </a>
+        <% }) %>
+      </div>
+      <div style="text-align: center;">
+        <a href="/marketplace/products?sort=recent" class="nav-link" style="font-size: 1.1rem;">Voir toutes les nouveautés →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Boutiques Recommandées -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Boutiques Recommandées</h2>
+      <div class="stores-grid" id="recommendedStores">
+        <% recommendedStores.forEach(store => { %>
+        <a href="/store/<%= store.store_slug %>" class="store-card">
+          <% if (store.logo_url) { %>
+          <img src="<%= store.logo_url %>" alt="<%= store.business_name %>" class="store-logo">
+          <% } else { %>
+          <div class="store-logo" style="display: flex; align-items: center; justify-content: center; background: var(--color-surface); font-size: 3rem;">📦</div>
+          <% } %>
+          <div class="store-name"><%= store.business_name %></div>
+          <% if (store.city) { %>
+          <div class="store-location"><%= store.city %>, <%= store.country || '' %></div>
+          <% } %>
+          <div class="store-stats">
+            <span><%= store.product_count %> produits</span>
+            <span><%= store.total_views %> vues</span>
+          </div>
+          
+          <% if (store.products && store.products.length > 0) { %>
+          <div class="store-products" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border);">
+            <div style="font-size: 0.85rem; color: var(--color-secondary); margin-bottom: 0.5rem; font-weight: 500;">Produits populaires</div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+              <% store.products.forEach(product => { %>
+              <div style="aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-surface);">
+                <img src="<%= product.image_url %>" alt="<%= product.name %>" style="width: 100%; height: 100%; object-fit: cover;">
+              </div>
+              <% }) %>
+            </div>
+          </div>
+          <% } %>
+        </a>
+        <% }) %>
+      </div>
+      <div style="text-align: center;">
+        <a href="/marketplace/stores" class="nav-link" style="font-size: 1.1rem;">Voir toutes les boutiques →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Catégories Tendances -->
+  <section class="section" style="background: var(--color-white);">
+    <div class="container">
+      <h2 class="section-title">Catégories Tendances</h2>
+      <div class="categories-grid" id="trendingCategories">
+        <% trendingCategories.forEach(category => { %>
+        <a href="/marketplace/products?category=<%= category.slug %>" class="category-card">
+          <div class="category-name"><%= category.name %></div>
+          <div class="category-count"><%= category.product_count %> produits</div>
+        </a>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div>&copy; 2026 Aura Marketplace. Tous droits réservés.</div>
+        <div class="footer-links">
+          <a href="#" class="footer-link">À propos</a>
+          <a href="#" class="footer-link">Contact</a>
+          <a href="#" class="footer-link">Conditions</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/marketplace-home.js"></script>
+</body>
+</html>
