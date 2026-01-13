@@ -135,6 +135,12 @@ body {
   border-bottom: 2px solid var(--color-surface);
 }
 
+.filters-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .filters-title {
   font-size: 1.25rem;
   font-weight: 700;
@@ -154,6 +160,23 @@ body {
 }
 
 .clear-filters-btn:hover {
+  background: var(--color-accent);
+  color: var(--color-primary);
+}
+
+/* Close Button - Hidden on desktop */
+.close-filters-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--color-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.close-filters-btn:hover {
   background: var(--color-accent);
   color: var(--color-primary);
 }
@@ -575,6 +598,9 @@ body {
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: -1;
+  }
+  .close-filters-btn{
+    display: flex;
   }
 }
 
