@@ -161,6 +161,8 @@ class AuthService {
           u.business_name,
           u.phone,
           u.whatsapp_number,
+          u.city,
+          u.country,
           u.store_slug,
           u.created_at,
           sp.name as plan_name
