@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const minPriceInput = filterForm.querySelector('input[name="minPrice"]');
   const maxPriceInput = filterForm.querySelector('input[name="maxPrice"]');
   const clearFiltersBtn = document.getElementById('clearFilters');
+  const closeFiltersBtn = document.getElementById('closeFilters');
 
   let currentOffset = 0;
   const limit = 20;
@@ -31,6 +32,14 @@ document.addEventListener('DOMContentLoaded', () => {
     filterToggle.addEventListener('click', (e) => {
       e.stopPropagation();
       filtersSidebar.classList.toggle('open');
+      closeFiltersBtn.classList.toggle('open');
+    });
+  }
+
+  // Bouton fermer le sidebar
+  if (closeFiltersBtn) {
+    closeFiltersBtn.addEventListener('click', () => {
+      filtersSidebar.classList.remove('open');
     });
   }
 

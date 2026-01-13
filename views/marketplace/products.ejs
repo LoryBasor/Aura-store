@@ -7,11 +7,11 @@
   <link rel="stylesheet" href="/css/marketplace-products.css">
 </head>
 <body>
-  
-  <% const { filters, categories, cities, countries, products, total } = data %>
 
-  <%- include('../partials/navbar', { currentPage: 'products', user: typeof user !== 'undefined' ? user : null }) %>
-  
+  <% const { filters, categories, cities, countries, products, total }=data %>
+
+    <%- include('../partials/navbar', { currentPage: 'products' , user: typeof user !=='undefined' ? user : null }) %>
+
   <div class="page-container">
     <!-- Header Section -->
     <header class="page-header">
@@ -36,7 +36,15 @@
       <aside class="filters-sidebar">
         <div class="filters-header">
           <h2 class="filters-title">Filtres</h2>
-          <button id="clearFilters" class="clear-filters-btn">Réinitialiser</button>
+          <div class="filters-header-actions">
+            <button id="clearFilters" class="clear-filters-btn">Réinitialiser</button>
+            <button id="closeFilters" class="close-filters-btn open" aria-label="Fermer">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <form id="filterForm" class="filters-form">
