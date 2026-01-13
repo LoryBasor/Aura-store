@@ -28,6 +28,7 @@ class UserManagementService {
         u.store_slug,
         u.account_status,
         u.is_active,
+        u.is_verified,
         u.suspended_reason,
         u.suspended_at, 
         u.last_login_at,
@@ -278,6 +279,90 @@ class UserManagementService {
     );
 
     return { success: true, temporary_password: newPassword };
+  }
+
+  /**
+   * Marque un vendeur comme vérifié
+   * POST /api/admin/vendors/:userId/verify
+   */
+  async verifyVendor(userId, adminId) {
+    const connection = await pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      // Vérifier que le vendeur existe
+      const [users] = await connection.execute(
+        'SELECT id, is_verified FROM users WHERE id = ? AND role = ? AND deleted_at IS NULL',
+        [userId, USER_ROLES.USER]
+      );
+
+      if (users.length === 0) {
+        throw new AppError('Vendeur introuvable', 404);
+      }
+
+      if (users[0].is_verified) {
+        throw new AppError('Ce vendeur est déjà vérifié', 400);
+      }
+
+      // Marquer comme vérifié
+      await connection.execute(
+        `UPDATE users 
+         SET is_verified = TRUE, verified_at = NOW(), verified_by = ?
+         WHERE id = ?`,
+        [adminId, userId]
+      );
+
+      await connection.commit();
+      return { success: true };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Retire la vérification d'un vendeur
+   * POST /api/admin/vendors/:userId/unverify
+   */
+  async unverifyVendor(userId, adminId) {
+    const connection = await pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      // Vérifier que le vendeur existe
+      const [users] = await connection.execute(
+        'SELECT id, is_verified FROM users WHERE id = ? AND role = ? AND deleted_at IS NULL',
+        [userId, USER_ROLES.USER]
+      );
+
+      if (users.length === 0) {
+        throw new AppError('Vendeur introuvable', 404);
+      }
+
+      if (!users[0].is_verified) {
+        throw new AppError('Ce vendeur n\'est pas vérifié', 400);
+      }
+
+      // Retirer la vérification
+      await connection.execute(
+        `UPDATE users 
+         SET is_verified = FALSE, verified_at = NULL, verified_by = NULL
+         WHERE id = ?`,
+        [userId]
+      );
+
+      await connection.commit();
+      return { success: true };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   /**

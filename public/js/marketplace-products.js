@@ -1,5 +1,5 @@
 // public/js/marketplace-products.js
-// Gestion des filtres et du tri pour la page produits du marketplace
+// Gestion CORRIGÉE des filtres, tri et pagination
 
 document.addEventListener('DOMContentLoaded', () => {
   const filterForm = document.getElementById('filterForm');
@@ -19,28 +19,49 @@ document.addEventListener('DOMContentLoaded', () => {
   const countrySelect = filterForm.querySelector('select[name="country"]');
   const minPriceInput = filterForm.querySelector('input[name="minPrice"]');
   const maxPriceInput = filterForm.querySelector('input[name="maxPrice"]');
+  const clearFiltersBtn = document.getElementById('clearFilters');
 
   let currentOffset = 0;
   const limit = 20;
   let allProducts = [];
+  let filteredProducts = [];
 
-  // Toggle menu responsive
+  // === TOGGLE SIDEBAR MOBILE ===
   if (filterToggle) {
-    filterToggle.addEventListener('click', () => {
+    filterToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
       filtersSidebar.classList.toggle('open');
     });
   }
 
-  // Fermer le menu quand on clique en dehors
+  // Fermer le sidebar en cliquant sur l'overlay
   document.addEventListener('click', (e) => {
-    if (filterToggle && !filterToggle.contains(e.target) && !filtersSidebar.contains(e.target)) {
-      filtersSidebar.classList.remove('open');
+    if (filtersSidebar && filtersSidebar.classList.contains('open')) {
+      if (!filtersSidebar.contains(e.target) && e.target !== filterToggle) {
+        filtersSidebar.classList.remove('open');
+      }
     }
   });
 
-  /**
-   * Récupère les filtres actuels du formulaire
-   */
+  // === RÉINITIALISER LES FILTRES ===
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      categoryInputs.forEach(input => {
+        input.checked = input.value === '';
+      });
+      citySelect.value = '';
+      countrySelect.value = '';
+      minPriceInput.value = '';
+      maxPriceInput.value = '';
+      sortSelect.value = 'recent';
+      
+      currentOffset = 0;
+      applyFilters();
+    });
+  }
+
+  // === RÉCUPÉRER LES FILTRES ACTUELS ===
   function getFilters() {
     const selectedCategory = Array.from(categoryInputs).find(i => i.checked);
     
@@ -51,27 +72,25 @@ document.addEventListener('DOMContentLoaded', () => {
       country: countrySelect.value || '',
       minPrice: minPriceInput.value ? parseFloat(minPriceInput.value) : null,
       maxPrice: maxPriceInput.value ? parseFloat(maxPriceInput.value) : null,
-      sort: sortSelect.value,
-      limit,
-      offset: currentOffset
+      sort: sortSelect.value
     };
   }
 
-  /**
-   * Filtre les produits côté client
-   */
-  function filterProducts() {
+  // === FILTRER LES PRODUITS CÔTÉ CLIENT ===
+  function applyFilters() {
     const filters = getFilters();
     
-    let filtered = allProducts.filter(product => {
+    // Filtrer les produits
+    filteredProducts = allProducts.filter(product => {
       // Filtre recherche
-      if (filters.search && !product.name.toLowerCase().includes(filters.search) && 
-          !product.business_name.toLowerCase().includes(filters.search)) {
-        return false;
+      if (filters.search) {
+        const nameMatch = product.name.toLowerCase().includes(filters.search);
+        const vendorMatch = product.business_name.toLowerCase().includes(filters.search);
+        if (!nameMatch && !vendorMatch) return false;
       }
       
       // Filtre catégorie
-      if (filters.category && product.category_name !== filters.category) {
+      if (filters.category && product.category_slug !== filters.category) {
         return false;
       }
       
@@ -98,42 +117,61 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     });
 
-    // Tri
-    if (filters.sort === 'recent') {
-      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (filters.sort === 'popular') {
-      filtered.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
-    } else if (filters.sort === 'price-asc') {
-      filtered.sort((a, b) => a.price - b.price);
-    } else if (filters.sort === 'price-desc') {
-      filtered.sort((a, b) => b.price - a.price);
-    }
+    // Trier les produits
+    sortProducts(filteredProducts, filters.sort);
 
-    // Pagination
-    const paginated = filtered.slice(currentOffset, currentOffset + limit);
-    
-    renderProducts(paginated);
-    resultsCount.textContent = filtered.length;
-    updatePagination(filtered.length);
+    // Mettre à jour l'affichage
+    updateDisplay();
   }
 
-  /**
-   * Charge les produits avec les filtres actuels
-   */
-  async function loadProducts() {
+  // === TRIER LES PRODUITS ===
+  function sortProducts(products, sortType) {
+    switch(sortType) {
+      case 'recent':
+        products.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+      case 'popular':
+        products.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+        break;
+      case 'price-asc':
+        products.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-desc':
+        products.sort((a, b) => b.price - a.price);
+        break;
+    }
+  }
+
+  // === METTRE À JOUR L'AFFICHAGE ===
+  function updateDisplay() {
+    const total = filteredProducts.length;
+    
+    // Calculer la pagination
+    const start = currentOffset;
+    const end = Math.min(start + limit, total);
+    const paginatedProducts = filteredProducts.slice(start, end);
+
+    // Afficher les produits
+    renderProducts(paginatedProducts);
+
+    // Mettre à jour le compteur
+    resultsCount.textContent = total;
+
+    // Mettre à jour la pagination
+    updatePagination(total);
+
+    // Scroll vers le haut
+    if (productsContainer) {
+      productsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  // === CHARGER TOUS LES PRODUITS DEPUIS L'API ===
+  async function loadAllProducts() {
     try {
       loadingIndicator.style.display = 'block';
-      currentOffset = 0;
-      const filters = getFilters();
-
-      // Construire l'URL avec les paramètres
+      
       const params = new URLSearchParams();
-      if (filters.category) params.append('category', filters.category);
-      if (filters.city) params.append('city', filters.city);
-      if (filters.country) params.append('country', filters.country);
-      if (filters.minPrice) params.append('minPrice', filters.minPrice);
-      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
-      params.append('sort', filters.sort);
       params.append('limit', 1000);
       params.append('offset', 0);
 
@@ -145,118 +183,178 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
 
-      // Mettre à jour les résultats
       if (data.success && data.data) {
         allProducts = data.data.products || [];
-        filterProducts();
+        filteredProducts = [...allProducts];
         
-        // Scroll vers les produits
-        productsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Appliquer les filtres initiaux
+        applyFilters();
+      } else {
+        throw new Error('Invalid response format');
       }
     } catch (error) {
       console.error('Erreur lors du chargement des produits:', error);
-      productsContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 2rem;">Erreur lors du chargement des produits. Veuillez réessayer.</p>';
+      productsContainer.innerHTML = '<p class="empty-message">Erreur lors du chargement des produits. Veuillez réessayer.</p>';
     } finally {
       loadingIndicator.style.display = 'none';
     }
   }
 
-  /**
-   * Affiche les produits
-   */
+  // === AFFICHER LES PRODUITS ===
   function renderProducts(products) {
     if (products.length === 0) {
-      productsContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 2rem;">Aucun produit trouvé avec vos critères.</p>';
+      productsContainer.innerHTML = '<p class="empty-message">Aucun produit trouvé avec vos critères de recherche.</p>';
       return;
     }
 
     productsContainer.innerHTML = products.map(product => `
       <a href="/p/${product.share_token}" class="product-card">
-        <img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name}" class="product-image">
+        <div class="product-image-wrapper">
+          <img src="${product.image_url || '/images/placeholder.png'}" alt="${escapeHtml(product.name)}" class="product-image">
+          ${product.view_count > 100 ? '<div class="product-badge">Populaire</div>' : ''}
+        </div>
         <div class="product-info">
-          <div class="product-name">${product.name}</div>
-          <div class="product-price">${product.price} ${product.currency}</div>
-          <div class="product-vendor">${product.business_name}</div>
-          ${product.city ? `<div class="product-location">${product.city}, ${product.country || ''}</div>` : ''}
+          <h3 class="product-name">${escapeHtml(product.name)}</h3>
+          <p class="product-price">${product.price} ${product.currency}</p>
+          <div class="product-vendor">
+            <span>${escapeHtml(product.business_name)}</span>
+            ${product.is_verified ? `
+              <svg class="verified-badge" width="16" height="16" viewBox="0 0 24 24" fill="#5C6C73" title="Vendeur vérifié">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+              </svg>
+            ` : ''}
+          </div>
+          ${product.city ? `<p class="product-location">📍 ${escapeHtml(product.city)}, ${escapeHtml(product.country || '')}</p>` : ''}
         </div>
       </a>
     `).join('');
+
+    // Ajouter des animations d'apparition
+    animateProductCards();
   }
 
-  /**
-   * Met à jour l'état des boutons de pagination
-   */
+  // === ÉCHAPPER HTML POUR SÉCURITÉ ===
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // === ANIMER L'APPARITION DES CARTES ===
+  function animateProductCards() {
+    const cards = document.querySelectorAll('.product-card');
+    cards.forEach((card, index) => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(20px)';
+      
+      setTimeout(() => {
+        card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      }, index * 30);
+    });
+  }
+
+  // === METTRE À JOUR LA PAGINATION ===
   function updatePagination(total) {
-    const hasNextPage = currentOffset + limit < total;
-    const hasPrevPage = currentOffset > 0;
-
-    prevBtn.disabled = !hasPrevPage;
-    nextBtn.disabled = !hasNextPage;
-
     const currentPage = Math.floor(currentOffset / limit) + 1;
     const totalPages = Math.ceil(total / limit);
-    pagination.textContent = `Page ${currentPage} / ${totalPages}`;
+    
+    // Désactiver/activer les boutons
+    const hasPrev = currentOffset > 0;
+    const hasNext = currentOffset + limit < total;
+
+    prevBtn.disabled = !hasPrev;
+    nextBtn.disabled = !hasNext;
+
+    // Mettre à jour le texte
+    pagination.textContent = totalPages > 0 ? `Page ${currentPage} / ${totalPages}` : 'Aucune page';
   }
 
-  // Événements des filtres - Application en temps réel
+  // === ÉVÉNEMENTS DES FILTRES ===
+  
+  // Catégories
   categoryInputs.forEach(input => {
     input.addEventListener('change', () => {
       currentOffset = 0;
-      filterProducts();
+      applyFilters();
     });
   });
 
+  // Ville
   citySelect.addEventListener('change', () => {
     currentOffset = 0;
-    filterProducts();
+    applyFilters();
   });
   
+  // Pays
   countrySelect.addEventListener('change', () => {
     currentOffset = 0;
-    filterProducts();
+    applyFilters();
   });
   
+  // Prix min
   minPriceInput.addEventListener('change', () => {
     currentOffset = 0;
-    filterProducts();
+    applyFilters();
   });
   
+  // Prix max
   maxPriceInput.addEventListener('change', () => {
     currentOffset = 0;
-    filterProducts();
+    applyFilters();
   });
   
+  // Tri
   sortSelect.addEventListener('change', () => {
     currentOffset = 0;
-    filterProducts();
+    applyFilters();
   });
 
-  // Recherche
+  // Recherche en temps réel
   if (searchInput) {
+    let searchTimeout;
     searchInput.addEventListener('input', () => {
-      currentOffset = 0;
-      filterProducts();
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentOffset = 0;
+        applyFilters();
+      }, 300); // Debounce de 300ms
+    });
+
+    searchInput.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') {
+        clearTimeout(searchTimeout);
+        currentOffset = 0;
+        applyFilters();
+      }
     });
   }
 
   if (searchBtn) {
     searchBtn.addEventListener('click', () => {
       currentOffset = 0;
-      filterProducts();
+      applyFilters();
     });
   }
 
-  // Pagination
+  // === PAGINATION ===
   prevBtn.addEventListener('click', () => {
-    currentOffset = Math.max(0, currentOffset - limit);
-    filterProducts();
+    if (currentOffset > 0) {
+      currentOffset = Math.max(0, currentOffset - limit);
+      updateDisplay();
+    }
   });
 
   nextBtn.addEventListener('click', () => {
-    currentOffset += limit;
-    filterProducts();
+    if (currentOffset + limit < filteredProducts.length) {
+      currentOffset += limit;
+      updateDisplay();
+    }
   });
 
-  // Charger les produits au chargement initial
-  loadProducts();
+  // === CHARGEMENT INITIAL ===
+  loadAllProducts();
+
+  console.log('✅ Marketplace products chargé avec filtres et pagination corrigés !');
 });

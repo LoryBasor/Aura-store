@@ -1,5 +1,5 @@
 // public/js/marketplace-stores.js
-// Gestion des filtres et du tri pour la page boutiques du marketplace
+// Gestion CORRIGÉE des filtres, tri et pagination pour les boutiques
 
 document.addEventListener('DOMContentLoaded', () => {
   const filterForm = document.getElementById('filterForm');
@@ -16,49 +16,63 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchBtn = document.getElementById('storeSearchBtn');
   const citySelect = filterForm.querySelector('select[name="city"]');
   const countrySelect = filterForm.querySelector('select[name="country"]');
+  const clearFiltersBtn = document.getElementById('clearFilters');
 
   let currentOffset = 0;
   const limit = 20;
   let allStores = [];
+  let filteredStores = [];
 
-  // Toggle menu responsive
+  // === TOGGLE SIDEBAR MOBILE ===
   if (filterToggle) {
-    filterToggle.addEventListener('click', () => {
+    filterToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
       filtersSidebar.classList.toggle('open');
     });
   }
 
-  // Fermer le menu quand on clique en dehors
+  // Fermer le sidebar en cliquant sur l'overlay
   document.addEventListener('click', (e) => {
-    if (filterToggle && !filterToggle.contains(e.target) && !filtersSidebar.contains(e.target)) {
-      filtersSidebar.classList.remove('open');
+    if (filtersSidebar && filtersSidebar.classList.contains('open')) {
+      if (!filtersSidebar.contains(e.target) && e.target !== filterToggle) {
+        filtersSidebar.classList.remove('open');
+      }
     }
   });
 
-  /**
-   * Récupère les filtres actuels du formulaire
-   */
+  // === RÉINITIALISER LES FILTRES ===
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      citySelect.value = '';
+      countrySelect.value = '';
+      sortSelect.value = 'recent';
+      
+      currentOffset = 0;
+      applyFilters();
+    });
+  }
+
+  // === RÉCUPÉRER LES FILTRES ACTUELS ===
   function getFilters() {
     return {
       search: searchInput ? searchInput.value.trim().toLowerCase() : '',
       city: citySelect.value || '',
       country: countrySelect.value || '',
-      sort: sortSelect.value,
-      limit,
-      offset: currentOffset
+      sort: sortSelect.value
     };
   }
 
-  /**
-   * Filtre les boutiques côté client
-   */
-  function filterStores() {
+  // === FILTRER LES BOUTIQUES CÔTÉ CLIENT ===
+  function applyFilters() {
     const filters = getFilters();
     
-    let filtered = allStores.filter(store => {
+    // Filtrer les boutiques
+    filteredStores = allStores.filter(store => {
       // Filtre recherche
-      if (filters.search && !store.business_name.toLowerCase().includes(filters.search)) {
-        return false;
+      if (filters.search) {
+        const nameMatch = store.business_name.toLowerCase().includes(filters.search);
+        if (!nameMatch) return false;
       }
       
       // Filtre ville
@@ -74,35 +88,55 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     });
 
-    // Tri
-    if (filters.sort === 'recent') {
-      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (filters.sort === 'popular') {
-      filtered.sort((a, b) => (b.total_views || 0) - (a.total_views || 0));
-    }
+    // Trier les boutiques
+    sortStores(filteredStores, filters.sort);
 
-    // Pagination
-    const paginated = filtered.slice(currentOffset, currentOffset + limit);
-    
-    renderStores(paginated);
-    resultsCount.textContent = filtered.length;
-    updatePagination(filtered.length);
+    // Mettre à jour l'affichage
+    updateDisplay();
   }
 
-  /**
-   * Charge les boutiques avec les filtres actuels
-   */
-  async function loadStores() {
+  // === TRIER LES BOUTIQUES ===
+  function sortStores(stores, sortType) {
+    switch(sortType) {
+      case 'recent':
+        stores.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+      case 'popular':
+        stores.sort((a, b) => (b.total_views || 0) - (a.total_views || 0));
+        break;
+    }
+  }
+
+  // === METTRE À JOUR L'AFFICHAGE ===
+  function updateDisplay() {
+    const total = filteredStores.length;
+    
+    // Calculer la pagination
+    const start = currentOffset;
+    const end = Math.min(start + limit, total);
+    const paginatedStores = filteredStores.slice(start, end);
+
+    // Afficher les boutiques
+    renderStores(paginatedStores);
+
+    // Mettre à jour le compteur
+    resultsCount.textContent = total;
+
+    // Mettre à jour la pagination
+    updatePagination(total);
+
+    // Scroll vers le haut
+    if (storesContainer) {
+      storesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  // === CHARGER TOUTES LES BOUTIQUES DEPUIS L'API ===
+  async function loadAllStores() {
     try {
       loadingIndicator.style.display = 'block';
-      currentOffset = 0;
-      const filters = getFilters();
-
-      // Construire l'URL avec les paramètres
+      
       const params = new URLSearchParams();
-      if (filters.city) params.append('city', filters.city);
-      if (filters.country) params.append('country', filters.country);
-      params.append('sort', filters.sort);
       params.append('limit', 1000);
       params.append('offset', 0);
 
@@ -114,104 +148,182 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
 
-      // Mettre à jour les résultats
       if (data.success && data.data) {
         allStores = data.data.stores || [];
-        filterStores();
+        filteredStores = [...allStores];
         
-        // Scroll vers les boutiques
-        storesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Appliquer les filtres initiaux
+        applyFilters();
+      } else {
+        throw new Error('Invalid response format');
       }
     } catch (error) {
       console.error('Erreur lors du chargement des boutiques:', error);
-      storesContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 2rem;">Erreur lors du chargement des boutiques. Veuillez réessayer.</p>';
+      storesContainer.innerHTML = '<p class="empty-message">Erreur lors du chargement des boutiques. Veuillez réessayer.</p>';
     } finally {
       loadingIndicator.style.display = 'none';
     }
   }
 
-  /**
-   * Affiche les boutiques
-   */
+  // === AFFICHER LES BOUTIQUES ===
   function renderStores(stores) {
     if (stores.length === 0) {
-      storesContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 2rem;">Aucune boutique trouvée avec vos critères.</p>';
+      storesContainer.innerHTML = '<p class="empty-message">Aucune boutique trouvée avec vos critères de recherche.</p>';
       return;
     }
 
-    // storesContainer.innerHTML = stores.map(store => `
-    //   <a href="/store/${store.store_slug}" class="store-card">
-    //     ${store.logo_url ? `<img src="${store.logo_url}" alt="${store.business_name}" class="store-logo">` : '<div class="store-logo" style="display: flex; align-items: center; justify-content: center; color: var(--color-text-light);">📦</div>'}
-    //     <div class="store-header">
-    //       <div class="store-name">${store.business_name}</div>
-    //       ${store.city ? `<div class="store-location">📍 ${store.city}, ${store.country || ''}</div>` : ''}
-    //       <div class="store-badge">✓ Actif</div>
-    //     </div>
-    //     <div class="store-stats">
-    //       <span><strong>${store.product_count}</strong> produits</span>
-    //       <span><strong>${store.total_views}</strong> vues</span>
-    //     </div>
-    //   </a>
-    // `).join('');
+    storesContainer.innerHTML = stores.map(store => {
+      const productsHTML = store.products && store.products.length > 0
+        ? store.products.slice(0, 4).map(product => `
+            <div class="product-thumb-wrapper">
+              <img src="${product.image_url || '/images/placeholder.png'}" alt="${escapeHtml(product.name)}" class="product-thumb">
+            </div>
+          `).join('')
+        : '';
+
+      return `
+        <a href="/store/${store.store_slug}" class="store-card">
+          <div class="store-header">
+            ${store.logo_url 
+              ? `<img src="${store.logo_url}" alt="${escapeHtml(store.business_name)}" class="store-logo">`
+              : '<div class="store-logo-placeholder">🏪</div>'
+            }
+            
+            <div class="store-info">
+              <h3 class="store-name">
+                ${escapeHtml(store.business_name)}
+                ${store.is_verified ? `
+                  <svg class="verified-badge" width="18" height="18" viewBox="0 0 24 24" fill="#5C6C73" title="Vendeur vérifié">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                  </svg>
+                ` : ''}
+              </h3>
+              ${store.city ? `<p class="store-location">📍 ${escapeHtml(store.city)}, ${escapeHtml(store.country || '')}</p>` : ''}
+            </div>
+          </div>
+
+          <div class="store-stats">
+            <div class="stat-item">
+              <span class="stat-value">${store.product_count}</span>
+              <span class="stat-label">Produits</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">${store.total_views || 0}</span>
+              <span class="stat-label">Vues</span>
+            </div>
+          </div>
+
+          ${productsHTML ? `<div class="store-products">${productsHTML}</div>` : ''}
+        </a>
+      `;
+    }).join('');
+
+    // Ajouter des animations d'apparition
+    animateStoreCards();
   }
 
-  /**
-   * Met à jour l'état des boutons de pagination
-   */
+  // === ÉCHAPPER HTML POUR SÉCURITÉ ===
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // === ANIMER L'APPARITION DES CARTES ===
+  function animateStoreCards() {
+    const cards = document.querySelectorAll('.store-card');
+    cards.forEach((card, index) => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(20px)';
+      
+      setTimeout(() => {
+        card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      }, index * 30);
+    });
+  }
+
+  // === METTRE À JOUR LA PAGINATION ===
   function updatePagination(total) {
-    const hasNextPage = currentOffset + limit < total;
-    const hasPrevPage = currentOffset > 0;
-
-    prevBtn.disabled = !hasPrevPage;
-    nextBtn.disabled = !hasNextPage;
-
     const currentPage = Math.floor(currentOffset / limit) + 1;
     const totalPages = Math.ceil(total / limit);
-    pagination.textContent = `Page ${currentPage} / ${totalPages}`;
+    
+    // Désactiver/activer les boutons
+    const hasPrev = currentOffset > 0;
+    const hasNext = currentOffset + limit < total;
+
+    prevBtn.disabled = !hasPrev;
+    nextBtn.disabled = !hasNext;
+
+    // Mettre à jour le texte
+    pagination.textContent = totalPages > 0 ? `Page ${currentPage} / ${totalPages}` : 'Aucune page';
   }
 
-  // Événements des filtres - Application en temps réel
+  // === ÉVÉNEMENTS DES FILTRES ===
+  
+  // Ville
   citySelect.addEventListener('change', () => {
     currentOffset = 0;
-    filterStores();
+    applyFilters();
   });
   
+  // Pays
   countrySelect.addEventListener('change', () => {
     currentOffset = 0;
-    filterStores();
+    applyFilters();
   });
   
+  // Tri
   sortSelect.addEventListener('change', () => {
     currentOffset = 0;
-    filterStores();
+    applyFilters();
   });
 
-  // Recherche
+  // Recherche en temps réel
   if (searchInput) {
+    let searchTimeout;
     searchInput.addEventListener('input', () => {
-      currentOffset = 0;
-      filterStores();
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentOffset = 0;
+        applyFilters();
+      }, 300); // Debounce de 300ms
+    });
+
+    searchInput.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') {
+        clearTimeout(searchTimeout);
+        currentOffset = 0;
+        applyFilters();
+      }
     });
   }
 
   if (searchBtn) {
     searchBtn.addEventListener('click', () => {
       currentOffset = 0;
-      filterStores();
+      applyFilters();
     });
   }
 
-  // Pagination
+  // === PAGINATION ===
   prevBtn.addEventListener('click', () => {
-    currentOffset = Math.max(0, currentOffset - limit);
-    filterStores();
+    if (currentOffset > 0) {
+      currentOffset = Math.max(0, currentOffset - limit);
+      updateDisplay();
+    }
   });
 
   nextBtn.addEventListener('click', () => {
-    currentOffset += limit;
-    filterStores();
+    if (currentOffset + limit < filteredStores.length) {
+      currentOffset += limit;
+      updateDisplay();
+    }
   });
 
-  // Charger les boutiques au chargement initial
-  loadStores();
+  // === CHARGEMENT INITIAL ===
+  loadAllStores();
+
+  console.log('✅ Marketplace stores chargé avec filtres et pagination corrigés !');
 });

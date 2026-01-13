@@ -184,7 +184,7 @@ class AuthService {
    * @param {object} updates - Champs à mettre à jour
    * @returns {object} Utilisateur mis à jour
    */
-  async updateProfile(userId, { business_name, phone, whatsapp_number }) {
+  async updateProfile(userId, { business_name, phone, whatsapp_number, country, city }) {
     const updates = [];
     const values = [];
 
@@ -199,6 +199,14 @@ class AuthService {
     if (whatsapp_number !== undefined) {
       updates.push('whatsapp_number = ?');
       values.push(whatsapp_number);
+    }
+    if (country !== undefined) {
+      updates.push('country = ?');
+      values.push(country);
+    }
+    if (city !== undefined) {
+      updates.push('city = ?');
+      values.push(city);
     }
 
     if (updates.length === 0) {

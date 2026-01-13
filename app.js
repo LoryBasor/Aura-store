@@ -529,15 +529,15 @@ async function startServer() {
       console.log('=================================');
       console.log('');
       console.log('📍 Routes disponibles:');
-      console.log('   - http://localhost:' + PORT + '/ (Accueil)');
-      console.log('   - http://localhost:' + PORT + '/marketplace (Marketplace)');
-      console.log('   - http://localhost:' + PORT + '/marketplace/products (Produits)');
-      console.log('   - http://localhost:' + PORT + '/marketplace/stores (Boutiques)');
-      console.log('   - http://localhost:' + PORT + '/login (Connexion)');
-      console.log('   - http://localhost:' + PORT + '/register (Inscription)');
-      console.log('   - http://localhost:' + PORT + '/dashboard (Vendeur)');
-      console.log('   - http://localhost:' + PORT + '/admin/dashboard (Admin)');
-      console.log('   - http://localhost:' + PORT + '/api/health (API Health)');
+      console.log(`   - ${process.env.APP_URL}/ (Accueil)`);
+      console.log(`   - ${process.env.APP_URL}/marketplace (Marketplace)`);
+      console.log(`   - ${process.env.APP_URL}/marketplace/products (Produits)`);
+      console.log(`   - ${process.env.APP_URL}/marketplace/stores (Boutiques)`);
+      console.log(`   - ${process.env.APP_URL}/login (Connexion)`);
+      console.log(`   - ${process.env.APP_URL}/register (Inscription)`);
+      console.log(`   - ${process.env.APP_URL}/dashboard (Vendeur)`);
+      console.log(`   - ${process.env.APP_URL}/admin/dashboard (Admin)`);
+      console.log(`   - ${process.env.APP_URL}/api/health (API Health)`);
       console.log('');
     });
 

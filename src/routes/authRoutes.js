@@ -46,7 +46,9 @@ router.put(
   validateRequest(Joi.object({
     business_name: Joi.string().min(2).max(255).optional(),
     phone: Joi.string().pattern(/^[0-9+\s()-]+$/).optional().allow('', null),
-    whatsapp_number: Joi.string().pattern(/^[0-9+\s()-]+$/).optional().allow('', null)
+    whatsapp_number: Joi.string().pattern(/^[0-9+\s()-]+$/).optional().allow('', null),
+    country: Joi.string().max(100).optional().allow('', null),
+    city: Joi.string().max(100).optional().allow('', null)
   })),
   authController.updateProfile
 );
