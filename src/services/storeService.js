@@ -14,6 +14,7 @@ class StoreService {
     // Récupérer les infos du vendeur
     const [vendors] = await pool.execute(
       `SELECT u.id, u.business_name, u.store_slug, u.whatsapp_number,
+              u.is_verified, u.country, u.city,
               sp.slug as plan_slug
        FROM users u
        LEFT JOIN subscriptions s ON u.id = s.user_id AND s.status IN ('trial', 'active')
@@ -88,9 +89,13 @@ class StoreService {
 
     return {
       vendor: {
+        id: vendor.id,
         business_name: vendor.business_name,
         store_slug: vendor.store_slug,
         whatsapp_number: vendor.whatsapp_number,
+        is_verified: vendor.is_verified,
+        country: vendor.country,
+        city: vendor.city,
         plan: planSlug
       },
       products,
@@ -105,7 +110,8 @@ class StoreService {
    */
   async getProductWithIntegrations(token) {
     const [products] = await pool.execute(
-      `SELECT p.*, u.business_name, u.whatsapp_number, u.store_slug, pl.click_count,
+      `SELECT p.*, u.id as vendor_id, u.business_name, u.whatsapp_number, u.store_slug, 
+              u.is_verified, u.country, u.city, pl.click_count,
               sp.slug as plan_slug
        FROM products p
        JOIN users u ON p.user_id = u.id
@@ -146,9 +152,13 @@ class StoreService {
     return {
       product,
       vendor: {
+        id: product.vendor_id,
         business_name: product.business_name,
         store_slug: product.store_slug,
-        whatsapp_number: product.whatsapp_number
+        whatsapp_number: product.whatsapp_number,
+        is_verified: product.is_verified,
+        country: product.country,
+        city: product.city
       },
       integrations
     };

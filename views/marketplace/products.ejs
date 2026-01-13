@@ -1,606 +1,220 @@
 <!DOCTYPE html>
 <html lang="fr">
-<% const { products = [], categories = [], cities = [], countries = [], total = 0, filters = {} } = data; %>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %></title>
-  <link rel="shortcut icon" href="/images/logo.png" type="image/png">
-  <meta name="description" content="Liste des produits - Aura Marketplace">
-
-  <style>
-    :root {
-      --color-primary: #253337;
-      --color-secondary: #5C6C73;
-      --color-accent: #E0FCFC;
-      --color-success: #4CAF50;
-      --color-white: #FFFFFF;
-      --color-text: #1a1a1a;
-      --color-text-light: #666666;
-      --color-border: rgba(37, 51, 55, 0.1);
-      --color-surface: #F5F7F9;
-
-      --gradient-primary: linear-gradient(135deg, #253337, #5C6C73);
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 16px;
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
-      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: var(--color-text);
-      background: var(--color-surface);
-    }
-
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 20px;
-    }
-
-    /* Header */
-    .header {
-      background: var(--color-white);
-      box-shadow: var(--shadow-sm);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 0;
-    }
-
-    .logo {
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: var(--color-primary);
-      text-decoration: none;
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 2rem;
-    }
-
-    .nav-link {
-      color: var(--color-text-light);
-      text-decoration: none;
-      transition: var(--transition);
-    }
-
-    .nav-link:hover {
-      color: var(--color-primary);
-    }
-
-    /* Toggle Menu Button */
-    .filter-toggle {
-      display: none;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0.5rem;
-      color: var(--color-primary);
-      font-size: 1.5rem;
-    }
-
-    .filter-toggle:hover {
-      color: var(--color-secondary);
-    }
-
-    /* Main Layout */
-    .main-content {
-      display: grid;
-      grid-template-columns: 250px 1fr;
-      gap: 2rem;
-      padding: 2rem 0;
-      min-height: calc(100vh - 70px);
-    }
-
-    /* Sidebar Filters */
-    .filters-sidebar {
-      background: var(--color-white);
-      border-radius: var(--radius-lg);
-      padding: 2rem;
-      height: 90vh;
-      overflow: scroll;
-      position: sticky;
-      top: 80px;
-      box-shadow: var(--shadow-md);
-      transition: var(--transition);
-      z-index: 500;
-    }
-
-    .filter-group {
-      margin-bottom: 2rem;
-      padding-bottom: 2rem;
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .filter-group:last-child {
-      border-bottom: none;
-    }
-
-    .filter-title {
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--color-primary);
-    }
-
-    .filter-options {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-    }
-
-    .filter-checkbox,
-    .filter-select,
-    .filter-input {
-      font-size: 0.95rem;
-      padding: 0.5rem;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--color-border);
-    }
-
-    .filter-select,
-    .filter-input {
-      width: 100%;
-      padding: 0.75rem;
-    }
-
-    .filter-checkbox {
-      cursor: pointer;
-    }
-
-    .filter-label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      font-size: 0.95rem;
-      color: var(--color-text-light);
-    }
-
-    .filter-label:hover {
-      color: var(--color-primary);
-    }
-
-    .apply-filters {
-      background: var(--gradient-primary);
-      color: var(--color-white);
-      border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      font-weight: 600;
-      width: 100%;
-      transition: var(--transition);
-    }
-
-    .apply-filters:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-    }
-
-    /* Products Container */
-    .products-container {
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-    }
-
-    .sort-bar {
-      background: var(--color-white);
-      padding: 1.5rem;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-md);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .sort-select {
-      padding: 0.75rem 1rem;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--color-border);
-      background: var(--color-white);
-      cursor: pointer;
-    }
-
-    .results-count {
-      color: var(--color-text-light);
-    }
-
-    /* Products Grid */
-    .products-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 2rem;
-    }
-
-    .product-card {
-      background: var(--color-white);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      box-shadow: var(--shadow-md);
-      transition: var(--transition);
-      text-decoration: none;
-      color: inherit;
-      display: block;
-    }
-
-    .product-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .product-image {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-      background: var(--color-surface);
-    }
-
-    .product-info {
-      padding: 1rem;
-    }
-
-    .product-name {
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: var(--color-primary);
-      line-height: 1.3;
-    }
-
-    .product-price {
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: var(--color-success);
-      margin-bottom: 0.5rem;
-    }
-
-    .product-vendor {
-      font-size: 0.9rem;
-      color: var(--color-text-light);
-    }
-
-    .product-location {
-      font-size: 0.85rem;
-      color: var(--color-text-light);
-    }
-
-    /* Pagination */
-    .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 2rem;
-    }
-
-    .pagination-btn {
-      padding: 0.5rem 1rem;
-      border: 1px solid var(--color-border);
-      background: var(--color-white);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .pagination-btn:hover {
-      background: var(--color-accent);
-      color: var(--color-primary);
-    }
-
-    .pagination-btn.active {
-      background: var(--color-primary);
-      color: var(--color-white);
-      border-color: var(--color-primary);
-    }
-
-    .pagination-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 2rem;
-      color: var(--color-text-light);
-    }
-
-    /* Footer */
-    .footer {
-      background: var(--color-primary);
-      color: var(--color-white);
-      padding: 2rem 0;
-      text-align: center;
-      margin-top: 4rem;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .filter-toggle {
-        display: block;
-      }
-
-      .main-content {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-      }
-
-      .filters-sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 80%;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out;
-        border-radius: 0;
-        top: 0;
-        max-height: 100%;
-        overflow-y: auto;
-        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-      }
-
-      .filters-sidebar.open {
-        transform: translateX(0);
-      }
-
-      .filters-sidebar::before {
-        content: '';
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: -1;
-      }
-
-      .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      }
-
-      .sort-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .sort-select {
-        width: 100%;
-      }
-
-      .header-content {
-        padding: 0.75rem 0;
-      }
-
-      .nav-links {
-        gap: 1rem;
-        font-size: 0.9rem;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 1rem;
-      }
-
-      .filter-toggle {
-        font-size: 1.2rem;
-      }
-
-      .logo {
-        font-size: 1.2rem;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="/css/marketplace-products.css">
 </head>
 <body>
-  <!-- Header -->
-  <header class="header">
-    <div class="container">
+  
+  <% const { filters, categories, cities, countries, products, total } = data %>
+
+  <%- include('../partials/navbar', { currentPage: 'products', user: typeof user !== 'undefined' ? user : null }) %>
+  
+  <div class="page-container">
+    <!-- Header Section -->
+    <header class="page-header">
       <div class="header-content">
-        <a href="/marketplace" class="logo">Aura Marketplace</a>
-        <button class="filter-toggle" id="filterToggle">☰ Filtres</button>
-        <nav class="nav-links">
-          <a href="/marketplace/products" class="nav-link">Produits</a>
-          <a href="/marketplace/stores" class="nav-link">Boutiques</a>
-        </nav>
+        <h1 class="page-title">Découvrez nos produits</h1>
+        <p class="page-subtitle">Explorez notre sélection de produits exceptionnels</p>
       </div>
-    </div>
-  </header>
+      
+      <!-- Mobile Filter Toggle -->
+      <button id="filterToggle" class="filter-toggle-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="18" x2="20" y2="18"></line>
+        </svg>
+        Filtres
+      </button>
+    </header>
 
-  <!-- Search Bar -->
-  <div class="search-bar-section">
-    <div class="container">
-      <div class="search-bar">
-        <input type="text" class="search-input" placeholder="Rechercher un produit..." id="productSearchInput">
-        <button class="search-btn" id="productSearchBtn">🔍</button>
-      </div>
-    </div>
-  </div>
-
-  <style>
-    .search-bar-section {
-      background: var(--color-white);
-      padding: 1rem 0;
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .search-bar {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .search-input {
-      flex: 1;
-      padding: 0.75rem 1rem;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      font-size: 0.95rem;
-    }
-
-    .search-input:focus {
-      outline: none;
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(37, 51, 55, 0.1);
-    }
-
-    .search-btn {
-      padding: 0.75rem 1.5rem;
-      background: var(--color-primary);
-      color: var(--color-white);
-      border: none;
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      font-weight: 600;
-      transition: var(--transition);
-    }
-
-    .search-btn:hover {
-      background: var(--color-secondary);
-    }
-
-    @media (max-width: 768px) {
-      .search-bar {
-        gap: 0.25rem;
-      }
-
-      .search-input {
-        padding: 0.6rem 0.75rem;
-        font-size: 0.9rem;
-      }
-
-      .search-btn {
-        padding: 0.6rem 1rem;
-      }
-    }
-  </style>
-
-  <!-- Main Content -->
-  <div class="container">
-    <div class="main-content">
-      <!-- Sidebar Filters -->
+    <div class="content-wrapper">
+      <!-- Filters Sidebar -->
       <aside class="filters-sidebar">
-        <form id="filterForm">
-          <!-- Catégories -->
+        <div class="filters-header">
+          <h2 class="filters-title">Filtres</h2>
+          <button id="clearFilters" class="clear-filters-btn">Réinitialiser</button>
+        </div>
+
+        <form id="filterForm" class="filters-form">
+          <!-- Search -->
           <div class="filter-group">
-            <div class="filter-title">Catégories</div>
+            <label class="filter-label">Recherche</label>
+            <div class="search-box">
+              <input 
+                type="text" 
+                id="productSearchInput" 
+                name="search"
+                placeholder="Rechercher..." 
+                value="<%= filters.search || '' %>"
+                class="filter-input"
+              >
+              <button type="button" id="productSearchBtn" class="search-icon-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Categories -->
+          <div class="filter-group">
+            <label class="filter-label">Catégories</label>
             <div class="filter-options">
-              <% categories.forEach(cat => { %>
-              <label class="filter-label">
-                <input type="checkbox" name="category" value="<%= cat.slug %>" class="filter-checkbox">
-                <%= cat.name %> (<%= cat.product_count %>)
+              <label class="filter-option">
+                <input type="radio" name="category" value="" <%= !filters.category ? 'checked' : '' %>>
+                <span>Toutes les catégories</span>
               </label>
-              <% }) %>
+              <% if (categories && categories.length > 0) { %>
+                <% categories.forEach(cat => { %>
+                  <label class="filter-option">
+                    <input type="radio" name="category" value="<%= cat.slug %>" <%= filters.category === cat.slug ? 'checked' : '' %>>
+                    <span><%= cat.name %> (<%= cat.product_count %>)</span>
+                  </label>
+                <% }); %>
+              <% } %>
             </div>
           </div>
 
-          <!-- Ville -->
+          <!-- Location -->
           <div class="filter-group">
-            <div class="filter-title">Ville</div>
-            <select name="city" class="filter-select" id="citySelect">
+            <label class="filter-label">Ville</label>
+            <select name="city" class="filter-select">
               <option value="">Toutes les villes</option>
-              <% cities.forEach(c => { %>
-              <option value="<%= c.city %>"><%= c.city %> (<%= c.product_count %>)</option>
-              <% }) %>
+              <% if (cities && cities.length > 0) { %>
+                <% cities.forEach(city => { %>
+                  <option value="<%= city.city %>" <%= filters.city === city.city ? 'selected' : '' %>>
+                    <%= city.city %> (<%= city.product_count %>)
+                  </option>
+                <% }); %>
+              <% } %>
             </select>
           </div>
 
-          <!-- Pays -->
           <div class="filter-group">
-            <div class="filter-title">Pays</div>
-            <select name="country" class="filter-select" id="countrySelect">
+            <label class="filter-label">Pays</label>
+            <select name="country" class="filter-select">
               <option value="">Tous les pays</option>
-              <% countries.forEach(c => { %>
-              <option value="<%= c.country %>"><%= c.country %> (<%= c.product_count %>)</option>
-              <% }) %>
+              <% if (countries && countries.length > 0) { %>
+                <% countries.forEach(country => { %>
+                  <option value="<%= country.country %>" <%= filters.country === country.country ? 'selected' : '' %>>
+                    <%= country.country %> (<%= country.product_count %>)
+                  </option>
+                <% }); %>
+              <% } %>
             </select>
           </div>
 
-          <!-- Prix -->
+          <!-- Price Range -->
           <div class="filter-group">
-            <div class="filter-title">Prix</div>
-            <div class="filter-options">
-              <input type="number" name="minPrice" class="filter-input" placeholder="Prix min" id="minPrice">
-              <input type="number" name="maxPrice" class="filter-input" placeholder="Prix max" id="maxPrice">
+            <label class="filter-label">Fourchette de prix</label>
+            <div class="price-inputs">
+              <input 
+                type="number" 
+                name="minPrice" 
+                placeholder="Min" 
+                value="<%= filters.minPrice || '' %>"
+                class="filter-input price-input"
+                min="0"
+              >
+              <span class="price-separator">-</span>
+              <input 
+                type="number" 
+                name="maxPrice" 
+                placeholder="Max" 
+                value="<%= filters.maxPrice || '' %>"
+                class="filter-input price-input"
+                min="0"
+              >
             </div>
           </div>
-         </form>
+        </form>
       </aside>
 
-      <!-- Products Container -->
-      <div class="products-container">
-        <!-- Sort Bar -->
-        <div class="sort-bar">
-          <span class="results-count">
-            Résultats: <span id="resultsCount"><%= total %></span>
-          </span>
-          <select class="sort-select" id="sortSelect">
-            <option value="recent" <%= filters.sort === 'recent' ? 'selected' : '' %>>Plus récents</option>
-            <option value="popular" <%= filters.sort === 'popular' ? 'selected' : '' %>>Plus populaires</option>
-            <option value="price_low" <%= filters.sort === 'price_low' ? 'selected' : '' %>>Prix croissant</option>
-            <option value="price_high" <%= filters.sort === 'price_high' ? 'selected' : '' %>>Prix décroissant</option>
-          </select>
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="results-info">
+            <span class="results-count" id="resultsCount"><%= total || 0 %></span>
+            <span class="results-label">produits trouvés</span>
+          </div>
+
+          <div class="sort-container">
+            <label for="sortSelect" class="sort-label">Trier par:</label>
+            <select id="sortSelect" class="sort-select">
+              <option value="recent" <%= filters.sort === 'recent' ? 'selected' : '' %>>Plus récents</option>
+              <option value="popular" <%= filters.sort === 'popular' ? 'selected' : '' %>>Plus populaires</option>
+              <option value="price-asc" <%= filters.sort === 'price-asc' ? 'selected' : '' %>>Prix croissant</option>
+              <option value="price-desc" <%= filters.sort === 'price-desc' ? 'selected' : '' %>>Prix décroissant</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+          <div class="spinner"></div>
+          <p>Chargement des produits...</p>
         </div>
 
         <!-- Products Grid -->
         <div id="productsContainer" class="products-grid">
-          <% products.forEach(product => { %>
-          <a href="/p/<%= product.share_token %>" class="product-card">
-            <img src="<%= product.image_url || '/images/placeholder.png' %>" alt="<%= product.name %>" class="product-image">
-            <div class="product-info">
-              <div class="product-name"><%= product.name %></div>
-              <div class="product-price"><%= product.price %> <%= product.currency %></div>
-              <div class="product-vendor"><%= product.business_name %></div>
-              <% if (product.city) { %>
-              <div class="product-location"><%= product.city %>, <%= product.country || '' %></div>
-              <% } %>
-            </div>
-          </a>
-          <% }) %>
-        </div>
-
-        <!-- Loading Indicator -->
-        <div id="loadingIndicator" class="loading" style="display: none;">
-          Chargement...
+          <% if (products && products.length > 0) { %>
+            <% products.forEach(product => { %>
+              <a href="/p/<%= product.share_token %>" class="product-card">
+                <div class="product-image-wrapper">
+                  <img src="<%= product.image_url || '/images/placeholder.png' %>" alt="<%= product.name %>" class="product-image">
+                  <% if (product.view_count > 100) { %>
+                    <div class="product-badge">Populaire</div>
+                  <% } %>
+                </div>
+                <div class="product-info">
+                  <h3 class="product-name"><%= product.name %></h3>
+                  <p class="product-price"><%= product.price %> <%= product.currency %></p>
+                  <div class="product-vendor">
+                    <span><%= product.business_name %></span>
+                    <% if (product.is_verified) { %>
+                      <svg class="verified-badge" width="16" height="16" viewBox="0 0 24 24" fill="#5C6C73" title="Vendeur vérifié">
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                      </svg>
+                    <% } %>
+                  </div>
+                  <% if (product.city) { %>
+                    <p class="product-location">📍 <%= product.city %>, <%= product.country || '' %></p>
+                  <% } %>
+                </div>
+              </a>
+            <% }); %>
+          <% } else { %>
+            <p class="empty-message">Aucun produit trouvé avec vos critères.</p>
+          <% } %>
         </div>
 
         <!-- Pagination -->
-        <div id="pagination" class="pagination" style="display: <% if (total <= filters.limit) { %>none<% } %>">
-          <button class="pagination-btn" id="prevBtn" <% if (filters.offset === 0) { %>disabled<% } %>>Précédent</button>
-          <span id="pageInfo"></span>
-          <button class="pagination-btn" id="nextBtn" <% if (filters.offset + filters.limit >= total) { %>disabled<% } %>>Suivant</button>
+        <div class="pagination-container">
+          <button id="prevBtn" class="pagination-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Précédent
+          </button>
+          
+          <span id="pagination" class="pagination-info">Page 1 / 1</span>
+          
+          <button id="nextBtn" class="pagination-btn">
+            Suivant
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
         </div>
-      </div>
+      </main>
     </div>
   </div>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div>&copy; 2026 Aura Marketplace. Tous droits réservés.</div>
-    </div>
-  </footer>
 
   <script src="/js/marketplace-products.js"></script>
 </body>

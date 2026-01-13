@@ -1,0 +1,1137 @@
+========================================================================================
+FILE: marketplaceService.js
+========================================================================================
+// src/services/marketplaceService.js
+const { pool } = require('../config/database');
+const { AppError } = require('../middlewares/errorHandler');
+const { getImageUrl } = require('../config/upload');
+
+/**
+ * Service pour le marketplace public
+ */
+class MarketplaceService {
+  /**
+   * Récupère les données pour la page principale marketplace
+   */
+  async getMarketplaceHome() {
+    // Produits populaires (par view_count)
+    const [popularProducts] = await pool.execute(`
+      SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug,
+             u.business_name, u.store_slug, u.city, u.country, u.is_verified,
+             pl.token as share_token,
+             p.view_count, p.order_count
+      FROM products p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN product_links pl ON p.id = pl.product_id
+      WHERE p.is_available = 1 AND p.deleted_at IS NULL
+        AND u.is_active = 1 AND u.deleted_at IS NULL
+      ORDER BY p.view_count DESC
+      LIMIT 12
+    `);
+
+    // Produits récents
+    const [recentProducts] = await pool.execute(`
+      SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug,
+             u.business_name, u.store_slug, u.city, u.country, u.is_verified,
+             pl.token as share_token
+      FROM products p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN product_links pl ON p.id = pl.product_id
+      WHERE p.is_available = 1 AND p.deleted_at IS NULL
+        AND u.is_active = 1 AND u.deleted_at IS NULL
+      ORDER BY p.created_at DESC
+      LIMIT 12
+    `);
+
+    // Boutiques recommandées (par nombre de produits)
+    const [recommendedStores] = await pool.execute(`
+      SELECT u.id, u.business_name, u.store_slug, u.city, u.country, u.is_verified,
+             COUNT(p.id) as product_count,
+             SUM(p.view_count) as total_views,
+             sc.logo_url
+      FROM users u
+      LEFT JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      LEFT JOIN store_customization sc ON u.id = sc.user_id
+      WHERE u.is_active = 1 AND u.deleted_at IS NULL
+      GROUP BY u.id
+      HAVING product_count > 0
+      ORDER BY product_count DESC, total_views DESC
+      LIMIT 8
+    `);
+
+    // Récupérer les produits pour chaque boutique
+    for (let store of recommendedStores) {
+      const [storeProducts] = await pool.execute(`
+        SELECT p.id, p.name, p.price, p.currency, p.image_url,
+               pl.token as share_token
+        FROM products p
+        LEFT JOIN product_links pl ON p.id = pl.product_id
+        WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
+        ORDER BY p.view_count DESC
+        LIMIT 4
+      `, [store.id]);
+
+      store.products = storeProducts.map(p => ({
+        ...p,
+        image_url: getImageUrl(p.image_url)
+      }));
+    }
+
+    // Catégories tendances (par nombre de produits)
+    const [trendingCategories] = await pool.execute(`
+      SELECT c.name, c.slug, COUNT(p.id) as product_count
+      FROM categories c
+      LEFT JOIN products p ON c.id = p.category_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE c.is_active = 1 AND c.deleted_at IS NULL
+      GROUP BY c.id
+      HAVING product_count > 0
+      ORDER BY product_count DESC
+      LIMIT 10
+    `);
+
+    // Formater les images
+    popularProducts.forEach(p => p.image_url = getImageUrl(p.image_url));
+    recentProducts.forEach(p => p.image_url = getImageUrl(p.image_url));
+
+    return {
+      popularProducts,
+      recentProducts,
+      recommendedStores,
+      trendingCategories
+    };
+  }
+
+  /**
+   * Récupère la liste des produits avec filtres
+   */
+  async getProducts(filters = {}) {
+    let whereConditions = [
+      'p.is_available = 1',
+      'p.deleted_at IS NULL',
+      'u.is_active = 1',
+      'u.deleted_at IS NULL'
+    ];
+    let params = [];
+    let orderBy = 'p.created_at DESC';
+
+
+    // Filtre par recherche
+    if (filters.search) {
+      whereConditions.push('(p.name LIKE ? OR p.description LIKE ?)');
+      params.push(`%${filters.search}%`, `%${filters.search}%`);
+    }
+
+    // Filtre par catégorie
+    if (filters.category) {
+      whereConditions.push(`c.slug = '${filters.category}'`);
+    }
+
+    // Filtre par ville
+    if (filters.city) {
+      whereConditions.push('u.city LIKE ?');
+      params.push(`%${filters.city}%`);
+    }
+
+    // Filtre par pays
+    if (filters.country) {
+      whereConditions.push('u.country = ?');
+      params.push(filters.country);
+    }
+
+    // Filtre par prix min
+    if (filters.minPrice) {
+      whereConditions.push('p.price >= ?');
+      params.push(filters.minPrice);
+    }
+
+    // Filtre par prix max
+    if (filters.maxPrice) {
+      whereConditions.push('p.price <= ?');
+      params.push(filters.maxPrice);
+    }
+
+    // Tri
+    if (filters.sort === 'popular') {
+      orderBy = 'p.view_count DESC';
+    } else if (filters.sort === 'recent') {
+      orderBy = 'p.created_at DESC';
+    } else if (filters.sort === 'price_low') {
+      orderBy = 'p.price ASC';
+    } else if (filters.sort === 'price_high') {
+      orderBy = 'p.price DESC';
+    } else if (filters.sort === 'rating') {
+      // Pour l'instant, pas de rating, utiliser view_count
+      orderBy = 'p.view_count DESC';
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+    const limit = parseInt(filters.limit ?? 20, 10) || 20;
+    const offset = parseInt(filters.offset ?? 0, 10) || 0;
+
+    const query = `
+      SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug, p.description,
+             u.business_name, u.store_slug, u.city, u.country, u.is_verified,
+             pl.token as share_token,
+             c.name as category_name, c.slug as category_slug,
+             p.view_count, p.order_count, p.created_at
+      FROM products p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN product_links pl ON p.id = pl.product_id
+      WHERE ${whereClause}
+      ORDER BY ${orderBy}
+      LIMIT ${limit} OFFSET ${offset};
+    `;
+
+    const [products] = await pool.execute(query, params);
+
+    // Formater les images
+    products.forEach(p => p.image_url = getImageUrl(p.image_url));
+
+    // Compter le total pour pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM products p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE ${whereClause}
+    `;
+    const [countResult] = await pool.execute(countQuery, params.slice(0, -2)); // Enlever limit et offset
+
+    return {
+      products,
+      total: countResult[0].total,
+      limit,
+      offset
+    };
+  }
+
+  /**
+   * Récupère la liste des boutiques avec filtres
+   */
+  async getStores(filters = {}) {
+    let whereConditions = [
+      'u.is_active = 1',
+      'u.deleted_at IS NULL'
+    ];
+    let params = [];
+    let orderBy = 'u.created_at DESC';
+
+    // Filtre par ville
+    if (filters.city) {
+      whereConditions.push('u.city LIKE ?');
+      params.push(`%${filters.city}%`);
+    }
+
+    // Filtre par pays
+    if (filters.country) {
+      whereConditions.push('u.country = ?');
+      params.push(filters.country);
+    }
+
+    // Tri
+    if (filters.sort === 'recent') {
+      orderBy = 'u.created_at DESC';
+    } else if (filters.sort === 'popular') {
+      orderBy = 'total_views DESC';
+    } else if (filters.sort === 'verified') {
+      // Pour l'instant, pas de vérification, utiliser nombre de produits
+      orderBy = 'product_count DESC';
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+
+    const limit = filters.limit || 20;
+    const offset = filters.offset || 0;
+
+    const query = `
+      SELECT u.id, u.business_name, u.store_slug, u.city, u.country, u.is_verified, u.created_at, sc.logo_url, COUNT(p.id) as product_count, SUM(p.view_count) as total_views, GROUP_CONCAT(DISTINCT p.image_url LIMIT 3) as sample_images FROM users u LEFT JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL LEFT JOIN store_customization sc ON u.id = sc.user_id WHERE ${whereClause} GROUP BY u.id HAVING product_count > 0 ORDER BY ${orderBy} LIMIT ${limit} OFFSET ${offset}
+
+    `;
+
+    const [stores] = await pool.execute(query, params);
+
+    // Récupérer les produits pour chaque boutique
+    for (let store of stores) {
+      const [storeProducts] = await pool.execute(`
+        SELECT p.id, p.name, p.price, p.currency, p.image_url,
+               pl.token as share_token
+        FROM products p
+        LEFT JOIN product_links pl ON p.id = pl.product_id
+        WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
+        ORDER BY p.view_count DESC
+        LIMIT 4
+      `, [store.id]);
+
+      store.products = storeProducts.map(p => ({
+        ...p,
+        image_url: getImageUrl(p.image_url)
+      }));
+    }
+
+    // Formater les images d'aperçu
+    stores.forEach(store => {
+      if (store.sample_images) {
+        store.sample_images = store.sample_images
+          .split(',')
+          .map(img => getImageUrl(img))
+          .join(',');
+      }
+    });
+
+    // Compter le total
+    const countQuery = `
+      SELECT COUNT(DISTINCT u.id) as total
+      FROM users u
+      LEFT JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE ${whereClause}
+      GROUP BY u.id
+      HAVING COUNT(p.id) > 0
+    `;
+    const [countResult] = await pool.execute(countQuery, params);
+
+    return {
+      stores,
+      total: countResult[0].total,
+      limit,
+      offset
+    };
+  }
+
+  /**
+   * Récupère les catégories disponibles
+   */
+  async getCategories() {
+    const [categories] = await pool.execute(`
+      SELECT c.name, c.slug, COUNT(p.id) as product_count
+      FROM categories c
+      LEFT JOIN products p ON c.id = p.category_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE c.is_active = 1 AND c.deleted_at IS NULL
+      GROUP BY c.id
+      HAVING product_count > 0
+      ORDER BY c.name ASC
+    `);
+
+    return categories;
+  }
+
+  /**
+   * Récupère les villes disponibles
+   */
+  async getCities() {
+    const [cities] = await pool.execute(`
+      SELECT DISTINCT u.city, COUNT(p.id) as product_count
+      FROM users u
+      JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE u.city IS NOT NULL AND u.city != '' AND u.is_active = 1 AND u.deleted_at IS NULL
+      GROUP BY u.city
+      ORDER BY product_count DESC
+      LIMIT 50
+    `);
+
+    return cities;
+  }
+
+  /**
+   * Récupère les pays disponibles
+   */
+  async getCountries() {
+    const [countries] = await pool.execute(`
+      SELECT DISTINCT u.country, COUNT(p.id) as product_count
+      FROM users u
+      JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      WHERE u.country IS NOT NULL AND u.country != '' AND u.is_active = 1 AND u.deleted_at IS NULL
+      GROUP BY u.country
+      ORDER BY product_count DESC
+    `);
+
+    return countries;
+  }
+}
+
+module.exports = new MarketplaceService();
+
+
+========================================================================================
+FILE: marketplaceController.js
+========================================================================================
+// src/controllers/marketplaceController.js
+const marketplaceService = require('../services/marketplaceService');
+const { successResponse } = require('../utils/response');
+
+/**
+ * Contrôleur pour le marketplace public
+ */
+class MarketplaceController {
+  /**
+   * Page principale marketplace
+   * GET /marketplace
+   */
+  async getHome(req, res, next) {
+    try {
+      const homeData = await marketplaceService.getMarketplaceHome();
+
+      res.render('marketplace/home', {
+        title: 'Marketplace - Aura',
+        popularProducts: homeData.popularProducts || [],
+        recentProducts: homeData.recentProducts || [],
+        recommendedStores: homeData.recommendedStores || [],
+        trendingCategories: homeData.trendingCategories || []
+      });
+    } catch (error) {
+      console.error('Erreur marketplace home:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Page liste produits
+   * GET /marketplace/products
+   */
+  async getProducts(req, res, next) {
+    try {
+      const filters = {
+        search: req.query.search,
+        category: req.query.category,
+        city: req.query.city,
+        country: req.query.country,
+        minPrice: req.query.minPrice ? parseFloat(req.query.minPrice) : null,
+        maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice) : null,
+        sort: req.query.sort || 'recent',
+        limit: req.query.limit ? parseInt(req.query.limit) : 20,
+        offset: req.query.offset ? parseInt(req.query.offset) : 0
+      };
+
+      const data = await marketplaceService.getProducts(filters);
+      const categories = await marketplaceService.getCategories();
+      const cities = await marketplaceService.getCities();
+      const countries = await marketplaceService.getCountries();
+
+      res.render('marketplace/products', {
+        title: 'Produits - Marketplace Aura',
+        products: data.products,
+        total: data.total,
+        filters,
+        categories,
+        cities,
+        countries
+      });
+    } catch (error) {
+      console.error('Erreur marketplace products:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * API pour récupérer les produits filtrés (pour AJAX)
+   * GET /api/marketplace/products
+   */
+  async getProductsAPI(req, res, next) {
+    try {
+      const filters = {
+        search: req.query.search,
+        category: req.query.category,
+        city: req.query.city,
+        country: req.query.country,
+        minPrice: req.query.minPrice ? parseFloat(req.query.minPrice) : null,
+        maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice) : null,
+        sort: req.query.sort || 'recent',
+        limit: req.query.limit ? parseInt(req.query.limit) : 20,
+        offset: req.query.offset ? parseInt(req.query.offset) : 0
+      };
+
+      const data = await marketplaceService.getProducts(filters);
+      return successResponse(res, data, 'Produits récupérés avec succès');
+    } catch (error) {
+      console.error('Erreur API marketplace products:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Page liste boutiques
+   * GET /marketplace/stores
+   */
+  async getStores(req, res, next) {
+    try {
+      const filters = {
+        city: req.query.city,
+        country: req.query.country,
+        sort: req.query.sort || 'recent',
+        limit: req.query.limit ? parseInt(req.query.limit) : 20,
+        offset: req.query.offset ? parseInt(req.query.offset) : 0
+      };
+
+      const data = await marketplaceService.getStores(filters);
+      const cities = await marketplaceService.getCities();
+      const countries = await marketplaceService.getCountries();
+
+      res.render('marketplace/stores', {
+        title: 'Boutiques - Marketplace Aura',
+        stores: data.stores,
+        total: data.total,
+        filters,
+        cities,
+        countries
+      });
+    } catch (error) {
+      console.error('Erreur marketplace stores:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * API pour récupérer les boutiques filtrées (pour AJAX)
+   * GET /api/marketplace/stores
+   */
+  async getStoresAPI(req, res, next) {
+    try {
+      const filters = {
+        city: req.query.city,
+        country: req.query.country,
+        sort: req.query.sort || 'recent',
+        limit: req.query.limit ? parseInt(req.query.limit) : 20,
+        offset: req.query.offset ? parseInt(req.query.offset) : 0
+      };
+
+      const data = await marketplaceService.getStores(filters);
+      return successResponse(res, data, 'Boutiques récupérées avec succès');
+    } catch (error) {
+      console.error('Erreur API marketplace stores:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * API pour récupérer les filtres disponibles
+   * GET /api/marketplace/filters
+   */
+  async getFilters(req, res, next) {
+    try {
+      const [categories, cities, countries] = await Promise.all([
+        marketplaceService.getCategories(),
+        marketplaceService.getCities(),
+        marketplaceService.getCountries()
+      ]);
+
+      return successResponse(res, {
+        categories,
+        cities,
+        countries
+      }, 'Filtres récupérés avec succès');
+    } catch (error) {
+      console.error('Erreur API marketplace filters:', error);
+      next(error);
+    }
+  }
+}
+
+module.exports = new MarketplaceController();
+
+
+========================================================================================
+FILE: marketplaceRoutes.js
+========================================================================================
+// src/routes/marketplaceRoutes.js
+const express = require('express');
+const marketplaceController = require('../controllers/marketplaceController');
+const { publicLimiter } = require('../middlewares/rateLimiter');
+
+const router = express.Router();
+
+/**
+ * Routes publiques du marketplace
+ */
+
+// Page principale marketplace
+router.get('/', publicLimiter, marketplaceController.getHome);
+
+// Page liste produits
+router.get('/products', publicLimiter, marketplaceController.getProducts);
+
+// Page liste boutiques
+router.get('/stores', publicLimiter, marketplaceController.getStores);
+
+// APIs pour les filtres AJAX
+router.get('/api/products', publicLimiter, marketplaceController.getProductsAPI);
+router.get('/api/stores', publicLimiter, marketplaceController.getStoresAPI);
+router.get('/api/filters', publicLimiter, marketplaceController.getFilters);
+
+module.exports = router;
+
+
+========================================================================================
+FILE: home.ejs
+========================================================================================
+[CONTENU HOME.EJS DISPONIBLE DANS LE PREMIER FICHIER LU]
+
+
+========================================================================================
+FILE: products.ejs
+========================================================================================
+[CONTENU PRODUCTS.EJS DISPONIBLE DANS LE DEUXIÈME FICHIER LU]
+
+
+========================================================================================
+FILE: stores.ejs
+========================================================================================
+[CONTENU STORES.EJS DISPONIBLE DANS LE TROISIÈME FICHIER LU]
+
+
+========================================================================================
+FILE: marketplace-home.js
+========================================================================================
+// public/js/marketplace-home.js
+// Gestion de la page d'accueil du marketplace
+
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn');
+
+  /**
+   * Filtre les produits et boutiques par recherche côté client
+   */
+  function handleSearch() {
+    const query = searchInput.value.trim().toLowerCase();
+    
+    // Filtrer les produits populaires
+    const popularProductCards = document.querySelectorAll('#popularProducts .product-card');
+    popularProductCards.forEach(card => {
+      const name = card.querySelector('.product-name').textContent.toLowerCase();
+      const vendor = card.querySelector('.product-vendor').textContent.toLowerCase();
+      card.style.display = (name.includes(query) || vendor.includes(query)) ? '' : 'none';
+    });
+
+    // Filtrer les produits récents
+    const recentProductCards = document.querySelectorAll('#recentProducts .product-card');
+    recentProductCards.forEach(card => {
+      const name = card.querySelector('.product-name').textContent.toLowerCase();
+      const vendor = card.querySelector('.product-vendor').textContent.toLowerCase();
+      card.style.display = (name.includes(query) || vendor.includes(query)) ? '' : 'none';
+    });
+
+    // Filtrer les boutiques recommandées
+    const storeCards = document.querySelectorAll('#recommendedStores .store-card');
+    storeCards.forEach(card => {
+      const name = card.querySelector('.store-name').textContent.toLowerCase();
+      card.style.display = name.includes(query) ? '' : 'none';
+    });
+
+    // Filtrer les catégories
+    const categoryCards = document.querySelectorAll('#trendingCategories .category-card');
+    categoryCards.forEach(card => {
+      const name = card.querySelector('.category-name').textContent.toLowerCase();
+      card.style.display = name.includes(query) ? '' : 'none';
+    });
+  }
+
+  /**
+   * Déclenche la recherche au clic du bouton
+   */
+  searchBtn.addEventListener('click', handleSearch);
+
+  /**
+   * Déclenche la recherche à l'appui d'Entrée
+   */
+  searchInput.addEventListener('keyup', (e) => {
+    handleSearch();
+  });
+
+  /**
+   * Réinitialise la recherche si le champ est vidé
+   */
+  searchInput.addEventListener('input', () => {
+    if (searchInput.value.trim() === '') {
+      handleSearch();
+    }
+  });
+});
+
+
+========================================================================================
+FILE: marketplace-products.js
+========================================================================================
+// public/js/marketplace-products.js
+// Gestion des filtres et du tri pour la page produits du marketplace
+
+document.addEventListener('DOMContentLoaded', () => {
+  const filterForm = document.getElementById('filterForm');
+  const filterToggle = document.getElementById('filterToggle');
+  const filtersSidebar = document.querySelector('.filters-sidebar');
+  const sortSelect = document.getElementById('sortSelect');
+  const productsContainer = document.getElementById('productsContainer');
+  const resultsCount = document.getElementById('resultsCount');
+  const loadingIndicator = document.getElementById('loadingIndicator');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const pagination = document.getElementById('pagination');
+  const searchInput = document.getElementById('productSearchInput');
+  const searchBtn = document.getElementById('productSearchBtn');
+  const categoryInputs = filterForm.querySelectorAll('input[name="category"]');
+  const citySelect = filterForm.querySelector('select[name="city"]');
+  const countrySelect = filterForm.querySelector('select[name="country"]');
+  const minPriceInput = filterForm.querySelector('input[name="minPrice"]');
+  const maxPriceInput = filterForm.querySelector('input[name="maxPrice"]');
+
+  let currentOffset = 0;
+  const limit = 20;
+  let allProducts = [];
+
+  // Toggle menu responsive
+  if (filterToggle) {
+    filterToggle.addEventListener('click', () => {
+      filtersSidebar.classList.toggle('open');
+    });
+  }
+
+  // Fermer le menu quand on clique en dehors
+  document.addEventListener('click', (e) => {
+    if (filterToggle && !filterToggle.contains(e.target) && !filtersSidebar.contains(e.target)) {
+      filtersSidebar.classList.remove('open');
+    }
+  });
+
+  /**
+   * Récupère les filtres actuels du formulaire
+   */
+  function getFilters() {
+    const selectedCategory = Array.from(categoryInputs).find(i => i.checked);
+    
+    return {
+      search: searchInput ? searchInput.value.trim().toLowerCase() : '',
+      category: selectedCategory ? selectedCategory.value : '',
+      city: citySelect.value || '',
+      country: countrySelect.value || '',
+      minPrice: minPriceInput.value ? parseFloat(minPriceInput.value) : null,
+      maxPrice: maxPriceInput.value ? parseFloat(maxPriceInput.value) : null,
+      sort: sortSelect.value,
+      limit,
+      offset: currentOffset
+    };
+  }
+
+  /**
+   * Filtre les produits côté client
+   */
+  function filterProducts() {
+    const filters = getFilters();
+    
+    let filtered = allProducts.filter(product => {
+      // Filtre recherche
+      if (filters.search && !product.name.toLowerCase().includes(filters.search) && 
+          !product.business_name.toLowerCase().includes(filters.search)) {
+        return false;
+      }
+      
+      // Filtre catégorie
+      if (filters.category && product.category_name !== filters.category) {
+        return false;
+      }
+      
+      // Filtre ville
+      if (filters.city && product.city !== filters.city) {
+        return false;
+      }
+      
+      // Filtre pays
+      if (filters.country && product.country !== filters.country) {
+        return false;
+      }
+      
+      // Filtre prix min
+      if (filters.minPrice !== null && product.price < filters.minPrice) {
+        return false;
+      }
+      
+      // Filtre prix max
+      if (filters.maxPrice !== null && product.price > filters.maxPrice) {
+        return false;
+      }
+      
+      return true;
+    });
+
+    // Tri
+    if (filters.sort === 'recent') {
+      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (filters.sort === 'popular') {
+      filtered.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+    } else if (filters.sort === 'price-asc') {
+      filtered.sort((a, b) => a.price - b.price);
+    } else if (filters.sort === 'price-desc') {
+      filtered.sort((a, b) => b.price - a.price);
+    }
+
+    // Pagination
+    const paginated = filtered.slice(currentOffset, currentOffset + limit);
+    
+    renderProducts(paginated);
+    resultsCount.textContent = filtered.length;
+    updatePagination(filtered.length);
+  }
+
+  /**
+   * Charge les produits avec les filtres actuels
+   */
+  async function loadProducts() {
+    try {
+      loadingIndicator.style.display = 'block';
+      currentOffset = 0;
+      const filters = getFilters();
+
+      // Construire l'URL avec les paramètres
+      const params = new URLSearchParams();
+      if (filters.category) params.append('category', filters.category);
+      if (filters.city) params.append('city', filters.city);
+      if (filters.country) params.append('country', filters.country);
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+      params.append('sort', filters.sort);
+      params.append('limit', 1000);
+      params.append('offset', 0);
+
+      const response = await fetch(`/api/marketplace/api/products?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Mettre à jour les résultats
+      if (data.success && data.data) {
+        allProducts = data.data.products || [];
+        filterProducts();
+        
+        // Scroll vers les produits
+        productsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des produits:', error);
+      productsContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 2rem;">Erreur lors du chargement des produits. Veuillez réessayer.</p>';
+    } finally {
+      loadingIndicator.style.display = 'none';
+    }
+  }
+
+  /**
+   * Affiche les produits
+   */
+  function renderProducts(products) {
+    if (products.length === 0) {
+      productsContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 2rem;">Aucun produit trouvé avec vos critères.</p>';
+      return;
+    }
+
+    productsContainer.innerHTML = products.map(product => `
+      <a href="/p/${product.share_token}" class="product-card">
+        <img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name}" class="product-image">
+        <div class="product-info">
+          <div class="product-name">${product.name}</div>
+          <div class="product-price">${product.price} ${product.currency}</div>
+          <div class="product-vendor">${product.business_name}</div>
+          ${product.city ? `<div class="product-location">${product.city}, ${product.country || ''}</div>` : ''}
+        </div>
+      </a>
+    `).join('');
+  }
+
+  /**
+   * Met à jour l'état des boutons de pagination
+   */
+  function updatePagination(total) {
+    const hasNextPage = currentOffset + limit < total;
+    const hasPrevPage = currentOffset > 0;
+
+    // prevBtn.disabled = !hasPrevPage;
+    // nextBtn.disabled = !hasNextPage;
+
+    const currentPage = Math.floor(currentOffset / limit) + 1;
+    const totalPages = Math.ceil(total / limit);
+    pagination.textContent = `Page ${currentPage} / ${totalPages}`;
+  }
+
+  // Événements des filtres - Application en temps réel
+  categoryInputs.forEach(input => {
+    input.addEventListener('change', () => {
+      currentOffset = 0;
+      filterProducts();
+    });
+  });
+
+  citySelect.addEventListener('change', () => {
+    currentOffset = 0;
+    filterProducts();
+  });
+  
+  countrySelect.addEventListener('change', () => {
+    currentOffset = 0;
+    filterProducts();
+  });
+  
+  minPriceInput.addEventListener('change', () => {
+    currentOffset = 0;
+    filterProducts();
+  });
+  
+  maxPriceInput.addEventListener('change', () => {
+    currentOffset = 0;
+    filterProducts();
+  });
+  
+  sortSelect.addEventListener('change', () => {
+    currentOffset = 0;
+    filterProducts();
+  });
+
+  // Recherche
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      currentOffset = 0;
+      filterProducts();
+    });
+  }
+
+  if (searchBtn) {
+    searchBtn.addEventListener('click', () => {
+      currentOffset = 0;
+      filterProducts();
+    });
+  }
+
+  // Pagination
+  prevBtn.addEventListener('click', () => {
+    currentOffset = Math.max(0, currentOffset - limit);
+    filterProducts();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    currentOffset += limit;
+    filterProducts();
+  });
+
+  // Charger les produits au chargement initial
+  loadProducts();
+});
+
+
+========================================================================================
+FILE: marketplace-stores.js
+========================================================================================
+// public/js/marketplace-stores.js
+// Gestion des filtres et du tri pour la page boutiques du marketplace
+
+document.addEventListener('DOMContentLoaded', () => {
+  const filterForm = document.getElementById('filterForm');
+  const filterToggle = document.getElementById('filterToggle');
+  const filtersSidebar = document.querySelector('.filters-sidebar');
+  const sortSelect = document.getElementById('sortSelect');
+  const storesContainer = document.getElementById('storesContainer');
+  const resultsCount = document.getElementById('resultsCount');
+  const loadingIndicator = document.getElementById('loadingIndicator');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const pagination = document.getElementById('pagination');
+  const searchInput = document.getElementById('storeSearchInput');
+  const searchBtn = document.getElementById('storeSearchBtn');
+  const citySelect = filterForm.querySelector('select[name="city"]');
+  const countrySelect = filterForm.querySelector('select[name="country"]');
+
+  let currentOffset = 0;
+  const limit = 20;
+  let allStores = [];
+
+  // Toggle menu responsive
+  if (filterToggle) {
+    filterToggle.addEventListener('click', () => {
+      filtersSidebar.classList.toggle('open');
+    });
+  }
+
+  // Fermer le menu quand on clique en dehors
+  document.addEventListener('click', (e) => {
+    if (filterToggle && !filterToggle.contains(e.target) && !filtersSidebar.contains(e.target)) {
+      filtersSidebar.classList.remove('open');
+    }
+  });
+
+  /**
+   * Récupère les filtres actuels du formulaire
+   */
+  function getFilters() {
+    return {
+      search: searchInput ? searchInput.value.trim().toLowerCase() : '',
+      city: citySelect.value || '',
+      country: countrySelect.value || '',
+      sort: sortSelect.value,
+      limit,
+      offset: currentOffset
+    };
+  }
+
+  /**
+   * Filtre les boutiques côté client
+   */
+  function filterStores() {
+    const filters = getFilters();
+    
+    let filtered = allStores.filter(store => {
+      // Filtre recherche
+      if (filters.search && !store.business_name.toLowerCase().includes(filters.search)) {
+        return false;
+      }
+      
+      // Filtre ville
+      if (filters.city && store.city !== filters.city) {
+        return false;
+      }
+      
+      // Filtre pays
+      if (filters.country && store.country !== filters.country) {
+        return false;
+      }
+      
+      return true;
+    });
+
+    // Tri
+    if (filters.sort === 'recent') {
+      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (filters.sort === 'popular') {
+      filtered.sort((a, b) => (b.total_views || 0) - (a.total_views || 0));
+    }
+
+    // Pagination
+    const paginated = filtered.slice(currentOffset, currentOffset + limit);
+    
+    renderStores(paginated);
+    resultsCount.textContent = filtered.length;
+    updatePagination(filtered.length);
+  }
+
+  /**
+   * Charge les boutiques avec les filtres actuels
+   */
+  async function loadStores() {
+    try {
+      loadingIndicator.style.display = 'block';
+      currentOffset = 0;
+      const filters = getFilters();
+
+      // Construire l'URL avec les paramètres
+      const params = new URLSearchParams();
+      if (filters.city) params.append('city', filters.city);
+      if (filters.country) params.append('country', filters.country);
+      params.append('sort', filters.sort);
+      params.append('limit', 1000);
+      params.append('offset', 0);
+
+      const response = await fetch(`/api/marketplace/api/stores?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Mettre à jour les résultats
+      if (data.success && data.data) {
+        allStores = data.data.stores || [];
+        filterStores();
+        
+        // Scroll vers les boutiques
+        storesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des boutiques:', error);
+      storesContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 2rem;">Erreur lors du chargement des boutiques. Veuillez réessayer.</p>';
+    } finally {
+      loadingIndicator.style.display = 'none';
+    }
+  }
+
+  /**
+   * Affiche les boutiques
+   */
+  function renderStores(stores) {
+    if (stores.length === 0) {
+      storesContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 2rem;">Aucune boutique trouvée avec vos critères.</p>';
+      return;
+    }
+
+    // storesContainer.innerHTML = stores.map(store => `
+    //   <a href="/store/${store.store_slug}" class="store-card">
+    //     ${store.logo_url ? `<img src="${store.logo_url}" alt="${store.business_name}" class="store-logo">` : '<div class="store-logo" style="display: flex; align-items: center; justify-content: center; color: var(--color-text-light);">📦</div>'}
+    //     <div class="store-header">
+    //       <div class="store-name">${store.business_name}</div>
+    //       ${store.city ? `<div class="store-location">📍 ${store.city}, ${store.country || ''}</div>` : ''}
+    //       <div class="store-badge">✓ Actif</div>
+    //     </div>
+    //     <div class="store-stats">
+    //       <span><strong>${store.product_count}</strong> produits</span>
+    //       <span><strong>${store.total_views}</strong> vues</span>
+    //     </div>
+    //   </a>
+    // `).join('');
+  }
+
+  /**
+   * Met à jour l'état des boutons de pagination
+   */
+  function updatePagination(total) {
+    const hasNextPage = currentOffset + limit < total;
+    const hasPrevPage = currentOffset > 0;
+
+    prevBtn.disabled = !hasPrevPage;
+    nextBtn.disabled = !hasNextPage;
+
+    const currentPage = Math.floor(currentOffset / limit) + 1;
+    const totalPages = Math.ceil(total / limit);
+    pagination.textContent = `Page ${currentPage} / ${totalPages}`;
+  }
+
+  // Événements des filtres - Application en temps réel
+  citySelect.addEventListener('change', () => {
+    currentOffset = 0;
+    filterStores();
+  });
+  
+  countrySelect.addEventListener('change', () => {
+    currentOffset = 0;
+    filterStores();
+  });
+  
+  sortSelect.addEventListener('change', () => {
+    currentOffset = 0;
+    filterStores();
+  });
+
+  // Recherche
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      currentOffset = 0;
+      filterStores();
+    });
+  }
+
+  if (searchBtn) {
+    searchBtn.addEventListener('click', () => {
+      currentOffset = 0;
+      filterStores();
+    });
+  }
+
+  // Pagination
+  prevBtn.addEventListener('click', () => {
+    currentOffset = Math.max(0, currentOffset - limit);
+    filterStores();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    currentOffset += limit;
+    filterStores();
+  });
+
+  // Charger les boutiques au chargement initial
+  loadStores();
+});

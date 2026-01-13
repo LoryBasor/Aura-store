@@ -83,6 +83,20 @@ router.post(
   adminUserController.resetPassword
 );
 
+// Marquer vendeur comme vérifié
+router.post(
+  '/vendors/:userId/verify',
+  auditLog('user.verify', 'users'),
+  adminUserController.verifyVendor
+);
+
+// Retirer la vérification du vendeur
+router.post(
+  '/vendors/:userId/unverify',
+  auditLog('user.unverify', 'users'),
+  adminUserController.unverifyVendor
+);
+
 // ==============================================
 // ROUTES GESTION PLANS
 // ==============================================

@@ -142,9 +142,15 @@ const AdminVendors = {
         <td style="text-align: center;">${vendor.products_count || 0}</td>
         <td style="text-align: center;">${vendor.orders_count || 0}</td>
         <td style="font-weight: 600;">${UI.formatCurrency(vendor.total_revenue || 0)}</td>
+        <td style="text-align: center;">
+          ${vendor.is_verified ? 
+            `<span class="badge badge-success">✓ Vérifié</span>` :
+            `<span class="badge badge-neutral">Non vérifié</span>`
+          }
+        </td>
         <td>
-          <span class="badge badge-${statusColors[vendor.account_status]}">
-            ${statusLabels[vendor.account_status]}
+          <span class="badge badge-${vendor.account_status === 'active' ? 'success' : vendor.account_status === 'suspended' ? 'error' : 'neutral'}">
+            ${vendor.account_status === 'active' ? 'Actif' : vendor.account_status === 'suspended' ? 'Suspendu' : 'Désactivé'}
           </span>
         </td>
         <td style="font-size: 13px; color: var(--color-secondary);">
@@ -239,12 +245,27 @@ const AdminVendors = {
           <div style="margin-bottom: 24px; padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm);">
             <h4 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">${vendor.business_name}</h4>
             <p style="color: var(--color-secondary); margin-bottom: 4px;">${vendor.email}</p>
-            <span class="badge badge-${vendor.account_status === 'active' ? 'success' : 'error'}">
-              ${vendor.account_status}
-            </span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+              <span class="badge badge-${vendor.account_status === 'active' ? 'success' : 'error'}">
+                ${vendor.account_status}
+              </span>
+              ${vendor.is_verified ? 
+                `<span class="badge badge-success">✓ Vérifié</span>` :
+                `<span class="badge badge-neutral">Non vérifié</span>`
+              }
+            </div>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 12px;">
+            ${vendor.is_verified ? 
+              `<button class="btn btn-secondary w-full" data-action="unverify-vendor" data-vendor-id="${id}">
+                ✗ Retirer la vérification
+              </button>` :
+              `<button class="btn btn-success w-full" data-action="verify-vendor" data-vendor-id="${id}">
+                ✓ Marquer comme vérifié
+              </button>`
+            }
+            
             ${!isSuspended && !isDeactivated ? 
               `<button class="btn btn-danger w-full" data-action="suspend-vendor" data-vendor-id="${id}">
                 ⛔ Suspendre le vendeur
@@ -285,6 +306,18 @@ const AdminVendors = {
   },
 
   attachActionButtons(vendorId) {
+    // Vérifier
+    const verifyBtn = document.querySelector('[data-action="verify-vendor"]');
+    if (verifyBtn) {
+      verifyBtn.addEventListener('click', () => this.openVerifyModal(vendorId, true));
+    }
+
+    // Retirer vérification
+    const unverifyBtn = document.querySelector('[data-action="unverify-vendor"]');
+    if (unverifyBtn) {
+      unverifyBtn.addEventListener('click', () => this.openVerifyModal(vendorId, false));
+    }
+
     // Suspendre
     const suspendBtn = document.querySelector('[data-action="suspend-vendor"]');
     if (suspendBtn) {
@@ -315,6 +348,47 @@ const AdminVendors = {
       viewBtn.addEventListener('click', () => {
         window.location.href = `/admin/vendors/${vendorId}`;
       });
+    }
+  },
+
+  openVerifyModal(userId, isVerifying) {
+    document.getElementById('verifyUserId').value = userId;
+    const title = document.getElementById('verifyModalTitle');
+    const message = document.getElementById('verifyModalMessage');
+    const btn = document.getElementById('confirmVerifyBtn');
+    
+    if (isVerifying) {
+      title.textContent = '✓ Marquer comme vérifié';
+      message.textContent = 'Êtes-vous sûr de vouloir marquer ce vendeur comme vérifié ?';
+      btn.textContent = 'Marquer comme vérifié';
+      btn.dataset.action = 'verify';
+    } else {
+      title.textContent = '✗ Retirer la vérification';
+      message.textContent = 'Êtes-vous sûr de vouloir retirer la vérification de ce vendeur ?';
+      btn.textContent = 'Retirer la vérification';
+      btn.dataset.action = 'unverify';
+    }
+
+    // Attacher événement
+    btn.onclick = () => this.handleVerifyChange(userId, isVerifying);
+    
+    ModalManager.closeModal('vendorActionsModal');
+    ModalManager.openModal('verifyModal');
+  },
+
+  async handleVerifyChange(userId, isVerifying) {
+    try {
+      const endpoint = isVerifying ? `/admin/vendors/${userId}/verify` : `/admin/vendors/${userId}/unverify`;
+      await API.post(endpoint, {}, true);
+      
+      const message = isVerifying ? 'Vendeur marqué comme vérifié' : 'Vérification retirée';
+      UI.showNotification('Succès', message, 'success');
+      
+      ModalManager.closeModal('verifyModal');
+      this.loadVendors(this.currentPage);
+    } catch (error) {
+      console.error('Erreur vérification:', error);
+      UI.showNotification('Erreur', error.message || 'Impossible de mettre à jour la vérification', 'error');
     }
   },
 

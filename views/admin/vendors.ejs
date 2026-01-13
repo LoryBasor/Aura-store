@@ -46,6 +46,7 @@
           <th>Produits</th>
           <th>Commandes</th>
           <th>CA Total</th>
+          <th>Vérifié</th>
           <th>Statut</th>
           <th>Inscription</th>
           <th>Actions</th>
@@ -136,6 +137,27 @@
       <button type="button" class="btn btn-secondary modal-close">Annuler</button>
       <button type="button" class="btn btn-primary" id="confirmResetPasswordBtn">
         Générer le mot de passe
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Modal Vérification Vendeur -->
+<div class="modal-overlay" id="verifyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="verifyModalTitle">✓ Marquer comme vérifié</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="verifyUserId">
+      <p id="verifyModalMessage" style="color: var(--color-secondary);">
+        Êtes-vous sûr de vouloir marquer ce vendeur comme vérifié ?
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+      <button type="button" class="btn btn-primary" id="confirmVerifyBtn">
+        Confirmer
       </button>
     </div>
   </div>

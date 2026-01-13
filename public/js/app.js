@@ -1791,6 +1791,8 @@ const ProfilePage = {
         document.getElementById('email').value = user.email || '';
         document.getElementById('phone').value = user.phone || '';
         document.getElementById('whatsapp_number').value = user.whatsapp_number || '';
+        document.getElementById('country').value = user.country || '';
+        document.getElementById('city').value = user.city || '';
 
         const storeLink = `${window.location.origin}/store/${user.store_slug}`;
         document.getElementById('store_link').value = storeLink;
@@ -1807,7 +1809,9 @@ const ProfilePage = {
     const formData = {
       business_name: document.getElementById('business_name').value,
       phone: document.getElementById('phone').value,
-      whatsapp_number: document.getElementById('whatsapp_number').value
+      whatsapp_number: document.getElementById('whatsapp_number').value,
+      country: document.getElementById('country').value,
+      city: document.getElementById('city').value
     };
 
     try {
@@ -1817,6 +1821,8 @@ const ProfilePage = {
       // Mettre à jour localStorage
       const currentUser = API.getUser();
       currentUser.business_name = formData.business_name;
+      currentUser.country = formData.country;
+      currentUser.city = formData.city;
       API.setUser(currentUser);
 
       setTimeout(() => location.reload(), 1000);

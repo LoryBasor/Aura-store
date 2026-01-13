@@ -134,6 +134,48 @@ class AdminUserController {
       next(error);
     }
   }
+
+  /**
+   * Marque un vendeur comme vérifié
+   * POST /api/admin/vendors/:userId/verify
+   */
+  async verifyVendor(req, res, next) {
+    try {
+      await captureOldState(req, 'users', req.params.userId);
+      
+      await userManagementService.verifyVendor(
+        req.params.userId,
+        req.user.id
+      );
+      
+      req.auditNotes = 'Vendeur marqué comme vérifié';
+      
+      return successResponse(res, null, 'Vendeur marqué comme vérifié avec succès');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Retire la vérification d'un vendeur
+   * POST /api/admin/vendors/:userId/unverify
+   */
+  async unverifyVendor(req, res, next) {
+    try {
+      await captureOldState(req, 'users', req.params.userId);
+      
+      await userManagementService.unverifyVendor(
+        req.params.userId,
+        req.user.id
+      );
+      
+      req.auditNotes = 'Vérification du vendeur retirée';
+      
+      return successResponse(res, null, 'Vérification du vendeur retirée avec succès');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AdminUserController();

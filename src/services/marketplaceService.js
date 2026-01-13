@@ -1,10 +1,10 @@
-// src/services/marketplaceService.js
+// src/services/marketplaceService.js - VERSION CORRIGÉE
 const { pool } = require('../config/database');
 const { AppError } = require('../middlewares/errorHandler');
 const { getImageUrl } = require('../config/upload');
 
 /**
- * Service pour le marketplace public
+ * Service pour le marketplace public - Optimisé avec corrections
  */
 class MarketplaceService {
   /**
@@ -14,7 +14,7 @@ class MarketplaceService {
     // Produits populaires (par view_count)
     const [popularProducts] = await pool.execute(`
       SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug,
-             u.business_name, u.store_slug, u.city, u.country,
+             u.business_name, u.store_slug, u.city, u.country, u.is_verified,
              pl.token as share_token,
              p.view_count, p.order_count
       FROM products p
@@ -29,7 +29,7 @@ class MarketplaceService {
     // Produits récents
     const [recentProducts] = await pool.execute(`
       SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug,
-             u.business_name, u.store_slug, u.city, u.country,
+             u.business_name, u.store_slug, u.city, u.country, u.is_verified,
              pl.token as share_token
       FROM products p
       JOIN users u ON p.user_id = u.id
@@ -42,7 +42,7 @@ class MarketplaceService {
 
     // Boutiques recommandées (par nombre de produits)
     const [recommendedStores] = await pool.execute(`
-      SELECT u.id, u.business_name, u.store_slug, u.city, u.country,
+      SELECT u.id, u.business_name, u.store_slug, u.city, u.country, u.is_verified,
              COUNT(p.id) as product_count,
              SUM(p.view_count) as total_views,
              sc.logo_url
@@ -50,7 +50,7 @@ class MarketplaceService {
       LEFT JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
       LEFT JOIN store_customization sc ON u.id = sc.user_id
       WHERE u.is_active = 1 AND u.deleted_at IS NULL
-      GROUP BY u.id
+      GROUP BY u.id, u.business_name, u.store_slug, u.city, u.country, u.is_verified, sc.logo_url
       HAVING product_count > 0
       ORDER BY product_count DESC, total_views DESC
       LIMIT 8
@@ -80,7 +80,7 @@ class MarketplaceService {
       FROM categories c
       LEFT JOIN products p ON c.id = p.category_id AND p.is_available = 1 AND p.deleted_at IS NULL
       WHERE c.is_active = 1 AND c.deleted_at IS NULL
-      GROUP BY c.id
+      GROUP BY c.id, c.name, c.slug
       HAVING product_count > 0
       ORDER BY product_count DESC
       LIMIT 10
@@ -99,7 +99,7 @@ class MarketplaceService {
   }
 
   /**
-   * Récupère la liste des produits avec filtres
+   * Récupère la liste des produits avec filtres - VERSION CORRIGÉE
    */
   async getProducts(filters = {}) {
     let whereConditions = [
@@ -111,14 +111,13 @@ class MarketplaceService {
     let params = [];
     let orderBy = 'p.created_at DESC';
 
-
     // Filtre par recherche
     if (filters.search) {
       whereConditions.push('(p.name LIKE ? OR p.description LIKE ?)');
       params.push(`%${filters.search}%`, `%${filters.search}%`);
     }
 
-    // Filtre par catégorie
+    // Filtre par catégorie - CORRECTION: utiliser paramètre
     if (filters.category) {
       whereConditions.push('c.slug = ?');
       params.push(filters.category);
@@ -126,8 +125,8 @@ class MarketplaceService {
 
     // Filtre par ville
     if (filters.city) {
-      whereConditions.push('u.city LIKE ?');
-      params.push(`%${filters.city}%`);
+      whereConditions.push('u.city = ?');
+      params.push(filters.city);
     }
 
     // Filtre par pays
@@ -153,12 +152,11 @@ class MarketplaceService {
       orderBy = 'p.view_count DESC';
     } else if (filters.sort === 'recent') {
       orderBy = 'p.created_at DESC';
-    } else if (filters.sort === 'price_low') {
+    } else if (filters.sort === 'price-asc') {
       orderBy = 'p.price ASC';
-    } else if (filters.sort === 'price_high') {
+    } else if (filters.sort === 'price-desc') {
       orderBy = 'p.price DESC';
     } else if (filters.sort === 'rating') {
-      // Pour l'instant, pas de rating, utiliser view_count
       orderBy = 'p.view_count DESC';
     }
 
@@ -166,9 +164,10 @@ class MarketplaceService {
     const limit = parseInt(filters.limit ?? 20, 10) || 20;
     const offset = parseInt(filters.offset ?? 0, 10) || 0;
 
+    // CORRECTION: Requête principale avec paramètres
     const query = `
       SELECT p.id, p.name, p.price, p.currency, p.image_url, p.slug, p.description,
-             u.business_name, u.store_slug, u.city, u.country,
+             u.business_name, u.store_slug, u.city, u.country, u.is_verified,
              pl.token as share_token,
              c.name as category_name, c.slug as category_slug,
              p.view_count, p.order_count, p.created_at
@@ -178,15 +177,16 @@ class MarketplaceService {
       LEFT JOIN product_links pl ON p.id = pl.product_id
       WHERE ${whereClause}
       ORDER BY ${orderBy}
-      LIMIT ${limit} OFFSET ${offset};
+      LIMIT ${limit} OFFSET ${offset}
     `;
 
-    const [products] = await pool.execute(query, params);
+    const queryParams = [...params];
+    const [products] = await pool.execute(query, queryParams);
 
     // Formater les images
     products.forEach(p => p.image_url = getImageUrl(p.image_url));
 
-    // Compter le total pour pagination
+    // CORRECTION: Compter le total pour pagination
     const countQuery = `
       SELECT COUNT(*) as total
       FROM products p
@@ -194,7 +194,7 @@ class MarketplaceService {
       LEFT JOIN categories c ON p.category_id = c.id
       WHERE ${whereClause}
     `;
-    const [countResult] = await pool.execute(countQuery, params.slice(0, -2)); // Enlever limit et offset
+    const [countResult] = await pool.execute(countQuery, params);
 
     return {
       products,
@@ -205,7 +205,7 @@ class MarketplaceService {
   }
 
   /**
-   * Récupère la liste des boutiques avec filtres
+   * Récupère la liste des boutiques avec filtres - VERSION CORRIGÉE
    */
   async getStores(filters = {}) {
     let whereConditions = [
@@ -213,12 +213,13 @@ class MarketplaceService {
       'u.deleted_at IS NULL'
     ];
     let params = [];
+    let havingClause = 'product_count > 0';
     let orderBy = 'u.created_at DESC';
 
     // Filtre par ville
     if (filters.city) {
-      whereConditions.push('u.city LIKE ?');
-      params.push(`%${filters.city}%`);
+      whereConditions.push('u.city = ?');
+      params.push(filters.city);
     }
 
     // Filtre par pays
@@ -233,51 +234,34 @@ class MarketplaceService {
     } else if (filters.sort === 'popular') {
       orderBy = 'total_views DESC';
     } else if (filters.sort === 'verified') {
-      // Pour l'instant, pas de vérification, utiliser nombre de produits
       orderBy = 'product_count DESC';
     }
 
     const whereClause = whereConditions.join(' AND ');
+    const limit = parseInt(filters.limit ?? 20, 10) || 20;
+    const offset = parseInt(filters.offset ?? 0, 10) || 0;
 
-    const limit = filters.limit || 20;
-    const offset = filters.offset || 0;
-
+    // CORRECTION: Requête principale avec paramètres
     const query = `
-      SELECT 
-        u.id,
-        u.business_name,
-        u.store_slug,
-        u.city,
-        u.country,
-        u.created_at,
-        sc.logo_url,
-        COUNT(p.id) AS product_count,
-        SUM(p.view_count) AS total_views,
-        (
-          SELECT GROUP_CONCAT(image_url)
-          FROM (
-            SELECT image_url
-            FROM products p2
-            WHERE p2.user_id = u.id AND p2.is_available = 1 AND p2.deleted_at IS NULL
-            LIMIT 3
-          ) AS tmp
-        ) AS sample_images
+      SELECT u.id, u.business_name, u.store_slug, u.city, u.country, 
+             u.is_verified, u.created_at, sc.logo_url,
+             COUNT(p.id) as product_count,
+             COALESCE(SUM(p.view_count), 0) as total_views
       FROM users u
-      LEFT JOIN products p 
-        ON u.id = p.user_id 
+      LEFT JOIN products p ON u.id = p.user_id 
         AND p.is_available = 1 
         AND p.deleted_at IS NULL
-      LEFT JOIN store_customization sc 
-        ON u.id = sc.user_id
+      LEFT JOIN store_customization sc ON u.id = sc.user_id
       WHERE ${whereClause}
-      GROUP BY u.id
-      HAVING product_count > 0
+      GROUP BY u.id, u.business_name, u.store_slug, u.city, u.country, 
+               u.is_verified, u.created_at, sc.logo_url
+      HAVING ${havingClause}
       ORDER BY ${orderBy}
-      LIMIT ${limit} OFFSET ${offset};
-
+      LIMIT ${limit} OFFSET ${offset}
     `;
 
-    const [stores] = await pool.execute(query, params);
+    const queryParams = [...params];
+    const [stores] = await pool.execute(query, queryParams);
 
     // Récupérer les produits pour chaque boutique
     for (let store of stores) {
@@ -297,30 +281,23 @@ class MarketplaceService {
       }));
     }
 
-    // Formater les images d'aperçu
-    stores.forEach(store => {
-      if (store.sample_images) {
-        store.sample_images = store.sample_images
-          .split(',')
-          .map(img => getImageUrl(img))
-          .join(',');
-      }
-    });
-
-    // Compter le total
+    // CORRECTION: Compter le total
     const countQuery = `
       SELECT COUNT(DISTINCT u.id) as total
       FROM users u
-      LEFT JOIN products p ON u.id = p.user_id AND p.is_available = 1 AND p.deleted_at IS NULL
+      LEFT JOIN products p ON u.id = p.user_id 
+        AND p.is_available = 1 
+        AND p.deleted_at IS NULL
       WHERE ${whereClause}
-      GROUP BY u.id
       HAVING COUNT(p.id) > 0
     `;
-    const [countResult] = await pool.execute(countQuery, params.slice(0, -2));
+    
+    const [countResult] = await pool.execute(countQuery, params);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
 
     return {
       stores,
-      total: countResult[0].total,
+      total,
       limit,
       offset
     };
@@ -335,7 +312,7 @@ class MarketplaceService {
       FROM categories c
       LEFT JOIN products p ON c.id = p.category_id AND p.is_available = 1 AND p.deleted_at IS NULL
       WHERE c.is_active = 1 AND c.deleted_at IS NULL
-      GROUP BY c.id
+      GROUP BY c.id, c.name, c.slug
       HAVING product_count > 0
       ORDER BY c.name ASC
     `);

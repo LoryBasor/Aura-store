@@ -22,13 +22,14 @@ const PlanManager = {
    */
   async init() {
     try {
+      const currentPath = window.location.pathname;
       const isPublicPage = currentPath.startsWith('/p/');
-    const isPublicStore = currentPath.startsWith('/store/');
+      const isPublicStore = currentPath.startsWith('/store/');
 
 
-    if (isPublicPage || isPublicStore) {
-      return;
-    }
+      if (isPublicPage || isPublicStore) {
+        return;
+      }
 
       const data = await API.getProfile();
       console.log('Données utilisateur pour plan:', data); 
