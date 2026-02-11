@@ -1,4 +1,4 @@
-# 🚀 SaaS Vendor Platform - Backend API
+# 🚀 Aura-store
 
 Plateforme SaaS multi-tenant pour vendeurs WhatsApp et Instagram en Afrique.
 
@@ -42,7 +42,7 @@ Plateforme SaaS multi-tenant pour vendeurs WhatsApp et Instagram en Afrique.
 - **Base de données**: MySQL 8.0
 - **Authentification**: JWT (jsonwebtoken)
 - **Sécurité**: bcrypt, helmet, express-rate-limit
-- **Upload**: Multer
+- **Upload**: Multer, Cloudinary
 - **Validation**: Joi
 
 ### Structure du Projet
@@ -59,8 +59,7 @@ saas-vendor-platform/
 │   └── app.js          # Point d'entrée application
 ├── migrations/         # Scripts SQL de migration
 ├── uploads/            # Stockage images
-├── logs/               # Logs application
-├── .env.example        # Template variables d'environnement
+├── .env                # Template variables d'environnement
 ├── package.json
 └── ecosystem.config.js # Configuration PM2
 ```
@@ -79,7 +78,7 @@ saas-vendor-platform/
 1. **Cloner le projet**
 ```bash
 git clone <repository-url>
-cd saas-vendor-platform
+cd Aura-store
 ```
 
 2. **Installer les dépendances**
@@ -130,17 +129,17 @@ npm start
 # Application
 NODE_ENV=production
 PORT=3000
-APP_URL=https://votre-domaine.com
+APP_URL=https://domaine.com
 
 # Base de données
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=votre_user
-DB_PASSWORD=votre_password
+DB_USER=name_user
+DB_PASSWORD=**********************
 DB_NAME=saas_vendor_db
 
 # JWT
-JWT_SECRET=votre_secret_64_caracteres_minimum
+JWT_SECRET=***********************
 JWT_EXPIRES_IN=7d
 
 # Upload
@@ -161,7 +160,7 @@ BCRYPT_ROUNDS=12
 
 ### Base URL
 ```
-Production: https://api.votre-domaine.com
+Production: https://api.domaine.com
 Development: http://localhost:3000
 ```
 
@@ -227,7 +226,7 @@ image: [file]
 
 #### Lister les produits
 ```http
-GET /api/products?page=1&limit=20&is_available=true
+GET /api/products
 Authorization: Bearer {token}
 ```
 
@@ -245,7 +244,7 @@ Content-Type: application/json
 
 {
   "product_id": 1,
-  "customer_name": "Jean Dupont",
+  "customer_name": "Zoua Bryant",
   "customer_phone": "+237698765432",
   "customer_address": "Douala, Akwa",
   "quantity": 1,
@@ -255,7 +254,7 @@ Content-Type: application/json
 
 #### Lister les commandes (Vendeur)
 ```http
-GET /api/orders?status=nouvelle&page=1
+GET /api/orders
 Authorization: Bearer {token}
 ```
 
@@ -335,8 +334,8 @@ EXIT;
 #### 3. Déployer l'application
 ```bash
 # Créer le dossier app
-sudo mkdir -p /var/www/saas-vendor-api
-cd /var/www/saas-vendor-api
+sudo mkdir -p /var/www/aura-store-api
+cd /var/www/Aura-store-api
 
 # Cloner le code ou uploader via SFTP
 # git clone <repo> .
@@ -361,13 +360,13 @@ pm2 startup
 
 #### 4. Configurer Nginx (Reverse Proxy)
 ```bash
-sudo nano /etc/nginx/sites-available/saas-vendor-api
+sudo nano /etc/nginx/sites-available/Aura-store-api
 ```
 
 ```nginx
 server {
     listen 80;
-    server_name api.votre-domaine.com;
+    server_name api.domaine.com;
 
     location / {
         proxy_pass http://localhost:3000;
@@ -381,7 +380,7 @@ server {
     }
 
     location /uploads {
-        alias /var/www/saas-vendor-api/uploads;
+        alias /var/www/Aura-store-api/uploads;
         expires 30d;
     }
 }
@@ -389,7 +388,7 @@ server {
 
 ```bash
 # Activer le site
-sudo ln -s /etc/nginx/sites-available/saas-vendor-api /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/Aura-store-api /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 ```
@@ -403,16 +402,16 @@ sudo certbot --nginx -d api.votre-domaine.com
 #### 6. Monitoring
 ```bash
 # Voir les logs
-pm2 logs saas-vendor-api
+pm2 logs Aura-store-api
 
 # Statistiques
 pm2 monit
 
 # Redémarrer
-pm2 restart saas-vendor-api
+pm2 restart Aura-store-api
 
 # Stopper
-pm2 stop saas-vendor-api
+pm2 stop Aura-store-api
 ```
 
 ---
@@ -452,7 +451,6 @@ pm2 stop saas-vendor-api
 
 ### Pour Améliorer
 - Implémenter un cache Redis
-- CDN pour les images (Cloudinary, AWS S3)
 - Optimisation des images (resize, compression)
 - Load balancing avec plusieurs instances
 
@@ -487,7 +485,7 @@ pm2 logs
 pm2 flush
 
 # Supprimer l'app et redémarrer
-pm2 delete saas-vendor-api
+pm2 delete Aura-store-api
 pm2 start ecosystem.config.js
 ```
 
@@ -502,8 +500,7 @@ MIT License - Voir le fichier LICENSE
 ## 👨‍💻 Support
 
 Pour toute question ou problème :
-- Email: support@votre-domaine.com
-- Documentation: https://docs.votre-domaine.com
+- Email: bryantzoua4@gmail.com
 
 ---
 
