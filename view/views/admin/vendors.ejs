@@ -1,0 +1,202 @@
+<%# ========================================
+    views/admin/vendors.ejs - SSR VERSION
+    ======================================== %>
+
+<%
+  function fmtDate(d) { if(!d) return '-'; return new Date(d).toLocaleDateString('fr-FR'); }
+  const currentVendors    = vendors    || [];
+  const currentPagination = pagination || { page:1, limit:20, total:0 };
+  const currentFilters    = filters    || {};
+  const totalPages        = Math.ceil(currentPagination.total / currentPagination.limit);
+%>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">👥 Gestion des vendeurs</h1>
+    <p class="page-subtitle">Administrez tous les comptes vendeurs (<%= currentPagination.total %> au total)</p>
+  </div>
+  <button class="btn btn-secondary" id="exportBtn">📊 Exporter CSV</button>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:24px;">
+  <form method="GET" action="/admin/vendors" style="display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;padding:16px;">
+    <input type="search" name="search" id="searchInput" class="form-input"
+           placeholder="Rechercher par nom, email ou téléphone..." value="<%= currentFilters.search || '' %>">
+    <select name="status" id="statusFilter" class="form-select" style="width:200px;" onchange="this.form.submit()">
+      <option value="" <%= !currentFilters.status ? 'selected' : '' %>>Tous les statuts</option>
+      <option value="active"      <%= currentFilters.status === 'active'      ? 'selected' : '' %>>Actifs</option>
+      <option value="suspended"   <%= currentFilters.status === 'suspended'   ? 'selected' : '' %>>Suspendus</option>
+      <option value="deactivated" <%= currentFilters.status === 'deactivated' ? 'selected' : '' %>>Désactivés</option>
+    </select>
+    <button type="submit" class="btn btn-primary" id="searchBtn">🔍 Rechercher</button>
+  </form>
+</div>
+
+<!-- Vendors Table -->
+<div class="card">
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Vendeur</th>
+          <th>Contact</th>
+          <th>Abonnement</th>
+          <th>Produits</th>
+          <th>Commandes</th>
+          <th>CA Total</th>
+          <th>Vérifié</th>
+          <th>Statut</th>
+          <th>Inscription</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="vendorsTableBody">
+        <% if (currentVendors.length === 0) { %>
+          <tr>
+            <td colspan="10" style="text-align:center;padding:48px;">
+              <div style="font-size:48px;margin-bottom:16px;">👤</div>
+              <p style="color:var(--color-secondary);">Aucun vendeur trouvé</p>
+            </td>
+          </tr>
+        <% } else { %>
+          <% currentVendors.forEach(vendor => { %>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:var(--color-primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:16px;">
+                    <%= vendor.business_name ? vendor.business_name.charAt(0).toUpperCase() : 'V' %>
+                  </div>
+                  <div>
+                    <div style="font-weight:700;"><%= vendor.business_name %></div>
+                    <div style="font-size:12px;color:var(--color-secondary);">/<%= vendor.store_slug %></div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div><%= vendor.email %></div>
+                <div style="font-size:12px;color:var(--color-secondary);"><%= vendor.phone || '-' %></div>
+              </td>
+              <td><span class="badge badge-info"><%= vendor.plan_name || 'Gratuit' %></span></td>
+              <td><%= vendor.product_count || 0 %></td>
+              <td><%= vendor.order_count || 0 %></td>
+              <td><%= (parseFloat(vendor.total_revenue)||0).toLocaleString('fr-FR') %> FCFA</td>
+              <td><%= vendor.is_verified ? '✅' : '⬜' %></td>
+              <td>
+                <span class="badge badge-<%= vendor.account_status === 'active' ? 'success' : vendor.account_status === 'suspended' ? 'warning' : 'error' %>">
+                  <%= vendor.account_status %>
+                </span>
+              </td>
+              <td><%= fmtDate(vendor.created_at) %></td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  <a href="/admin/vendors/<%= vendor.id %>" class="btn btn-secondary btn-sm">👁 Détails</a>
+                  <button class="btn btn-outline btn-sm" data-action="vendor-actions" data-vendor-id="<%= vendor.id %>">⚙️</button>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination SSR -->
+<% if (totalPages > 1) { %>
+<div id="pagination" class="flex-center" style="margin-top:24px;gap:8px;">
+  <% if (currentPagination.page > 1) { %>
+    <a href="/admin/vendors?page=<%= currentPagination.page - 1 %>&search=<%= currentFilters.search || '' %>&status=<%= currentFilters.status || '' %>"
+       class="btn btn-secondary btn-sm">← Précédent</a>
+  <% } %>
+  <span style="padding:8px 16px;color:var(--color-secondary);font-size:13px;">
+    Page <%= currentPagination.page %> / <%= totalPages %> (<%= currentPagination.total %> vendeurs)
+  </span>
+  <% if (currentPagination.page < totalPages) { %>
+    <a href="/admin/vendors?page=<%= currentPagination.page + 1 %>&search=<%= currentFilters.search || '' %>&status=<%= currentFilters.status || '' %>"
+       class="btn btn-secondary btn-sm">Suivant →</a>
+  <% } %>
+</div>
+<% } %>
+
+<!-- Modals (actions CRUD via API fetch) -->
+<div class="modal-overlay" id="vendorActionsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Actions vendeur</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="vendorActionsBody"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="suspendModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">⛔ Suspendre le vendeur</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="suspendForm">
+      <div class="modal-body">
+        <input type="hidden" id="suspendUserId">
+        <div class="form-group">
+          <label for="suspendReason" class="form-label required">Raison de la suspension</label>
+          <textarea id="suspendReason" name="reason" class="form-textarea"
+                    placeholder="Expliquez la raison de la suspension..." required></textarea>
+          <p class="form-help">Cette raison sera visible par le vendeur</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+        <button type="submit" class="btn btn-danger">Suspendre</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resetPasswordModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">🔑 Réinitialiser le mot de passe</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="resetPasswordUserId">
+      <p style="margin-bottom:16px;color:var(--color-secondary);">Un mot de passe temporaire sera généré et affiché après confirmation.</p>
+      <div id="temporaryPasswordDisplay" style="display:none;padding:16px;background:var(--color-accent);border-radius:var(--radius-sm);margin-bottom:16px;">
+        <strong style="color:var(--color-primary);">Mot de passe temporaire :</strong>
+        <div style="font-size:24px;font-weight:700;color:var(--color-primary);margin:12px 0;font-family:monospace;">
+          <span id="temporaryPasswordValue"></span>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="copyPasswordBtn">📋 Copier</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+      <button type="button" class="btn btn-primary" id="confirmResetPasswordBtn">Générer le mot de passe</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="verifyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="verifyModalTitle">✓ Marquer comme vérifié</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="verifyUserId">
+      <p id="verifyModalMessage" style="color:var(--color-secondary);">Êtes-vous sûr de vouloir marquer ce vendeur comme vérifié ?</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+      <button type="button" class="btn btn-primary" id="confirmVerifyBtn">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Inject vendors data for JS -->
+<script>
+  window.__SSR_VENDORS__ = <%- JSON.stringify(currentVendors) %>;
+</script>

@@ -1,5 +1,6 @@
 <!-- ========================================
-     views/partials/sidebar.ejs
+     views/partials/sidebar.ejs - SSR VERSION
+     Plan-aware : menus affichés selon user.plan_slug injecté SSR
      ======================================== -->
 <aside class="sidebar">
   <!-- Logo -->
@@ -9,7 +10,7 @@
 
   <!-- Navigation -->
   <nav class="sidebar-nav">
-    <% if (user && user.role==='SUPER_ADMIN' ) { %>
+    <% if (user && user.role === 'SUPER_ADMIN') { %>
       <!-- NAVIGATION SUPER ADMIN -->
       <div class="nav-section">
         <div class="nav-section-title">Administration</div>
@@ -45,75 +46,122 @@
           <span>Activité globale</span>
         </a>
       </div>
-      <% } else { %>
-        <!-- NAVIGATION VENDEUR -->
-        <div class="nav-section">
-          <div class="nav-section-title">Principal</div>
-          <a href="/dashboard" class="nav-item <%= currentPage === 'dashboard' ? 'active' : '' %>">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span>Tableau de bord</span>
-          </a>
 
-          <a href="/products" class="nav-item <%= currentPage === 'products' ? 'active' : '' %>">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <span>Produits</span>
-          </a>
-          <a href="/categories" class="nav-item">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-            <span>Catégories</span>
-          </a>
-          <a href="/orders" class="nav-item <%= currentPage === 'orders' ? 'active' : '' %>">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            <span>Commandes</span>
-          </a>
-        </div>
+    <% } else { %>
+      <!-- NAVIGATION VENDEUR (affichée selon le plan SSR) -->
+      <div class="nav-section">
+        <div class="nav-section-title">Principal</div>
+        <a href="/dashboard" class="nav-item <%= currentPage === 'dashboard' ? 'active' : '' %>">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          <span>Tableau de bord</span>
+        </a>
 
-        <div class="nav-section">
-          <div class="nav-section-title">Compte</div>
-          <a href="/profile" class="nav-item <%= currentPage === 'profile' ? 'active' : '' %>">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span>Mon profil</span>
-          </a>
+        <a href="/products" class="nav-item <%= currentPage === 'products' ? 'active' : '' %>">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          <span>Produits</span>
+        </a>
 
-          <a href="/subscription" class="nav-item <%= currentPage === 'subscription' ? 'active' : '' %>">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-            <span>Abonnement</span>
-          </a>
-        </div>
-        <% } %>
+        <a href="/categories" class="nav-item <%= currentPage === 'categories' ? 'active' : '' %>">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+          <span>Catégories</span>
+        </a>
+
+        <a href="/orders" class="nav-item <%= currentPage === 'orders' ? 'active' : '' %>">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+          <span>Commandes</span>
+        </a>
+      </div>
+
+      <!-- Section Pro (PRO et BUSINESS) -->
+      <% if (user && user.has_advanced_stats) { %>
+      <div class="nav-section">
+        <div class="nav-section-title">Fonctionnalités Pro</div>
+        <a href="/advanced-stats" class="nav-item <%= currentPage === 'advanced-stats' ? 'active' : '' %>">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+          <span>Statistiques avancées</span>
+        </a>
+      </div>
+      <% } %>
+
+      <!-- Section Business -->
+      <% if (user && user.has_customization) { %>
+      <div class="nav-section">
+        <div class="nav-section-title">Business</div>
+        <a href="/customization" class="nav-item <%= currentPage === 'customization' ? 'active' : '' %>">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+          </svg>
+          <span>Personnalisation</span>
+        </a>
+        <a href="/integrations" class="nav-item <%= currentPage === 'integrations' ? 'active' : '' %>">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+          </svg>
+          <span>Intégrations</span>
+        </a>
+      </div>
+      <% } %>
+
+      <div class="nav-section">
+        <div class="nav-section-title">Compte</div>
+        <a href="/profile" class="nav-item <%= currentPage === 'profile' ? 'active' : '' %>">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span>Mon profil</span>
+        </a>
+
+        <a href="/subscription" class="nav-item <%= currentPage === 'subscription' ? 'active' : '' %>">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+          <span>Abonnement</span>
+        </a>
+      </div>
+    <% } %>
   </nav>
 
   <!-- Footer utilisateur -->
   <div class="sidebar-footer">
     <div class="user-info">
-      <div class="user-avatar">
-        <%= user && user.business_name ? user.business_name.charAt(0).toUpperCase() : 'U' %>
+      <div class="user-avatar" style="<%= user && user.plan_slug === 'business' && user.logo_url ? 'background:white;padding:2px;' : '' %>">
+        <% if (user && user.plan_slug === 'business' && user.logo_url) { %>
+          <img src="<%= user.logo_url %>" alt="Logo" style="width:100%;height:100%;border-radius:50%;object-fit:contain;">
+        <% } else { %>
+          <%= user && user.business_name ? user.business_name.charAt(0).toUpperCase() : 'U' %>
+        <% } %>
       </div>
       <div class="user-details">
         <div class="user-name">
           <%= user && user.business_name ? user.business_name : 'Utilisateur' %>
         </div>
         <div class="user-role">
-          <%= user && user.role==='SUPER_ADMIN' ? 'Super Admin' : 'Vendeur' %>
+          <%= user && user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Vendeur' %>
         </div>
+        <% if (user && user.plan_name && user.role !== 'SUPER_ADMIN') { %>
+          <div class="plan-badge" style="display:inline-block;padding:2px 8px;background:<%= user.plan_slug === 'business' ? '#8B5CF6' : user.plan_slug === 'pro' ? '#3B82F6' : '#9CA3AF' %>;color:white;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase;margin-top:4px;">
+            <%= user.plan_name %>
+          </div>
+        <% } %>
       </div>
     </div>
 

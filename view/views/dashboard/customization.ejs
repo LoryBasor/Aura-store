@@ -1,0 +1,315 @@
+<%# ========================================
+    views/dashboard/customization.ejs - SSR VERSION
+    ======================================== %>
+
+<% const c = customization || {}; %>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">🎨 Personnalisation Avancée</h1>
+    <p class="page-subtitle">Façonnez l'apparence et le comportement de votre boutique de A à Z</p>
+  </div>
+  <button class="btn btn-danger" data-action="reset-customization">🔄 Réinitialiser par défaut</button>
+</div>
+
+<div id="customizationContainer">
+  <div class="grille2" style="grid-template-columns: 1fr 1fr;">
+    <!-- Colonne Gauche : Formulaires -->
+    <div style="display:flex;flex-direction:column;gap:24px; max-height: 80vh; overflow-y: auto; padding-right: 16px;">
+      
+      <!-- 1. En-tête de Boutique -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">📝 En-tête & Textes</h3></div>
+        <form id="headerForm" data-ajax="true">
+          <div style="padding:24px;">
+            <div class="form-group">
+              <label class="form-label">Titre de la boutique</label>
+              <input type="text" id="storeTitle" class="form-input" 
+                     placeholder="<%= user && user.business_name ? user.business_name : 'Nom de votre boutique' %>"
+                     value="<%= c.store_title || '' %>">
+              <p class="form-help">Remplace le nom par défaut de votre entreprise sur la boutique publique.</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description / Slogan</label>
+              <textarea id="storeDescription" class="form-textarea" rows="2"
+                        placeholder="Une phrase d'accroche pour vos visiteurs..."><%= c.store_description || '' %></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Message d'information (bannière basse)</label>
+              <textarea id="orderMessage" class="form-textarea" rows="2"
+                        placeholder="Ex: Livraison gratuite à partir de 20 000 FCFA !"><%= c.order_message || '' %></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">💾 Enregistrer les textes</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 2. Typographie & Agencement -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Aa Typographie & Layout</h3></div>
+        <form id="layoutForm" data-ajax="true">
+          <div style="padding:24px;">
+            <div class="form-group">
+              <label class="form-label">Police d'écriture (Font)</label>
+              <select id="fontFamily" class="form-input">
+                <option value="Inter" <%= c.font_family === 'Inter' ? 'selected' : '' %>>Inter (Moderne & Propre)</option>
+                <option value="Roboto" <%= c.font_family === 'Roboto' ? 'selected' : '' %>>Roboto (Classique Google)</option>
+                <option value="Outfit" <%= c.font_family === 'Outfit' ? 'selected' : '' %>>Outfit (Géométrique & Tendance)</option>
+                <option value="'Playfair Display', serif" <%= c.font_family === "'Playfair Display', serif" ? 'selected' : '' %>>Playfair Display (Élégant & Premium)</option>
+                <option value="'Courier New', monospace" <%= c.font_family === "'Courier New', monospace" ? 'selected' : '' %>>Monospace (Tech/Brut)</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Affichage des produits</label>
+              <div style="display:flex;gap:16px;">
+                <label style="display:flex;align-items:center;gap:8px;">
+                  <input type="radio" name="product_layout" value="grid" <%= c.product_layout !== 'list' ? 'checked' : '' %>> Grille (Cartes)
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;">
+                  <input type="radio" name="product_layout" value="list" <%= c.product_layout === 'list' ? 'checked' : '' %>> Liste (Lignes)
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Style des boutons "Commander"</label>
+              <select id="buttonStyle" class="form-input">
+                <option value="solid" <%= c.button_style === 'solid' ? 'selected' : '' %>>Plein (Classique)</option>
+                <option value="rounded" <%= c.button_style === 'rounded' ? 'selected' : '' %>>Arrondi (Pilule)</option>
+                <option value="outline" <%= c.button_style === 'outline' ? 'selected' : '' %>>Contour (Minimaliste)</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary">💾 Enregistrer l'agencement</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 3. Couleurs (Étendu) -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">🎨 Palette de Couleurs</h3></div>
+        <form id="colorsForm" data-ajax="true">
+          <div style="padding:24px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="form-group">
+                <label class="form-label">Couleur primaire (Boutons)</label>
+                <input type="color" id="primaryColor" class="form-input" style="height:40px;padding:2px;" value="<%= c.primary_color || '#4f46e5' %>">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Couleur secondaire</label>
+                <input type="color" id="secondaryColor" class="form-input" style="height:40px;padding:2px;" value="<%= c.secondary_color || '#10b981' %>">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fond de la boutique</label>
+                <input type="color" id="backgroundColor" class="form-input" style="height:40px;padding:2px;" value="<%= c.background_color || '#f3f4f6' %>">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Couleur du Titre</label>
+                <input type="color" id="titleColor" class="form-input" style="height:40px;padding:2px;" value="<%= c.title_color || '#1f2937' %>">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Couleur de Description</label>
+                <input type="color" id="descriptionColor" class="form-input" style="height:40px;padding:2px;" value="<%= c.description_color || '#4b5563' %>">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Texte général (Produits)</label>
+                <input type="color" id="textColor" class="form-input" style="height:40px;padding:2px;" value="<%= c.text_color || '#1f2937' %>">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:16px;">💾 Enregistrer les couleurs</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 4. Logo et Bannière -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">🖼️ Médias</h3></div>
+        <div style="padding:24px;">
+          <div class="form-group">
+            <label class="form-label">Logo de la marque</label>
+            <% if (c.logo_url) { %>
+              <div style="margin-bottom:12px;">
+                <img src="<%= c.logo_url %>" alt="Logo" style="max-height:80px;border-radius:var(--radius-sm); border: 1px solid #e5e7eb;">
+              </div>
+              <div id="deleteLogo"><button type="button" class="btn btn-danger btn-sm" data-action="delete-logo">🗑 Supprimer</button></div>
+            <% } else { %>
+              <div id="deleteLogo"></div>
+            <% } %>
+            <input type="file" id="logoUpload" class="form-input" accept="image/*" style="margin-top:8px;">
+            <div id="logoPreview" style="margin-top:12px;"></div>
+          </div>
+
+          <div class="form-group" style="margin-top: 24px;">
+            <label class="form-label">Bannière (Haut de page)</label>
+            <% if (c.banner_url) { %>
+              <div style="margin-bottom:12px;">
+                <img src="<%= c.banner_url %>" alt="Bannière" style="max-height:120px;width:100%;object-fit:cover;border-radius:var(--radius-sm);">
+              </div>
+              <div id="deleteBanner"><button type="button" class="btn btn-danger btn-sm" data-action="delete-banner">🗑 Supprimer</button></div>
+            <% } else { %>
+              <div id="deleteBanner"></div>
+            <% } %>
+            <input type="file" id="bannerUpload" class="form-input" accept="image/*" style="margin-top:8px;">
+            <div id="bannerPreview" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Pied de page & Visibilité -->
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">⚙️ Footer & Options</h3></div>
+        <form id="optionsForm" data-ajax="true">
+          <div style="padding:24px;">
+            <div class="form-group">
+              <label class="form-label">Texte du pied de page (Footer)</label>
+              <input type="text" id="footerText" class="form-input" 
+                     placeholder="© 2026 Mon Entreprise. Tous droits réservés."
+                     value="<%= c.footer_text || '' %>">
+            </div>
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+                <input type="checkbox" id="showProductCount" <%= c.show_product_count ? 'checked' : '' %>>
+                <span>Afficher le compteur de produits</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+                <input type="checkbox" id="showSocialLinks" <%= c.show_social_links ? 'checked' : '' %>>
+                <span>Afficher les icônes de réseaux sociaux</span>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top: 16px;">💾 Enregistrer les options</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Colonne Droite : Prévisualisation en direct -->
+    <div style="position:sticky;top:24px; height: 100%;">
+      <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 class="card-title">👁️ Aperçu en Direct</h3>
+          <a href="/store/<%= user && user.store_slug ? user.store_slug : '' %>" target="_blank" class="btn btn-secondary btn-sm">Ouvrir la boutique ↗</a>
+        </div>
+        
+        <div style="flex: 1; padding: 16px; background: #e5e7eb; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+          
+          <!-- Fenêtre de prévisualisation (Mockup) -->
+          <div id="livePreviewBox" style="
+            background: <%= c.background_color || '#f3f4f6' %>; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            height: 600px; 
+            overflow-y: auto;
+            font-family: <%= c.font_family || 'Inter' %>, sans-serif;
+            position: relative;
+          ">
+            
+            <!-- Banner Preview -->
+            <div id="previewBanner" style="
+              height: 120px; 
+              background-color: <%= c.primary_color || '#4f46e5' %>;
+              background-image: url('<%= c.banner_url || '' %>');
+              background-size: cover;
+              background-position: center;
+            "></div>
+
+            <!-- Header Content Preview -->
+            <div style="padding: 0 24px; margin-top: -30px; text-align: center;">
+              <% if (c.logo_url) { %>
+                <img id="previewLogo" src="<%= c.logo_url %>" alt="Logo" style="height: 80px; width: 80px; border-radius: 50%; border: 4px solid white; object-fit: cover; background: white; margin: 0 auto;">
+              <% } else { %>
+                <div id="previewLogo" style="height: 80px; width: 80px; border-radius: 50%; border: 4px solid white; background: <%= c.primary_color || '#4f46e5' %>; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold;">
+                  <%= (c.store_title || user.business_name || 'B').charAt(0).toUpperCase() %>
+                </div>
+              <% } %>
+              
+              <h1 id="previewTitle" style="margin-top: 12px; font-size: 24px; font-weight: 800; color: <%= c.title_color || '#1f2937' %>;">
+                <%= c.store_title || user.business_name || 'Ma Boutique' %>
+              </h1>
+              <p id="previewDesc" style="margin-top: 4px; font-size: 14px; color: <%= c.description_color || '#4b5563' %>;">
+                <%= c.store_description || 'Bienvenue dans notre boutique en ligne.' %>
+              </p>
+            </div>
+
+            <!-- Body Preview -->
+            <div style="padding: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 16px; font-weight: 600; color: <%= c.title_color || '#1f2937' %>;">Nos Produits</h3>
+                <span id="previewCount" style="font-size: 12px; color: <%= c.description_color || '#4b5563' %>; display: <%= c.show_product_count ? 'block' : 'none' %>;">12 produits</span>
+              </div>
+
+              <!-- Product List/Grid Preview -->
+              <div id="previewLayout" style="display: grid; gap: 16px; grid-template-columns: <%= c.product_layout === 'list' ? '1fr' : '1fr 1fr' %>;">
+                <!-- Product 1 -->
+                <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); <%= c.product_layout === 'list' ? 'display: flex;' : '' %>">
+                  <div style="background: #e5e7eb; <%= c.product_layout === 'list' ? 'width: 100px; height: 100px;' : 'height: 120px; width: 100%;' %>"></div>
+                  <div style="padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                    <div style="font-weight: 600; font-size: 14px; color: <%= c.text_color || '#1f2937' %>;">Produit Exemple</div>
+                    <div style="color: <%= c.secondary_color || '#10b981' %>; font-weight: 700; margin-top: 4px;">15 000 FCFA</div>
+                    <button class="preview-btn" style="
+                      margin-top: 12px; 
+                      padding: 6px 12px; 
+                      font-size: 12px; 
+                      font-weight: 600; 
+                      cursor: pointer;
+                      width: 100%;
+                      <%= c.button_style === 'outline' 
+                          ? `background: transparent; color: ${c.primary_color || '#4f46e5'}; border: 1px solid ${c.primary_color || '#4f46e5'};`
+                          : `background: ${c.primary_color || '#4f46e5'}; color: white; border: none;` %>
+                      <%= c.button_style === 'rounded' ? 'border-radius: 9999px;' : 'border-radius: 4px;' %>
+                    ">Commander</button>
+                  </div>
+                </div>
+                <!-- Product 2 -->
+                <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); <%= c.product_layout === 'list' ? 'display: flex;' : '' %>">
+                  <div style="background: #e5e7eb; <%= c.product_layout === 'list' ? 'width: 100px; height: 100px;' : 'height: 120px; width: 100%;' %>"></div>
+                  <div style="padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                    <div style="font-weight: 600; font-size: 14px; color: <%= c.text_color || '#1f2937' %>;">Article Démo</div>
+                    <div style="color: <%= c.secondary_color || '#10b981' %>; font-weight: 700; margin-top: 4px;">5 000 FCFA</div>
+                    <button class="preview-btn" style="
+                      margin-top: 12px; 
+                      padding: 6px 12px; 
+                      font-size: 12px; 
+                      font-weight: 600; 
+                      cursor: pointer;
+                      width: 100%;
+                      <%= c.button_style === 'outline' 
+                          ? `background: transparent; color: ${c.primary_color || '#4f46e5'}; border: 1px solid ${c.primary_color || '#4f46e5'};`
+                          : `background: ${c.primary_color || '#4f46e5'}; color: white; border: none;` %>
+                      <%= c.button_style === 'rounded' ? 'border-radius: 9999px;' : 'border-radius: 4px;' %>
+                    ">Commander</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Preview -->
+            <div id="previewFooter" style="text-align: center; padding: 24px; margin-top: 24px; border-top: 1px solid #e5e7eb;">
+              <p id="previewOrderMsg" style="font-size: 13px; font-weight: 600; color: <%= c.primary_color || '#4f46e5' %>; margin-bottom: 8px;">
+                <%= c.order_message || '' %>
+              </p>
+              <div id="previewSocials" style="display: <%= c.show_social_links ? 'flex' : 'none' %>; justify-content: center; gap: 8px; margin-bottom: 12px;">
+                <div style="width: 24px; height: 24px; background: <%= c.description_color || '#4b5563' %>; border-radius: 50%;"></div>
+                <div style="width: 24px; height: 24px; background: <%= c.description_color || '#4b5563' %>; border-radius: 50%;"></div>
+              </div>
+              <p id="previewFooterText" style="font-size: 11px; color: <%= c.description_color || '#4b5563' %>;">
+                <%= c.footer_text || '© 2026 ' + (user.business_name || 'Boutique') %>
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Inject customization data for JS -->
+<script>
+  window.__SSR_CUSTOMIZATION__ = <%- JSON.stringify(c) %>;
+</script>
+<script src="/js/customization.js"></script>

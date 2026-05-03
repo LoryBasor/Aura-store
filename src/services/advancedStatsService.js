@@ -47,6 +47,44 @@ class AdvancedStatsService {
       [userId, days]
     );
 
+    // Remplir les jours manquants avec 0 pour avoir une ligne continue
+    if (period === 'day') {
+      const filledResults = [];
+      const dataMap = new Map();
+      
+      results.forEach(r => {
+        let key = r.period;
+        if (key instanceof Date) {
+            key = key.toISOString().split('T')[0];
+        }
+        dataMap.set(key, r);
+      });
+      
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        
+        if (dataMap.has(dateStr)) {
+          filledResults.push(dataMap.get(dateStr));
+        } else {
+          filledResults.push({
+            period: dateStr,
+            label: d.toLocaleDateString('fr-FR'), // Format fr-FR court
+            order_count: 0,
+            revenue: 0,
+            avg_order_value: 0,
+            unique_customers: 0
+          });
+        }
+      }
+      return filledResults.map(r => ({
+        ...r,
+        revenue: parseFloat(r.revenue || 0),
+        avg_order_value: parseFloat(r.avg_order_value || 0)
+      }));
+    }
+
     return results.map(r => ({
       ...r,
       revenue: parseFloat(r.revenue || 0),
@@ -247,6 +285,91 @@ class AdvancedStatsService {
       },
       trend: orderGrowth > 0 ? 'up' : orderGrowth < 0 ? 'down' : 'stable'
     };
+  }
+
+  /**
+   * Visibilité de la boutique (Total vues)
+   */
+  async getStoreVisibility(userId) {
+    const [result] = await pool.execute(
+      `SELECT SUM(view_count) as total_views 
+       FROM products 
+       WHERE user_id = ? AND deleted_at IS NULL`,
+      [userId]
+    );
+    return result[0]?.total_views || 0;
+  }
+
+  /**
+   * Produits les plus sollicités (par vues)
+   */
+  async getMostSolicitedProducts(userId, limit = 10) {
+    const [products] = await pool.execute(
+      `SELECT id, name, view_count, order_count, price, currency
+       FROM products
+       WHERE user_id = ? AND deleted_at IS NULL
+       ORDER BY view_count DESC
+       LIMIT ${parseInt(limit, 10)}`,
+      [userId]
+    );
+    return products;
+  }
+
+  /**
+   * Performance des catégories
+   */
+  async getCategoryPerformance(userId) {
+    const [categories] = await pool.execute(
+      `SELECT 
+        c.name, 
+        COUNT(o.id) as order_count, 
+        SUM(o.total_amount) as total_revenue
+       FROM orders o
+       JOIN products p ON o.product_id = p.id
+       JOIN categories c ON p.category_id = c.id
+       WHERE o.user_id = ? AND o.deleted_at IS NULL AND p.deleted_at IS NULL
+       GROUP BY c.id
+       ORDER BY total_revenue DESC
+       LIMIT 5`,
+      [userId]
+    );
+    return categories.map(c => ({
+      ...c,
+      total_revenue: parseFloat(c.total_revenue || 0)
+    }));
+  }
+
+  /**
+   * Liste détaillée des meilleurs clients
+   */
+  async getTopCustomers(userId, limit = 10) {
+    const [customers] = await pool.execute(
+      `SELECT name, phone, email, total_orders, total_spent, last_order_at
+       FROM customers
+       WHERE user_id = ? AND deleted_at IS NULL
+       ORDER BY total_spent DESC
+       LIMIT ${parseInt(limit, 10)}`,
+      [userId]
+    );
+    return customers.map(c => ({
+      ...c,
+      total_spent: parseFloat(c.total_spent || 0)
+    }));
+  }
+
+  /**
+   * Historique des abonnements
+   */
+  async getSubscriptionHistory(userId) {
+    const [history] = await pool.execute(
+      `SELECT s.status, s.started_at as start_date, s.expires_at as end_date, s.created_at, sp.name as plan_name, sp.price
+       FROM subscriptions s
+       JOIN subscription_plans sp ON s.plan_id = sp.id
+       WHERE s.user_id = ?
+       ORDER BY s.created_at DESC`,
+      [userId]
+    );
+    return history;
   }
 }
 

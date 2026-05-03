@@ -605,4 +605,23 @@ body {
   .carousel-btn {
     display: none;
   }
+  
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .store-products {
+    grid-template-columns: repeat(3, 1fr); /* Garder 3 vignettes mais ajustées */
+    gap: 4px;
+  }
+  
+  .store-stats {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .categories-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }

@@ -48,6 +48,10 @@ function errorHandler(err, req, res, next) {
 
   // Erreur personnalisée avec statusCode
   if (err.statusCode) {
+    if (req.accepts('html') && !req.path.startsWith('/api')) {
+      if (err.statusCode === 403) return res.status(403).render('errors/403', { title: 'Accès Refusé', showSidebar: false, showHeader: false, message: err.message });
+      if (err.statusCode === 404) return res.status(404).render('errors/404', { title: 'Page introuvable', showSidebar: false, showHeader: false });
+    }
     return errorResponse(res, err.message, err.statusCode);
   }
 
@@ -56,6 +60,9 @@ function errorHandler(err, req, res, next) {
     ? err.message 
     : 'Une erreur est survenue';
   
+  if (req.accepts('html') && !req.path.startsWith('/api')) {
+    return res.status(500).render('errors/404', { title: 'Erreur', showSidebar: false, showHeader: false }); // On peut utiliser 404 comme fallback ou créer une 500
+  }
   return serverErrorResponse(res, message);
 }
 
@@ -63,6 +70,13 @@ function errorHandler(err, req, res, next) {
  * Middleware pour les routes non trouvées (404)
  */
 function notFoundHandler(req, res) {
+  if (req.accepts('html') && !req.path.startsWith('/api')) {
+    return res.status(404).render('errors/404', {
+      title: 'Page introuvable',
+      showSidebar: false,
+      showHeader: false
+    });
+  }
   return errorResponse(res, `Route ${req.originalUrl} introuvable`, 404);
 }
 

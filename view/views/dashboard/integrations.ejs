@@ -1,0 +1,179 @@
+<!-- views/dashboard/integrations.ejs -->
+
+<!-- Page Header -->
+<div class="page-header">
+  <h1 class="page-title">🔗 Intégrations Sociales</h1>
+  <p class="page-subtitle">Connectez vos réseaux sociaux</p>
+</div>
+
+<!-- Container principal -->
+<div id="integrationsContainer">
+
+  <!-- WhatsApp -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 48px; height: 48px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+          📱
+        </div>
+        <div style="flex: 1;">
+          <h3 class="card-title">WhatsApp Business</h3>
+          <p style="font-size: 13px; color: var(--color-secondary); margin: 0;">
+            Permettez aux clients de commander via WhatsApp
+          </p>
+        </div>
+        <div id="whatsappStatus"></div>
+      </div>
+    </div>
+    <form id="whatsappForm">
+      <div style="padding: 24px;">
+        <div class="form-group">
+          <label class="form-label required">Numéro WhatsApp</label>
+          <input 
+            type="tel" 
+            id="whatsappNumber" 
+            class="form-input" 
+            placeholder="+237 6XX XXX XXX"
+            required
+          >
+          <p class="form-help">Format international requis (ex: +237671646335)</p>
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+            <input type="checkbox" id="whatsappEnabled">
+            <span>Activer WhatsApp sur ma boutique</span>
+          </label>
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <button type="submit" class="btn btn-primary">
+            💾 Enregistrer
+          </button>
+          <button type="button" class="btn btn-secondary" data-action="test-whatsapp">
+            🧪 Tester le message
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Instagram -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 48px; height: 48px; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+          📷
+        </div>
+        <div style="flex: 1;">
+          <h3 class="card-title">Instagram</h3>
+          <p style="font-size: 13px; color: var(--color-secondary); margin: 0;">
+            Lien vers votre profil Instagram
+          </p>
+        </div>
+        <div id="instagramStatus"></div>
+      </div>
+    </div>
+    <form id="instagramForm">
+      <div style="padding: 24px;">
+        <div class="form-group">
+          <label class="form-label">URL ou nom d'utilisateur</label>
+          <input 
+            type="text" 
+            id="instagramUrl" 
+            class="form-input" 
+            placeholder="@ma_boutique ou https://instagram.com/ma_boutique"
+          >
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+            <input type="checkbox" id="instagramEnabled">
+            <span>Afficher le lien Instagram</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          💾 Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Facebook -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 48px; height: 48px; background: #1877F2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+          👥
+        </div>
+        <div style="flex: 1;">
+          <h3 class="card-title">Facebook</h3>
+          <p style="font-size: 13px; color: var(--color-secondary); margin: 0;">
+            Lien vers votre page Facebook
+          </p>
+        </div>
+        <div id="facebookStatus"></div>
+      </div>
+    </div>
+    <form id="facebookForm">
+      <div style="padding: 24px;">
+        <div class="form-group">
+          <label class="form-label">URL de la page</label>
+          <input 
+            type="text" 
+            id="facebookUrl" 
+            class="form-input" 
+            placeholder="ma_boutique ou https://facebook.com/ma_boutique"
+          >
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+            <input type="checkbox" id="facebookEnabled">
+            <span>Afficher le lien Facebook</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          💾 Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Message personnalisé -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">💬 Message WhatsApp personnalisé</h3>
+    </div>
+    <form id="customMessageForm">
+      <div style="padding: 24px;">
+        <div class="form-group">
+          <label class="form-label">Modèle de message</label>
+          <textarea 
+            id="customOrderMessage" 
+            class="form-textarea" 
+            rows="5"
+          ></textarea>
+          <p class="form-help">
+            Variables disponibles : <code>{{product_name}}</code>, <code>{{product_price}}</code>, <code>{{currency}}</code>, <code>{{quantity}}</code>
+          </p>
+        </div>
+
+        <div id="messagePreview" style="margin-bottom: 16px;"></div>
+
+        <button type="submit" class="btn btn-primary">
+          💾 Enregistrer le message
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<!-- Inject data for JS -->
+<script>
+  window.__SSR_INTEGRATIONS__ = <%- JSON.stringify(integrations || {}) %>;
+</script>
+<script src="/js/integrations.js"></script>

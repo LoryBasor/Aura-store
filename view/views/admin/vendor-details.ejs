@@ -1,0 +1,43 @@
+<!-- ========================================
+     views/admin/vendor-details.ejs
+     ======================================== -->
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title" id="vendorName">Détails vendeur</h1>
+    <p class="page-subtitle" id="vendorEmail"></p>
+  </div>
+  <div style="display: flex; gap: 12px;">
+    <button class="btn btn-secondary" onclick="window.location.href='/admin/vendors'">
+      ← Retour
+    </button>
+    <button class="btn btn-primary" id="manageSubscriptionBtn">
+      📋 Gérer l'abonnement
+    </button>
+  </div>
+</div>
+
+<!-- Vendor Info Card -->
+<div class="card" id="vendorInfoCard">
+  <div class="loader"></div>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid" id="vendorStats">
+  <div class="loader"></div>
+</div>
+
+<!-- Recent Orders (Read-only) -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">📦 Commandes récentes (aperçu)</h3>
+    <span style="color: var(--color-secondary); font-size: 14px;">Lecture seule</span>
+  </div>
+  <div id="recentOrders">
+    <div class="loader"></div>
+  </div>
+</div>
+
+<!-- Script -->
+<script src="/js/admin/vendor-details.js"></script>

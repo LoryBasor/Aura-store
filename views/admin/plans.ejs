@@ -1,54 +1,168 @@
-<!-- ========================================
-     views/admin/plans.ejs
-     ======================================== -->
+<%# ========================================
+    views/admin/plans.ejs - SSR VERSION
+    ======================================== %>
+
+<%
+  function fmtDate(d) { if(!d) return '-'; return new Date(d).toLocaleDateString('fr-FR'); }
+  const currentSubs       = subscriptions || [];
+  const currentPlans      = plans || [];
+  const currentPagination = pagination    || { page:1, limit:20, total:0 };
+  const currentFilters    = filters       || {};
+  const totalPages        = Math.ceil(currentPagination.total / currentPagination.limit);
+  const statusColors = { trial:'info', active:'success', expired:'error', cancelled:'error', suspended:'warning' };
+  const statusLabels = { trial:'Trial', active:'Actif', expired:'Expiré', cancelled:'Annulé', suspended:'Suspendu' };
+%>
 
 <!-- Page Header -->
 <div class="page-header">
   <div>
     <h1 class="page-title">📋 Gestion des Abonnements</h1>
-    <p class="page-subtitle">Administrez les abonnements vendeurs</p>
+    <p class="page-subtitle">Administrez les abonnements vendeurs (<%= currentPagination.total %> au total)</p>
   </div>
-  <button class="btn btn-primary" data-action="new-subscription">
-    + Créer un abonnement
-  </button>
+  <button class="btn btn-primary" data-action="new-subscription">+ Créer un abonnement</button>
 </div>
 
-<!-- Stats Abonnements -->
-<div class="stats-grid" id="subscriptionStats">
-  <div class="loader"></div>
+<!-- Plans disponibles -->
+<div class="stats-grid" style="margin-bottom:24px;">
+  <% currentPlans.forEach(plan => { %>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label"><%= plan.name %></span>
+        <div class="stat-icon"><%= plan.price === 0 ? '🆓' : plan.price < 5000 ? '⭐' : '💎' %></div>
+      </div>
+      <div class="stat-value"><%= (parseFloat(plan.price)||0).toLocaleString('fr-FR') %> FCFA</div>
+      <div class="stat-change"><%= plan.billing_cycle || 'mensuel' %></div>
+    </div>
+  <% }); %>
 </div>
 
-<!-- Filters -->
-<div class="card" style="margin-bottom: 24px;">
-  <div style="display: flex; gap: 16px; align-items: center;">
-    <input 
-      type="search" 
-      id="searchVendor" 
-      class="form-input" 
-      placeholder="Rechercher un vendeur..."
-      style="flex: 1;"
-    >
-    <select class="form-select" style="width: 200px;" id="planFilter">
-      <option value="">Tous les plans</option>
+<!-- Filters (GET form SSR) -->
+<div class="card" style="margin-bottom:24px;">
+  <form method="GET" action="/admin/subscriptions" class="filter-bar">
+    <input type="search" name="search" class="form-input" id="searchVendor"
+           placeholder="Rechercher un vendeur..." value="<%= currentFilters.search || '' %>">
+
+    <select class="form-select" name="plan" id="planFilter" onchange="this.form.submit()">
+      <option value="" <%= !currentFilters.plan ? 'selected' : '' %>>Tous les plans</option>
+      <% currentPlans.forEach(plan => { %>
+        <option value="<%= plan.slug %>" <%= currentFilters.plan === plan.slug ? 'selected' : '' %>><%= plan.name %></option>
+      <% }); %>
     </select>
-    <select class="form-select" style="width: 200px;" id="statusFilter">
-      <option value="">Tous les statuts</option>
-      <option value="trial">Trial</option>
-      <option value="active">Actifs</option>
-      <option value="expired">Expirés</option>
-      <option value="cancelled">Annulés</option>
+
+    <select class="form-select" name="status" id="statusFilter" onchange="this.form.submit()">
+      <option value="" <%= !currentFilters.status ? 'selected' : '' %>>Tous les statuts</option>
+      <option value="trial"     <%= currentFilters.status === 'trial'     ? 'selected' : '' %>>Trial</option>
+      <option value="active"    <%= currentFilters.status === 'active'    ? 'selected' : '' %>>Actifs</option>
+      <option value="expired"   <%= currentFilters.status === 'expired'   ? 'selected' : '' %>>Expirés</option>
+      <option value="cancelled" <%= currentFilters.status === 'cancelled' ? 'selected' : '' %>>Annulés</option>
     </select>
+
+    <button type="submit" class="btn btn-primary">🔍 Filtrer</button>
+  </form>
+</div>
+
+<!-- Abonnements Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Vendeur</th>
+          <th>Plan</th>
+          <th>Statut</th>
+          <th>Début</th>
+          <th>Expiration</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="subscriptionsList">
+        <% if (currentSubs.length === 0) { %>
+          <tr>
+            <td colspan="7" style="text-align:center;padding:48px;">
+              <div style="font-size:48px;margin-bottom:16px;">📋</div>
+              <p style="color:var(--color-secondary);">Aucun abonnement trouvé</p>
+            </td>
+          </tr>
+        <% } else { %>
+          <% currentSubs.forEach(sub => { %>
+            <tr>
+              <td data-label="Vendeur">
+            <tr>
+              <td data-label="Vendeur">
+                <div><strong><%= sub.business_name %></strong></div>
+                <div style="font-size:12px;color:var(--color-secondary);"><%= sub.email %></div>
+              </td>
+              <td data-label="Plan"><span class="badge badge-info"><%= sub.plan_name %></span></td>
+              <td data-label="Statut"><span class="badge badge-<%= statusColors[sub.status] || 'info' %>"><%= statusLabels[sub.status] || sub.status %></span></td>
+              <td data-label="Début"><%= fmtDate(sub.started_at) %></td>
+              <td data-label="Expiration"><%= fmtDate(sub.expires_at) %></td>
+              <td data-label="Notes"><%= sub.notes || '-' %></td>
+              <td data-label="Actions">
+                <div style="display:flex;gap:6px;">
+                  <a href="/admin/subscriptions/<%= sub.user_id %>" class="btn btn-secondary btn-sm" title="Détails">👁️</a>
+                  <button class="btn btn-outline btn-sm" onclick="AdminSubscriptions.openChangeStatus('<%= sub.id %>', '<%= sub.business_name %>', '<%= sub.status %>')" title="Changer statut">🏷️</button>
+                  <button class="btn btn-outline btn-sm" onclick="AdminSubscriptions.openChangePlan('<%= sub.user_id %>')" title="Changer plan">🔄</button>
+                  <button class="btn btn-outline btn-sm" onclick="AdminSubscriptions.openExtend('<%= sub.user_id %>')" title="Prolonger">📅</button>
+                  <button class="btn btn-danger btn-sm" onclick="AdminSubscriptions.openCancel('<%= sub.user_id %>')" title="Annuler">❌</button>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        <% } %>
+      </tbody>
+    </table>
   </div>
 </div>
 
-<!-- Abonnements List -->
-<div class="card">
-  <div id="subscriptionsList">
-    <div class="loader"></div>
+<!-- Pagination SSR -->
+<% if (totalPages > 1) { %>
+<div id="pagination" class="flex-center" style="margin-top:24px;gap:8px;">
+  <% if (currentPagination.page > 1) { %>
+    <a href="/admin/subscriptions?page=<%= currentPagination.page - 1 %>&search=<%= currentFilters.search || '' %>&plan=<%= currentFilters.plan || '' %>&status=<%= currentFilters.status || '' %>"
+       class="btn btn-secondary btn-sm">← Précédent</a>
+  <% } %>
+  <span style="padding:8px 16px;color:var(--color-secondary);font-size:13px;">
+    Page <%= currentPagination.page %> / <%= totalPages %>
+  </span>
+  <% if (currentPagination.page < totalPages) { %>
+    <a href="/admin/subscriptions?page=<%= currentPagination.page + 1 %>&search=<%= currentFilters.search || '' %>&plan=<%= currentFilters.plan || '' %>&status=<%= currentFilters.status || '' %>"
+       class="btn btn-secondary btn-sm">Suivant →</a>
+  <% } %>
+</div>
+<% } %>
+
+<!-- Modal Changer Statut -->
+<div class="modal-overlay" id="changeStatusModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">🏷️ Modifier le statut</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="changeStatusForm">
+      <div class="modal-body">
+        <input type="hidden" id="statusSubId">
+        <p id="statusVendorName" style="font-weight:700; margin-bottom:16px;"></p>
+        <div class="form-group">
+          <label class="form-label">Nouveau statut</label>
+          <select id="newSubStatus" class="form-select" required>
+            <option value="active">Actif</option>
+            <option value="trial">Essai</option>
+            <option value="expired">Expiré</option>
+            <option value="suspended">Suspendu</option>
+            <option value="cancelled">Annulé</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
   </div>
 </div>
 
-<!-- Modal Créer Abonnement -->
+<!-- Modals -->
 <div class="modal-overlay" id="createSubscriptionModal">
   <div class="modal">
     <div class="modal-header">
@@ -63,14 +177,15 @@
             <option value="">-- Sélectionner un vendeur --</option>
           </select>
         </div>
-
         <div class="form-group">
           <label class="form-label required">Plan</label>
           <select id="selectPlan" class="form-select" required>
             <option value="">-- Sélectionner un plan --</option>
+            <% currentPlans.forEach(plan => { %>
+              <option value="<%= plan.id %>"><%= plan.name %> — <%= (parseFloat(plan.price)||0).toLocaleString('fr-FR') %> FCFA</option>
+            <% }); %>
           </select>
         </div>
-
         <div class="form-group">
           <label class="form-label">Notes</label>
           <textarea id="subscriptionNotes" class="form-textarea" placeholder="Notes internes..."></textarea>
@@ -84,7 +199,6 @@
   </div>
 </div>
 
-<!-- Modal Changer Plan -->
 <div class="modal-overlay" id="changePlanModal">
   <div class="modal">
     <div class="modal-header">
@@ -98,6 +212,9 @@
           <label class="form-label required">Nouveau plan</label>
           <select id="newPlanSelect" class="form-select" required>
             <option value="">-- Sélectionner --</option>
+            <% currentPlans.forEach(plan => { %>
+              <option value="<%= plan.id %>"><%= plan.name %></option>
+            <% }); %>
           </select>
         </div>
       </div>
@@ -109,7 +226,6 @@
   </div>
 </div>
 
-<!-- Modal Prolonger -->
 <div class="modal-overlay" id="extendModal">
   <div class="modal">
     <div class="modal-header">
@@ -121,7 +237,7 @@
         <input type="hidden" id="extendUserId">
         <div class="form-group">
           <label class="form-label required">Nombre de jours</label>
-          <input type="number" id="extendDays" class="form-input" min="1" max="365" required>
+          <input type="number" id="extendDays" class="form-input" min="1" max="365" value="30" required>
         </div>
       </div>
       <div class="modal-footer">
@@ -132,7 +248,6 @@
   </div>
 </div>
 
-<!-- Modal Annuler -->
 <div class="modal-overlay" id="cancelModal">
   <div class="modal">
     <div class="modal-header">
@@ -144,16 +259,64 @@
         <input type="hidden" id="cancelUserId">
         <div class="form-group">
           <label class="form-label required">Raison</label>
-          <textarea id="cancelReason" class="form-textarea" required></textarea>
+          <textarea id="cancelReason" class="form-textarea" required placeholder="Expliquez la raison..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary modal-close">Fermer</button>
-        <button type="submit" class="btn btn-danger">Annuler l'abonnement</button>
+        <button type="submit" class="btn btn-danger">Confirmer</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Script -->
+<!-- Inject plans for JS -->
+<script>
+  window.__SSR_PLANS__ = <%- JSON.stringify(currentPlans) %>;
+</script>
 <script src="/js/admin/subscriptions.js"></script>
+
+<style>
+  .table { width: 100%; border-collapse: collapse; min-width: 900px; }
+  .table-container { overflow-x: auto; background: white; border-radius: var(--radius-md); }
+  
+  .table th, .table td { padding: 16px; text-align: left; vertical-align: middle; }
+  .table th { background: var(--color-surface); color: var(--color-primary); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .table tbody tr { border-bottom: 1px solid var(--color-border); transition: background 0.2s; }
+  .table tbody tr:hover { background: rgba(37, 99, 235, 0.02); }
+
+  @media (max-width: 768px) {
+    .table { min-width: unset; }
+    .table thead { display: none; }
+    .table tr { 
+      display: block; 
+      margin-bottom: 16px; 
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: white;
+      padding: 12px;
+    }
+    .table td { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      padding: 10px 0;
+      border: none;
+      text-align: right;
+      border-bottom: 1px dashed var(--color-border);
+    }
+    .table td:last-child { border-bottom: none; }
+    .table td::before {
+      content: attr(data-label);
+      font-weight: 700;
+      font-size: 11px;
+      color: var(--color-secondary);
+      text-transform: uppercase;
+      margin-right: 12px;
+      text-align: left;
+    }
+    .table td .btn { width: auto; font-size: 11px; padding: 6px 10px; }
+  }
+
+
+</style>

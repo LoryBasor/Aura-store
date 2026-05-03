@@ -17,52 +17,6 @@ const router = express.Router();
  */
 
 // ========================================
-// ROUTES PUBLIQUES
-// ========================================
-
-/**
- * Créer une commande (PUBLIC - depuis lien produit)
- * POST /api/orders
- */
-router.post(
-  '/',
-  publicLimiter,
-  validateRequest(orderSchema),
-  orderController.createOrder,
-  incrementOrderCount
-);
-
-/**
- * Créer une commande depuis un lien public (PUBLIC - depuis lien public)
- * POST /api/orders/public
- */
-router.post(
-  '/public',
-  publicLimiter,
-  validateRequest(Joi.object({
-    product_token: Joi.string().required().messages({
-      'any.required': 'Token produit requis'
-    }),
-    customer_name: Joi.string().min(2).max(255).required().messages({
-      'any.required': 'Nom client requis',
-      'string.min': 'Nom minimum 2 caractères'
-    }),
-    customer_phone: Joi.string().pattern(/^\+\d(?:\s?\d){9,14}$/).required().messages({
-      'string.pattern.base': 'Numéro de téléphone invalide',
-      'any.required': 'Téléphone requis'
-    }),
-    customer_address: Joi.string().max(500).optional().allow('', null),
-    quantity: Joi.number().integer().min(1).max(1000).required().messages({
-      'any.required': 'Quantité requise',
-      'number.min': 'Quantité minimum 1'
-    }),
-    notes: Joi.string().max(1000).optional().allow('', null)
-  })),
-  orderController.createOrderFromPublicLink,
-  incrementOrderCount
-);
-
-// ========================================
 // ROUTES PROTÉGÉES (VENDEUR)
 // ========================================
 

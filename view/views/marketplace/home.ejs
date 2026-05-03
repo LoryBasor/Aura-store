@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/marketplace-home.css">
+</head>
+<body>
+  <% const { popularProducts, recommendedStores, trendingCategories, recentProducts } = data %>
+  
+  <%- include('../partials/navbar', { currentPage: 'home', user: typeof user !== 'undefined' ? user : null }) %>
+  
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Découvrez des produits exceptionnels</h1>
+      <p class="hero-subtitle">Explorez notre marketplace et trouvez les meilleurs vendeurs</p>
+      
+      <!-- Search Bar -->
+      <div class="search-container">
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Rechercher un produit, une boutique..." 
+          class="search-input"
+        >
+        <button id="searchBtn" class="search-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          Rechercher
+        </button>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="quick-stats">
+        <div class="stat-item">
+          <span class="stat-number"><%= popularProducts.length %>+</span>
+          <span class="stat-label">Produits</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number"><%= recommendedStores.length %>+</span>
+          <span class="stat-label">Boutiques</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number"><%= trendingCategories.length %>+</span>
+          <span class="stat-label">Catégories</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Popular Products Carousel -->
+  <section class="section-container">
+    <div class="section-header">
+      <h2 class="section-title">Produits Populaires</h2>
+      <a href="/marketplace/products?sort=popular" class="see-all-link">Voir tout →</a>
+    </div>
+    
+    <div class="carousel-container" id="popularProducts">
+      <button class="carousel-btn carousel-prev" data-carousel="popular">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      
+      <div class="carousel-track" data-carousel="popular">
+        <% if (popularProducts && popularProducts.length > 0) { %>
+          <% popularProducts.forEach(product => { %>
+            <a href="/p/<%= product.share_token %>" class="product-card">
+              <div class="product-image-wrapper">
+                <img src="<%= product.image_url || '/images/placeholder.png' %>" alt="<%= product.name %>" class="product-image">
+                <div class="product-badge">Populaire</div>
+              </div>
+              <div class="product-info">
+                <h3 class="product-name"><%= product.name %></h3>
+                <p class="product-price"><%= product.price %> <%= product.currency %></p>
+                <div class="product-vendor">
+                  <span><%= product.business_name %></span>
+                  <% if (product.is_verified) { %>
+                    <svg class="verified-badge" width="16" height="16" viewBox="0 0 24 24" fill="#5C6C73">
+                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                    </svg>
+                  <% } %>
+                </div>
+                <% if (product.city) { %>
+                  <p class="product-location">📍 <%= product.city %>, <%= product.country || '' %></p>
+                <% } %>
+              </div>
+            </a>
+          <% }); %>
+        <% } else { %>
+          <p class="empty-message">Aucun produit populaire pour le moment.</p>
+        <% } %>
+      </div>
+      
+      <button class="carousel-btn carousel-next" data-carousel="popular">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- Trending Categories -->
+  <section class="section-container categories-section">
+    <div class="section-header">
+      <h2 class="section-title">Catégories Tendances</h2>
+    </div>
+    
+    <div class="categories-grid" id="trendingCategories">
+      <% if (trendingCategories && trendingCategories.length > 0) { %>
+        <% trendingCategories.slice(0, 8).forEach(category => { %>
+          <a href="/marketplace/products?category=<%= category.slug %>" class="category-card">
+            <div class="category-icon">🏷️</div>
+            <h3 class="category-name"><%= category.name %></h3>
+            <p class="category-count"><%= category.product_count %> produits</p>
+          </a>
+        <% }); %>
+      <% } else { %>
+        <p class="empty-message">Aucune catégorie disponible.</p>
+      <% } %>
+    </div>
+  </section>
+
+  <!-- Recommended Stores Carousel -->
+  <section class="section-container">
+    <div class="section-header">
+      <h2 class="section-title">Boutiques Recommandées</h2>
+      <a href="/marketplace/stores" class="see-all-link">Voir tout →</a>
+    </div>
+    
+    <div class="carousel-container" id="recommendedStores">
+      <button class="carousel-btn carousel-prev" data-carousel="stores">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      
+      <div class="carousel-track" data-carousel="stores">
+        <% if (recommendedStores && recommendedStores.length > 0) { %>
+          <% recommendedStores.forEach(store => { %>
+            <a href="/store/<%= store.store_slug %>" class="store-card">
+              <div class="store-header">
+                <% if (store.logo_url) { %>
+                  <img src="<%= store.logo_url %>" alt="<%= store.business_name %>" class="store-logo">
+                <% } else { %>
+                  <div class="store-logo-placeholder">🏪</div>
+                <% } %>
+                <div class="store-info">
+                  <h3 class="store-name">
+                    <%= store.business_name %>
+                    <% if (store.is_verified) { %>
+                      <svg class="verified-badge" width="16" height="16" viewBox="0 0 24 24" fill="#5C6C73">
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                      </svg>
+                    <% } %>
+                  </h3>
+                  <% if (store.city) { %>
+                    <p class="store-location">📍 <%= store.city %>, <%= store.country || '' %></p>
+                  <% } %>
+                </div>
+              </div>
+              
+              <div class="store-stats">
+                <div class="stat">
+                  <span class="stat-value"><%= store.product_count %></span>
+                  <span class="stat-label">Produits</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value"><%= store.total_views || 0 %></span>
+                  <span class="stat-label">Vues</span>
+                </div>
+              </div>
+
+              <% if (store.products && store.products.length > 0) { %>
+                <div class="store-products">
+                  <% store.products.slice(0, 3).forEach(product => { %>
+                    <img src="<%= product.image_url || '/images/placeholder.png' %>" alt="<%= product.name %>" class="store-product-thumb">
+                  <% }); %>
+                </div>
+              <% } %>
+            </a>
+          <% }); %>
+        <% } else { %>
+          <p class="empty-message">Aucune boutique recommandée pour le moment.</p>
+        <% } %>
+      </div>
+      
+      <button class="carousel-btn carousel-next" data-carousel="stores">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- Recent Products -->
+  <section class="section-container">
+    <div class="section-header">
+      <h2 class="section-title">Produits Récents</h2>
+      <a href="/marketplace/products?sort=recent" class="see-all-link">Voir tout →</a>
+    </div>
+    
+    <div class="products-grid" id="recentProducts">
+      <% if (recentProducts && recentProducts.length > 0) { %>
+        <% recentProducts.slice(0, 8).forEach(product => { %>
+          <a href="/p/<%= product.share_token %>" class="product-card">
+            <div class="product-image-wrapper">
+              <img src="<%= product.image_url || '/images/placeholder.png' %>" alt="<%= product.name %>" class="product-image">
+              <div class="product-badge badge-new">Nouveau</div>
+            </div>
+            <div class="product-info">
+              <h3 class="product-name"><%= product.name %></h3>
+              <p class="product-price"><%= product.price %> <%= product.currency %></p>
+              <div class="product-vendor">
+                <span><%= product.business_name %></span>
+                <% if (product.is_verified) { %>
+                  <svg class="verified-badge" width="16" height="16" viewBox="0 0 24 24" fill="#5C6C73">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                  </svg>
+                <% } %>
+              </div>
+              <% if (product.city) { %>
+                <p class="product-location">📍 <%= product.city %>, <%= product.country || '' %></p>
+              <% } %>
+            </div>
+          </a>
+        <% }); %>
+      <% } else { %>
+        <p class="empty-message">Aucun produit récent pour le moment.</p>
+      <% } %>
+    </div>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('searchInput');
+      const searchBtn = document.getElementById('searchBtn');
+
+      const handleSearch = () => {
+        const query = searchInput.value.trim();
+        if (query) {
+          window.location.href = `/marketplace/products?search=${encodeURIComponent(query)}`;
+        }
+      };
+
+      searchBtn.addEventListener('click', handleSearch);
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSearch();
+      });
+
+      // Carousels (Simple scroll)
+      document.querySelectorAll('.carousel-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const carouselId = btn.getAttribute('data-carousel');
+          const track = document.querySelector(`.carousel-track[data-carousel="${carouselId}"]`);
+          const scrollAmount = track.clientWidth * 0.8;
+          
+          if (btn.classList.contains('carousel-prev')) {
+            track.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+          } else {
+            track.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

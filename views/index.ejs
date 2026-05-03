@@ -740,64 +740,51 @@
     </div>
     
     <div class="pricing-grid">
-      <!-- Plan Gratuit -->
-      <div class="pricing-card">
-        <div class="pricing-header">
-          <h3 class="pricing-name">Essai Gratuit</h3>
-          <div class="pricing-price">0 <span style="font-size: 1.5rem;">FCFA</span></div>
-          <p class="pricing-period">Pour démarrer</p>
-        </div>
-        
-        <ul class="pricing-features">
-          <li>Jusqu'à 5 produits</li>
-          <li>20 commandes par mois</li>
-          <li>Tableau de bord basique</li>
-          <li>Liens de partage produits</li>
-        </ul>
-        
-        <a href="/register" class="btn btn-outline" style="width: 100%;">Commencer gratuitement</a>
-      </div>
-      
-      <!-- Plan Standard -->
-      <div class="pricing-card featured">
-        <div class="pricing-badge">⭐ Populaire</div>
-        <div class="pricing-header">
-          <h3 class="pricing-name pro">Pro</h3>
-          <div class="pricing-price">4 000 <span style="font-size: 1.5rem;">FCFA</span></div>
-          <p class="pricing-period">Par mois</p>
-        </div>
-        
-        <ul class="pricing-features">
-          <li>Produits illimités</li>
-          <li>Commandes illimitées</li>
-          <li>Statistiques avancées</li>
-          <li>Gestion des clients</li>
-          <li>Export des données</li>
-        </ul>
-        
-        <a href="/register" class="btn btn-primary" style="width: 100%;">Choisir Standard</a>
-      </div>
-      
-      <!-- Plan Premium -->
-      <div class="pricing-card">
-        <div class="pricing-header">
-          <h3 class="pricing-name pro">Business</h3>
-          <div class="pricing-price">8 000 <span style="font-size: 1.5rem;">FCFA</span></div>
-          <p class="pricing-period">Par mois</p>
-        </div>
-        
-        <ul class="pricing-features">
-          <li>Tout du plan Pro</li>
-          <li>Personnalisation boutique (logo, banière, apparence etc..)</li>
-          <li>Message de commandes personalisable</li>
-          <li>Intégration WhatsApp Business</li>
-          <li>Intégration Instagram</li>
-          <li>Intégration Facebook</li>
-          <li>Rapports détaillés</li>
-        </ul>
-        
-        <a href="/register" class="btn btn-outline" style="width: 100%;">Choisir Premium</a>
-      </div>
+      <% if (typeof plans !== 'undefined' && plans.length > 0) { %>
+        <% 
+          const fmtCurrency = (n) => (parseFloat(n)||0).toLocaleString('fr-FR') + ' FCFA';
+          plans.forEach(plan => { 
+            const isFeatured = plan.slug === 'pro';
+        %>
+          <div class="pricing-card <%= isFeatured ? 'featured' : '' %>">
+            <% if (isFeatured) { %>
+              <div class="pricing-badge">⭐ Populaire</div>
+            <% } %>
+            <div class="pricing-header">
+              <h3 class="pricing-name <%= plan.slug %>"><%= plan.name %></h3>
+              <div class="pricing-price">
+                <%= plan.price == 0 ? 'Gratuit' : fmtCurrency(plan.price) %>
+              </div>
+              <p class="pricing-period"><%= plan.billing_cycle === 'monthly' ? 'Par mois' : 'Par an' %></p>
+            </div>
+            
+            <ul class="pricing-features">
+              <li>
+                <strong><%= plan.max_products === -1 || plan.max_products >= 999999 ? 'Produits illimités' : 'Jusqu\'à ' + plan.max_products + ' produits' %></strong>
+              </li>
+              <li>
+                <%= plan.max_orders_per_month === -1 || plan.max_orders_per_month >= 999999 ? 'Commandes illimitées' : plan.max_orders_per_month + ' commandes / semaine' %>
+              </li>
+              <% if (plan.has_analytics) { %><li>Tableau de bord & Stats</li><% } %>
+              <% if (plan.has_custom_branding) { %><li>Personnalisation boutique</li><% } %>
+              <% if (plan.has_whatsapp_integration) { %><li>Intégration WhatsApp Business</li><% } %>
+              <% if (plan.slug === 'business') { %>
+                <li>Intégrations Social Media</li>
+                <li>Rapports détaillés</li>
+              <% } %>
+              <% if (plan.trial_days > 0 && plan.price > 0) { %>
+                <li style="color:var(--color-primary); font-weight:700;"><%= plan.trial_days %> jours d'essai gratuit</li>
+              <% } %>
+            </ul>
+            
+            <a href="/register" class="btn <%= isFeatured ? 'btn-primary' : 'btn-outline' %>" style="width: 100%;">
+              <%= plan.price == 0 ? 'Démarrer gratuitement' : 'Choisir ' + plan.name %>
+            </a>
+          </div>
+        <% }); %>
+      <% } else { %>
+        <p style="grid-column: 1/-1; text-align: center; color: var(--color-tertiary);">Aucun plan d'abonnement disponible pour le moment.</p>
+      <% } %>
     </div>
   </section>
 

@@ -24,6 +24,7 @@
     <!-- Sidebar -->
     <% if (typeof showSidebar === 'undefined' || showSidebar) { %>
       <%- include('../partials/sidebar') %>
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <% } %>
 
     <!-- Main Content -->
@@ -46,9 +47,24 @@
   </div>
   
   <!-- Scripts Globaux -->
-   <script src="/js/api.js"></script>
-  <script src="/js/ui.js"></script>
-  <script src="/js/planManager.js"></script>
+  <% if (typeof user !== 'undefined' && user) { %>
+  <script>
+    window.__SSR_USER__ = <%- JSON.stringify({
+      id: user.id,
+      email: user.email,
+      business_name: user.business_name,
+      store_slug: user.store_slug,
+      role: user.role,
+      plan_name: user.plan_name || 'Gratuit',
+      plan_slug: user.plan_slug || 'free',
+      has_advanced_stats: user.has_advanced_stats || false,
+      has_export: user.has_export || false,
+      has_customization: user.has_customization || false,
+      has_integrations: user.has_integrations || false
+    }) %>;
+  </script>
+  <% } %>
+   <script src="/js/ui.js"></script>
   <script src="/js/app.js"></script>
   
   <% if (typeof additionalScripts !== 'undefined') { %>

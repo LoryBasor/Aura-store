@@ -95,11 +95,6 @@ class AuthService {
 
     const user = users[0];
 
-    // Vérifier que le compte est actif
-    if (!user.is_active) {
-      throw new AppError('Compte désactivé', 403);
-    }
-
     // Vérifier le mot de passe
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 

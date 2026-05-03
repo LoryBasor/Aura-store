@@ -1,41 +1,41 @@
-<!-- ========================================
-     views/admin/vendors.ejs - VERSION COMPLÈTE
-     ======================================== -->
+<%# ========================================
+    views/admin/vendors.ejs - SSR VERSION
+    ======================================== %>
+
+<%
+  function fmtDate(d) { if(!d) return '-'; return new Date(d).toLocaleDateString('fr-FR'); }
+  const currentVendors    = vendors    || [];
+  const currentPagination = pagination || { page:1, limit:20, total:0 };
+  const currentFilters    = filters    || {};
+  const totalPages        = Math.ceil(currentPagination.total / currentPagination.limit);
+%>
 
 <!-- Page Header -->
 <div class="page-header">
   <div>
     <h1 class="page-title">👥 Gestion des vendeurs</h1>
-    <p class="page-subtitle">Administrez tous les comptes vendeurs</p>
+    <p class="page-subtitle">Administrez tous les comptes vendeurs (<%= currentPagination.total %> au total)</p>
   </div>
-  <button class="btn btn-secondary" id="exportBtn">
-    📊 Exporter CSV
-  </button>
+  <button class="btn btn-secondary" id="exportBtn">📊 Exporter CSV</button>
 </div>
 
 <!-- Filters -->
-<div class="card" style="margin-bottom: 24px;">
-  <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center;">
-    <input 
-      type="search" 
-      id="searchInput" 
-      class="form-input" 
-      placeholder="Rechercher par nom, email ou téléphone..."
-    >
-    <select class="form-select" style="width: 200px;" id="statusFilter">
-      <option value="">Tous les statuts</option>
-      <option value="active">Actifs</option>
-      <option value="suspended">Suspendus</option>
-      <option value="deactivated">Désactivés</option>
+<div class="card" style="margin-bottom:24px;">
+  <form method="GET" action="/admin/vendors" class="filter-bar">
+    <input type="search" name="search" id="searchInput" class="form-input"
+           placeholder="Rechercher par nom, email ou téléphone..." value="<%= currentFilters.search || '' %>">
+    <select name="status" id="statusFilter" class="form-select" onchange="this.form.submit()">
+      <option value="" <%= !currentFilters.status ? 'selected' : '' %>>Tous les statuts</option>
+      <option value="active"      <%= currentFilters.status === 'active'      ? 'selected' : '' %>>Actifs</option>
+      <option value="suspended"   <%= currentFilters.status === 'suspended'   ? 'selected' : '' %>>Suspendus</option>
+      <option value="deactivated" <%= currentFilters.status === 'deactivated' ? 'selected' : '' %>>Désactivés</option>
     </select>
-    <button class="btn btn-primary" id="searchBtn">
-      🔍 Rechercher
-    </button>
-  </div>
+    <button type="submit" class="btn btn-primary" id="searchBtn">🔍 Rechercher</button>
+  </form>
 </div>
 
 <!-- Vendors Table -->
-<div class="card">
+<div class="card" style="padding: 0; overflow: hidden;">
   <div class="table-container">
     <table class="table">
       <thead>
@@ -53,35 +53,92 @@
         </tr>
       </thead>
       <tbody id="vendorsTableBody">
-        <tr>
-          <td colspan="8" style="text-align: center; padding: 48px;">
-            <div class="loader"></div>
-          </td>
-        </tr>
+        <% if (currentVendors.length === 0) { %>
+          <tr>
+            <td colspan="10" style="text-align:center;padding:48px;">
+              <div style="font-size:48px;margin-bottom:16px;">👤</div>
+              <p style="color:var(--color-secondary);">Aucun vendeur trouvé</p>
+            </td>
+          </tr>
+        <% } else { %>
+          <% currentVendors.forEach(vendor => { %>
+            <tr>
+              <td data-label="Vendeur">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:var(--color-primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:16px;">
+                    <%= vendor.business_name ? vendor.business_name.charAt(0).toUpperCase() : 'V' %>
+                  </div>
+                  <div>
+                    <div style="font-weight:700;"><%= vendor.business_name %></div>
+                    <div style="font-size:12px;color:var(--color-secondary);">/<%= vendor.store_slug %></div>
+                  </div>
+                </div>
+              </td>
+              <td data-label="Contact">
+                <div><%= vendor.email %></div>
+                <div style="font-size:12px;color:var(--color-secondary);"><%= vendor.phone || '-' %></div>
+              </td>
+              <td data-label="Abonnement"><span class="badge badge-info"><%= vendor.plan_name || 'Gratuit' %></span></td>
+              <td data-label="Produits"><%= vendor.product_count || 0 %></td>
+              <td data-label="Commandes"><%= vendor.order_count || 0 %></td>
+              <td data-label="CA Total"><%= (parseFloat(vendor.total_revenue)||0).toLocaleString('fr-FR') %> FCFA</td>
+              <td data-label="Vérifié">
+                <button class="btn btn-sm btn-<%= vendor.is_verified ? 'success' : 'outline' %>" 
+                        data-action="toggle-verify" 
+                        data-vendor-id="<%= vendor.id %>" 
+                        data-current="<%= vendor.is_verified %>"
+                        title="<%= vendor.is_verified ? 'Retirer la vérification' : 'Marquer comme vérifié' %>">
+                  <%= vendor.is_verified ? '✅ Vérifié' : '⬜ Vérifier' %>
+                </button>
+              </td>
+              <td data-label="Statut">
+                <span class="badge badge-<%= vendor.account_status === 'active' ? 'success' : vendor.account_status === 'suspended' ? 'warning' : 'error' %>">
+                  <%= vendor.account_status %>
+                </span>
+              </td>
+              <td data-label="Inscription"><%= fmtDate(vendor.created_at) %></td>
+              <td data-label="Actions">
+                <div style="display:flex;gap:6px;">
+                  <a href="/admin/vendors/<%= vendor.id %>" class="btn btn-secondary btn-sm">👁 Détails</a>
+                  <button class="btn btn-outline btn-sm" data-action="vendor-actions" data-vendor-id="<%= vendor.id %>">⚙️</button>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        <% } %>
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- Pagination -->
-<div id="pagination" class="flex-center" style="margin-top: 24px; gap: 8px;">
-  <!-- Pagination dynamique -->
+<!-- Pagination SSR -->
+<% if (totalPages > 1) { %>
+<div id="pagination" class="flex-center" style="margin-top:24px;gap:8px;">
+  <% if (currentPagination.page > 1) { %>
+    <a href="/admin/vendors?page=<%= currentPagination.page - 1 %>&search=<%= currentFilters.search || '' %>&status=<%= currentFilters.status || '' %>"
+       class="btn btn-secondary btn-sm">← Précédent</a>
+  <% } %>
+  <span style="padding:8px 16px;color:var(--color-secondary);font-size:13px;">
+    Page <%= currentPagination.page %> / <%= totalPages %> (<%= currentPagination.total %> vendeurs)
+  </span>
+  <% if (currentPagination.page < totalPages) { %>
+    <a href="/admin/vendors?page=<%= currentPagination.page + 1 %>&search=<%= currentFilters.search || '' %>&status=<%= currentFilters.status || '' %>"
+       class="btn btn-secondary btn-sm">Suivant →</a>
+  <% } %>
 </div>
+<% } %>
 
-<!-- Modal Actions Vendeur -->
+<!-- Modals (actions CRUD via API fetch) -->
 <div class="modal-overlay" id="vendorActionsModal">
   <div class="modal">
     <div class="modal-header">
       <h3 class="modal-title">Actions vendeur</h3>
       <button class="modal-close">✕</button>
     </div>
-    <div class="modal-body" id="vendorActionsBody">
-      <!-- Actions chargées dynamiquement -->
-    </div>
+    <div class="modal-body" id="vendorActionsBody"></div>
   </div>
 </div>
 
-<!-- Modal Suspension -->
 <div class="modal-overlay" id="suspendModal">
   <div class="modal">
     <div class="modal-header">
@@ -93,13 +150,8 @@
         <input type="hidden" id="suspendUserId">
         <div class="form-group">
           <label for="suspendReason" class="form-label required">Raison de la suspension</label>
-          <textarea 
-            id="suspendReason" 
-            name="reason" 
-            class="form-textarea" 
-            placeholder="Expliquez la raison de la suspension..."
-            required
-          ></textarea>
+          <textarea id="suspendReason" name="reason" class="form-textarea"
+                    placeholder="Expliquez la raison de la suspension..." required></textarea>
           <p class="form-help">Cette raison sera visible par le vendeur</p>
         </div>
       </div>
@@ -111,7 +163,6 @@
   </div>
 </div>
 
-<!-- Modal Reset Password -->
 <div class="modal-overlay" id="resetPasswordModal">
   <div class="modal">
     <div class="modal-header">
@@ -120,45 +171,79 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="resetPasswordUserId">
-      <p style="margin-bottom: 16px; color: var(--color-secondary);">
-        Un mot de passe temporaire sera généré et affiché après confirmation.
-      </p>
-      <div id="temporaryPasswordDisplay" style="display: none; padding: 16px; background: var(--color-accent); border-radius: var(--radius-sm); margin-bottom: 16px;">
-        <strong style="color: var(--color-primary);">Mot de passe temporaire :</strong>
-        <div style="font-size: 24px; font-weight: 700; color: var(--color-primary); margin: 12px 0; font-family: monospace;">
+      <p style="margin-bottom:16px;color:var(--color-secondary);">Un mot de passe temporaire sera généré et affiché après confirmation.</p>
+      <div id="temporaryPasswordDisplay" style="display:none;padding:16px;background:var(--color-accent);border-radius:var(--radius-sm);margin-bottom:16px;">
+        <strong style="color:var(--color-primary);">Mot de passe temporaire :</strong>
+        <div style="font-size:24px;font-weight:700;color:var(--color-primary);margin:12px 0;font-family:monospace;">
           <span id="temporaryPasswordValue"></span>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" id="copyPasswordBtn">
-          📋 Copier
-        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="copyPasswordBtn">📋 Copier</button>
       </div>
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-secondary modal-close">Annuler</button>
-      <button type="button" class="btn btn-primary" id="confirmResetPasswordBtn">
-        Générer le mot de passe
-      </button>
+      <button type="button" class="btn btn-primary" id="confirmResetPasswordBtn">Générer le mot de passe</button>
     </div>
   </div>
 </div>
-<!-- Modal Vérification Vendeur -->
-<div class="modal-overlay" id="verifyModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title" id="verifyModalTitle">✓ Marquer comme vérifié</h3>
-      <button class="modal-close">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="verifyUserId">
-      <p id="verifyModalMessage" style="color: var(--color-secondary);">
-        Êtes-vous sûr de vouloir marquer ce vendeur comme vérifié ?
-      </p>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn btn-secondary modal-close">Annuler</button>
-      <button type="button" class="btn btn-primary" id="confirmVerifyBtn">
-        Confirmer
-      </button>
-    </div>
-  </div>
+
 </div>
+
+<!-- Inject vendors data for JS -->
+<script>
+  window.__SSR_VENDORS__ = <%- JSON.stringify(currentVendors) %>;
+</script>
+<script src="/js/admin/vendors.js"></script>
+
+<style>
+  .table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+  .table-container { overflow-x: auto; background: white; border-radius: var(--radius-md); }
+  
+  .table th, .table td { padding: 16px; text-align: left; vertical-align: middle; }
+  .table th { background: var(--color-surface); color: var(--color-primary); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .table tbody tr { border-bottom: 1px solid var(--color-border); transition: background 0.2s; }
+  .table tbody tr:hover { background: rgba(37, 99, 235, 0.02); }
+
+  /* Ajustements spécifiques aux colonnes */
+  .table td[data-label="Vendeur"] { min-width: 200px; }
+  .table td[data-label="Actions"] { white-space: nowrap; width: 150px; }
+  .table td[data-label="Vérifié"] { width: 120px; }
+
+  /* Mode Mobile / Tablette */
+  @media (max-width: 768px) {
+    .table { min-width: unset; }
+    .table thead { display: none; }
+    .table tr { 
+      display: block; 
+      margin-bottom: 16px; 
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: white;
+      padding: 12px;
+    }
+    .table td { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      padding: 10px 0;
+      border: none;
+      text-align: right;
+      border-bottom: 1px dashed var(--color-border);
+    }
+    .table td:last-child { border-bottom: none; }
+    .table td::before {
+      content: attr(data-label);
+      font-weight: 700;
+      font-size: 11px;
+      color: var(--color-secondary);
+      text-transform: uppercase;
+      margin-right: 12px;
+      text-align: left;
+    }
+    .table td:first-child { background: var(--color-surface); margin: -12px -12px 12px -12px; padding: 12px; border-radius: var(--radius-md) var(--radius-md) 0 0; border-bottom: 1px solid var(--color-border); }
+    .table td .btn { width: 100%; justify-content: center; margin-top: 4px; }
+  }
+
+  .w-100 { width: 100%; }
+
+</style>

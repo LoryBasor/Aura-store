@@ -313,8 +313,10 @@ class ProductService {
       `SELECT p.*, 
               u.business_name, 
               u.whatsapp_number,
-              u.id, 
-              u.store_slug, 
+              u.id as vendor_id, 
+              u.store_slug,
+              u.city,
+              u.country,
               pl.click_count, 
               pl.product_id,
               c.name as category_name
@@ -336,14 +338,14 @@ class ProductService {
       `SELECT user_id FROM v_user_plan_access 
        WHERE user_id = ? AND plan_name = 'Business' 
        AND (subscription_status = 'active' OR subscription_status = 'trial')`, 
-      [product.id]
+      [product.user_id]
     );
     
     let customMessage = null;
     if (isPlanBusiness.length !== 0){
       const [custom_message] = await pool.execute(
         `SELECT custom_order_message FROM social_integrations WHERE user_id = ?`, 
-        [product.id]
+        [product.user_id]
       );
       customMessage = custom_message[0];
     }

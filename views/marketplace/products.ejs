@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %></title>
+  <link rel="icon" type="image/png" href="/images/logo.png">
   <link rel="stylesheet" href="/css/marketplace-products.css">
 </head>
 <body>
@@ -203,27 +204,103 @@
         </div>
 
         <!-- Pagination -->
-        <div class="pagination-container">
-          <button id="prevBtn" class="pagination-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-            Précédent
-          </button>
-          
-          <span id="pagination" class="pagination-info">Page 1 / 1</span>
-          
-          <button id="nextBtn" class="pagination-btn">
-            Suivant
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
-        </div>
+        <% if (data.pagination.totalPages > 1) { %>
+          <div class="pagination-container">
+            <a href="?<%= new URLSearchParams({...filters, page: data.pagination.page - 1}).toString() %>" 
+               class="pagination-btn <%= data.pagination.page <= 1 ? 'disabled' : '' %>"
+               id="prevBtn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+              Précédent
+            </a>
+            
+            <span id="pagination" class="pagination-info">
+              Page <%= data.pagination.page %> / <%= data.pagination.totalPages %>
+            </span>
+            
+            <a href="?<%= new URLSearchParams({...filters, page: data.pagination.page + 1}).toString() %>" 
+               class="pagination-btn <%= data.pagination.page >= data.pagination.totalPages ? 'disabled' : '' %>"
+               id="nextBtn">
+              Suivant
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </a>
+          </div>
+        <% } %>
       </main>
     </div>
   </div>
 
-  <script src="/js/marketplace-products.js"></script>
+  <script>
+    // Petit script pour soumettre le formulaire lors du changement de filtre
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('filterForm');
+      const sortSelect = document.getElementById('sortSelect');
+      
+      const updateFilters = () => {
+        const formData = new FormData(form);
+        const params = new URLSearchParams(window.location.search);
+        
+        // Mettre à jour les paramètres de l'URL
+        for (const [key, value] of formData.entries()) {
+          if (value) params.set(key, value);
+          else params.delete(key);
+        }
+        
+        // Ajouter le tri
+        if (sortSelect.value) params.set('sort', sortSelect.value);
+        
+        // Reset page à 1
+        params.delete('page');
+        
+        window.location.href = `?${params.toString()}`;
+      };
+
+      // Écouter les changements sur le formulaire
+      form.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('change', (e) => {
+          if (e.target.type !== 'text' && e.target.type !== 'number') {
+            updateFilters();
+          }
+        });
+      });
+
+      // Écouter le bouton de recherche
+      document.getElementById('productSearchBtn').addEventListener('click', updateFilters);
+      document.getElementById('productSearchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          updateFilters();
+        }
+      });
+
+      // Tri
+      sortSelect.addEventListener('change', updateFilters);
+
+      // Réinitialiser
+      document.getElementById('clearFilters').addEventListener('click', () => {
+        window.location.href = window.location.pathname;
+      });
+
+      // Toggle filtres mobile
+      const filterToggle = document.getElementById('filterToggle');
+      const filtersSidebar = document.querySelector('.filters-sidebar');
+      const closeFilters = document.getElementById('closeFilters');
+
+      if (filterToggle) {
+        filterToggle.addEventListener('click', () => {
+          filtersSidebar.classList.add('open');
+        });
+      }
+
+      if (closeFilters) {
+        closeFilters.addEventListener('click', () => {
+          filtersSidebar.classList.remove('open');
+        });
+      }
+    });
+  </script>
 </body>
 </html>

@@ -1,0 +1,199 @@
+<!-- ========================================
+     views/admin/activity.ejs
+     ======================================== -->
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📊 Activité de la Plateforme</h1>
+    <p class="page-subtitle">Monitoring global en temps réel</p>
+  </div>
+  <div style="display: flex; gap: 12px;">
+    <select class="form-select" style="width: 150px;" id="periodFilter">
+      <option value="today">Aujourd'hui</option>
+      <option value="7days" selected>7 jours</option>
+      <option value="30days">30 jours</option>
+      <option value="90days">90 jours</option>
+    </select>
+    <button class="btn btn-secondary" id="refreshBtn">
+      🔄 Actualiser
+    </button>
+    <button class="btn btn-primary" id="exportBtn">
+      📊 Exporter rapport
+    </button>
+  </div>
+</div>
+
+<!-- Real-time Stats -->
+<div class="stats-grid" id="realtimeStats">
+  <div class="stat-card">
+    <div class="loader"></div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Activity Chart -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">📈 Évolution de l'activité</h3>
+      <select class="form-select" style="width: 150px;" id="chartMetric">
+        <option value="signups">Inscriptions</option>
+        <option value="orders" selected>Commandes</option>
+        <option value="revenue">Revenus</option>
+        <option value="products">Produits</option>
+      </select>
+    </div>
+    <div id="activityChart" style="height: 300px;">
+      <div class="loader"></div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">⚡ Statistiques rapides</h3>
+    </div>
+    <div id="quickStats">
+      <div class="loader"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Activity Feed -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Recent Signups -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">🆕 Nouvelles inscriptions</h3>
+      <span class="badge badge-success" id="signupsCount">0</span>
+    </div>
+    <div id="recentSignups">
+      <div class="loader"></div>
+    </div>
+  </div>
+
+  <!-- Recent Orders -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">🛒 Dernières commandes</h3>
+      <span class="badge badge-info" id="ordersCount">0</span>
+    </div>
+    <div id="recentOrders">
+      <div class="loader"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Platform Health -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 24px;">
+  <!-- Active Vendors -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">👥 Vendeurs actifs</h3>
+    </div>
+    <div id="activeVendors">
+      <div class="loader"></div>
+    </div>
+  </div>
+
+  <!-- System Status -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">🔧 État du système</h3>
+    </div>
+    <div id="systemStatus">
+      <div class="loader"></div>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">⚠️ Alertes</h3>
+    </div>
+    <div id="alertsPanel">
+      <div class="loader"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Tables -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">📋 Détails de l'activité</h3>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn btn-sm btn-secondary" data-tab="vendors">Vendeurs</button>
+      <button class="btn btn-sm btn-secondary" data-tab="products">Produits</button>
+      <button class="btn btn-sm btn-secondary" data-tab="orders">Commandes</button>
+      <button class="btn btn-sm btn-secondary" data-tab="subscriptions">Abonnements</button>
+    </div>
+  </div>
+  <div id="activityDetails">
+    <div style="padding: 48px; text-align: center; color: var(--color-secondary);">
+      Sélectionnez un onglet pour voir les détails
+    </div>
+  </div>
+</div>
+
+<!-- Modal Export -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">📊 Exporter le rapport</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <form id="exportForm">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Format</label>
+          <select id="exportFormat" class="form-select">
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+            <option value="pdf">PDF (Bientôt)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Période</label>
+          <select id="exportPeriod" class="form-select">
+            <option value="today">Aujourd'hui</option>
+            <option value="7days">7 derniers jours</option>
+            <option value="30days">30 derniers jours</option>
+            <option value="90days">90 derniers jours</option>
+            <option value="all">Toutes les données</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Inclure</label>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="includeVendors" checked>
+              Vendeurs
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="includeOrders" checked>
+              Commandes
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="includeProducts">
+              Produits
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="includeSubscriptions">
+              Abonnements
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+        <button type="submit" class="btn btn-primary">Générer le rapport</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Script dédié -->
+<script src="/js/admin/activity.js"></script>

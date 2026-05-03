@@ -1,43 +1,99 @@
-<!-- ========================================
-     views/admin/vendor-details.ejs
-     ======================================== -->
+<%
+  const v = vendor.user;
+  const s = vendor.stats;
+  const ro = vendor.recent_orders || [];
+  function fmtCurrency(n) { return (parseFloat(n)||0).toLocaleString('fr-FR') + ' FCFA'; }
+  function fmtDate(d) { if(!d) return '-'; return new Date(d).toLocaleDateString('fr-FR'); }
+%>
 
 <!-- Page Header -->
 <div class="page-header">
   <div>
-    <h1 class="page-title" id="vendorName">Détails vendeur</h1>
-    <p class="page-subtitle" id="vendorEmail"></p>
+    <h1 class="page-title" id="vendorName"><%= v.business_name %></h1>
+    <p class="page-subtitle" id="vendorEmail"><%= v.email %> • Inscrit le <%= fmtDate(v.created_at) %></p>
   </div>
-  <div style="display: flex; gap: 12px;">
-    <button class="btn btn-secondary" onclick="window.location.href='/admin/vendors'">
-      ← Retour
-    </button>
-    <button class="btn btn-primary" id="manageSubscriptionBtn">
-      📋 Gérer l'abonnement
-    </button>
+  <div class="page-header-actions">
+    <a href="/admin/vendors" class="btn btn-secondary">← Retour</a>
+    <a href="/admin/subscriptions/<%= v.id %>" class="btn btn-primary">📋 Gérer l'abonnement</a>
   </div>
 </div>
 
-<!-- Vendor Info Card -->
-<div class="card" id="vendorInfoCard">
-  <div class="loader"></div>
-</div>
-
-<!-- Stats Grid -->
-<div class="stats-grid" id="vendorStats">
-  <div class="loader"></div>
-</div>
-
-<!-- Recent Orders (Read-only) -->
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">📦 Commandes récentes (aperçu)</h3>
-    <span style="color: var(--color-secondary); font-size: 14px;">Lecture seule</span>
+<div class="grid-1fr-2fr vendor-detail-grid">
+  <!-- Info Card -->
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">ℹ️ Informations</h3></div>
+    <div style="padding: 20px;">
+      <div style="margin-bottom: 16px;">
+        <label style="display:block; font-size:12px; color:var(--color-secondary); text-transform:uppercase;">Statut Compte</label>
+        <span class="badge badge-<%= v.account_status === 'active' ? 'success' : 'error' %>"><%= v.account_status %></span>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display:block; font-size:12px; color:var(--color-secondary); text-transform:uppercase;">Téléphone</label>
+        <div style="font-weight:600;"><%= v.phone || '-' %></div>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display:block; font-size:12px; color:var(--color-secondary); text-transform:uppercase;">WhatsApp</label>
+        <div style="font-weight:600;"><%= v.whatsapp_number || '-' %></div>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display:block; font-size:12px; color:var(--color-secondary); text-transform:uppercase;">Localisation</label>
+        <div style="font-weight:600;"><%= [v.city, v.country].filter(Boolean).join(', ') || '-' %></div>
+      </div>
+      <div>
+        <label style="display:block; font-size:12px; color:var(--color-secondary); text-transform:uppercase;">Plan Actuel</label>
+        <div style="font-weight:600;"><span class="badge badge-info"><%= v.plan_name || 'Gratuit' %></span></div>
+      </div>
+    </div>
   </div>
-  <div id="recentOrders">
-    <div class="loader"></div>
+
+  <!-- Stats Grid -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Produits</span></div>
+        <div class="stat-value"><%= s.total_products %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Commandes</span></div>
+        <div class="stat-value"><%= s.total_orders %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">CA Global</span></div>
+        <div class="stat-value" style="font-size: 20px;"><%= fmtCurrency(s.total_revenue) %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Clients</span></div>
+        <div class="stat-value"><%= s.total_customers %></div>
+      </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">📦 Commandes récentes</h3>
+      </div>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr><th>Numéro</th><th>Client</th><th>Montant</th><th>Statut</th><th>Date</th></tr>
+          </thead>
+          <tbody>
+            <% if (ro.length === 0) { %>
+              <tr><td colspan="5" style="text-align:center; padding:20px;">Aucune commande</td></tr>
+            <% } else { %>
+              <% ro.forEach(o => { %>
+                <tr>
+                  <td><strong><%= o.order_number %></strong></td>
+                  <td><%= o.customer_name %></td>
+                  <td><%= fmtCurrency(o.total_amount) %></td>
+                  <td><span class="badge badge-info"><%= o.status %></span></td>
+                  <td><%= fmtDate(o.created_at) %></td>
+                </tr>
+              <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
-
-<!-- Script -->
-<script src="/js/admin/vendor-details.js"></script>
