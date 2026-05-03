@@ -16,17 +16,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- ACTIONS ---
-  
+
   // Nouveau produit
   AppUtils.onAll('[data-action="new-product"]', 'click', () => {
     productForm.reset();
     document.getElementById('productId').value = '';
     modalTitle.textContent = 'Nouveau produit';
-    
+
     // Reset image preview
     const preview = document.getElementById('imagePreview');
     if (preview) preview.innerHTML = '';
-    
+
     ModalManager.openModal('productModal');
   });
 
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('button');
     const id = btn.dataset.productId;
     const product = getProductData(id);
-    
+
     if (product) {
       document.getElementById('productId').value = product.id;
       document.getElementById('name').value = product.name;
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('stock_quantity').value = product.stock_quantity;
       document.getElementById('category_id').value = product.category_id || '';
       document.getElementById('is_available').value = product.is_available.toString();
-      
+
       const preview = document.getElementById('imagePreview');
       if (preview) {
         if (product.image_url) {
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
           preview.innerHTML = '';
         }
       }
-      
+
       modalTitle.textContent = 'Modifier le produit';
       ModalManager.openModal('productModal');
     }
@@ -64,14 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
   AppUtils.delegate(productsGrid, 'click', '[data-action="delete-product"]', async (e) => {
     const btn = e.target.closest('button');
     const id = btn.dataset.productId;
-    
+
     if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ? Cette action est irréversible.')) {
       try {
         UI.showLoader();
         const response = await fetch(`/api/products/${id}`, {
           method: 'DELETE'
         });
-        
+
         if (response.ok) {
           UI.showNotification('Succès', 'Produit supprimé avec succès', 'success');
           window.location.reload();
@@ -104,22 +104,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (productForm) {
     productForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const formData = new FormData(productForm);
       const productId = document.getElementById('productId').value;
       const isEdit = !!productId;
-      
+
       const url = isEdit ? `/api/products/${productId}` : '/api/products';
       const method = isEdit ? 'PUT' : 'POST';
-      
+
       try {
         UI.showLoader();
-        
+
         const response = await fetch(url, {
           method: method,
           body: formData
         });
-        
+
         if (response.ok) {
           UI.showNotification('Succès', `Produit ${isEdit ? 'modifié' : 'créé'} avec succès`, 'success');
           ModalManager.closeModal('productModal');
@@ -139,11 +139,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Aperçu de l'image
   const imageInput = document.getElementById('image');
   if (imageInput) {
-    imageInput.addEventListener('change', function() {
+    imageInput.addEventListener('change', function () {
       const preview = document.getElementById('imagePreview');
       if (this.files && this.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
           preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width:100px; border-radius:8px;">`;
         };
         reader.readAsDataURL(this.files[0]);

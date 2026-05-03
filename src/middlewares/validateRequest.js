@@ -14,6 +14,11 @@ function validateRequest(schema, property = 'body') {
       stripUnknown: true // Supprimer les champs non définis dans le schéma
     });
     if (error) {
+      console.error('❌ Validation Error:', {
+        url: req.originalUrl,
+        errors: error.details.map(d => d.message)
+      });
+
       const errors = error.details.map(detail => ({
         field: detail.path.join('.'),
         message: detail.message

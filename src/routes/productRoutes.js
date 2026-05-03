@@ -9,7 +9,7 @@ const { apiLimiter } = require('../middlewares/rateLimiter');
 const { upload } = require('../config/upload');
 const { productSchema } = require('../utils/validators');
 
-const router = express.Router(); 
+const router = express.Router();
 
 /**
  * Routes de gestion des produits
