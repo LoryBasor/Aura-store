@@ -277,19 +277,101 @@ class SubscriptionService {
   }
 
   /**
-   * Récupère les statistiques globales des abonnements
+   * Liste tous les abonnements avec filtres (pour la vue SSR admin)
    */
-  async getSubscriptionStats() {
-    const [stats] = await pool.execute(`
-      SELECT 
-        (SELECT COUNT(*) FROM subscriptions WHERE status = 'trial') as trial_count,
-        (SELECT COUNT(*) FROM subscriptions WHERE status = 'active') as active_count,
-        (SELECT COUNT(*) FROM subscriptions WHERE status = 'expired') as expired_count,
-        (SELECT COUNT(*) FROM subscriptions WHERE status = 'cancelled') as cancelled_count,
-        (SELECT COUNT(*) FROM subscriptions WHERE expires_at < NOW() AND status IN ('trial', 'active')) as expiring_soon
-    `);
+  async listSubscriptions({ page = 1, limit = 20, search = '', plan = '', status = '' } = {}) {
+    const offset = (page - 1) * limit;
+    let conditions = ['1=1'];
+    let params = [];
 
-    return stats[0];
+    if (search) {
+      conditions.push('(u.business_name LIKE ? OR u.email LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (plan) {
+      conditions.push('sp.slug = ?');
+      params.push(plan);
+    }
+    if (status) {
+      conditions.push('s.status = ?');
+      params.push(status);
+    }
+
+    const where = conditions.join(' AND ');
+
+    const [subscriptions] = await pool.execute(
+      `SELECT s.*, u.business_name, u.email, u.phone, sp.name as plan_name, sp.price
+       FROM subscriptions s
+       JOIN users u ON s.user_id = u.id
+       JOIN subscription_plans sp ON s.plan_id = sp.id
+       WHERE ${where}
+       ORDER BY s.created_at DESC
+       LIMIT ${limit} OFFSET ${offset}`,
+      params
+    );
+
+    const [countResult] = await pool.execute(
+      `SELECT COUNT(*) as total FROM subscriptions s
+       JOIN users u ON s.user_id = u.id
+       JOIN subscription_plans sp ON s.plan_id = sp.id
+       WHERE ${where}`,
+      params
+    );
+
+    return {
+      subscriptions,
+      pagination: { page, limit, total: countResult[0].total }
+    };
+  }
+
+  /**
+   * Met à jour le prix d'un plan
+   */
+  async updatePlanPrice(planId, newPrice, adminId) {
+    const [result] = await pool.execute(
+      'UPDATE subscription_plans SET price = ? WHERE id = ?',
+      [newPrice, planId]
+    );
+
+    if (result.affectedRows === 0) {
+      throw new AppError('Plan introuvable', 404);
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Met à jour le statut d'un abonnement
+   */
+  async updateSubscriptionStatus(subscriptionId, newStatus, adminId) {
+    const [result] = await pool.execute(
+      'UPDATE subscriptions SET status = ? WHERE id = ?',
+      [newStatus, subscriptionId]
+    );
+
+    if (result.affectedRows === 0) {
+      throw new AppError('Abonnement introuvable', 404);
+    }
+
+    // Mapper le statut vers une action valide de l'ENUM
+    const statusToAction = {
+      'active': 'resumed',
+      'suspended': 'suspended',
+      'expired': 'expired',
+      'cancelled': 'cancelled',
+      'trial': 'renewed'
+    };
+    const action = statusToAction[newStatus] || 'renewed';
+
+    // Logger dans l'historique
+    await pool.execute(
+      `INSERT INTO subscription_history (subscription_id, user_id, plan_id, action, new_status, performed_by, notes)
+       SELECT id, user_id, plan_id, ?, ?, ?, 'Changement manuel de statut'
+       FROM subscriptions WHERE id = ?`,
+      [action, newStatus, adminId, subscriptionId]
+    );
+
+    return { success: true };
   }
 }
 

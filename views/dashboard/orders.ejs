@@ -1,45 +1,68 @@
-<!-- ========================================
-     views/dashboard/orders.ejs - VERSION COMPLÈTE
-     ======================================== -->
+<%# ========================================
+    views/dashboard/orders.ejs - SSR VERSION
+    ======================================== %>
+
+<%
+  const statusColors  = { nouvelle:'info', confirmee:'success', en_preparation:'warning', en_livraison:'warning', livree:'success', annulee:'error' };
+  const statusLabels  = { nouvelle:'🆕 Nouvelle', confirmee:'✅ Confirmée', en_preparation:'👨‍🍳 En prép.', en_livraison:'🚚 En livraison', livree:'📦 Livrée', annulee:'❌ Annulée' };
+  function fmtCurrency(n) { return (parseFloat(n)||0).toLocaleString('fr-FR') + ' FCFA'; }
+  function fmtDate(d) { if(!d) return '-'; return new Date(d).toLocaleDateString('fr-FR'); }
+  const currentOrders     = orders     || [];
+  const currentPagination = pagination || { page:1, limit:20, total:0 };
+  const currentFilters    = filters    || {};
+  const stats             = orderStats || {};
+  const totalPages        = Math.ceil(currentPagination.total / currentPagination.limit);
+%>
 
 <!-- Page Header -->
 <div class="page-header">
   <div>
     <h1 class="page-title">📦 Mes commandes</h1>
-    <p class="page-subtitle">Suivez et gérez toutes vos commandes</p>
+    <p class="page-subtitle">Suivez et gérez toutes vos commandes (<%= currentPagination.total %> au total)</p>
   </div>
-  <button class="btn btn-primary" data-action="new-order">
-    + Nouvelle commande
-  </button>
+  <button class="btn btn-primary" data-action="new-order">+ Nouvelle commande</button>
 </div>
 
 <!-- Stats Commandes -->
-<div class="stats-grid" id="orderStats" style="margin-bottom: 24px;">
-  <div class="loader"></div>
+<div class="stats-grid" id="orderStats" style="margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Total</span><div class="stat-icon">📦</div></div>
+    <div class="stat-value"><%= stats.total_orders || 0 %></div>
+    <div class="stat-change"><%= stats.pending_orders || 0 %> en attente</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Livrées</span><div class="stat-icon">✅</div></div>
+    <div class="stat-value"><%= stats.delivered_orders || 0 %></div>
+    <div class="stat-change positive">Complétées</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Chiffre d'affaires</span><div class="stat-icon">💰</div></div>
+    <div class="stat-value"><%= fmtCurrency(stats.total_revenue || 0) %></div>
+    <div class="stat-change">Panier moy: <%= fmtCurrency(stats.avg_order_value || 0) %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Annulées</span><div class="stat-icon">❌</div></div>
+    <div class="stat-value"><%= stats.cancelled_orders || 0 %></div>
+    <div class="stat-change">Total annulées</div>
+  </div>
 </div>
 
-<!-- Filters -->
-<div class="card" style="margin-bottom: 24px;">
-  <div style="display: grid; grid-template-columns: 1fr; gap: 16px; align-items: center;">
-    <input 
-      type="search" 
-      id="searchInput" 
-      class="form-input" 
-      placeholder="Rechercher par n° commande, client..."
-    >
-    <select class="form-select" style="width: 200px;" data-filter="order-status">
-      <option value="">Tous les statuts</option>
-      <option value="nouvelle">Nouvelles</option>
-      <option value="confirmee">Confirmées</option>
-      <option value="en_preparation">En préparation</option>
-      <option value="en_livraison">En livraison</option>
-      <option value="livree">Livrées</option>
-      <option value="annulee">Annulées</option>
+<!-- Filters (GET form pour SSR) -->
+<div class="card" style="margin-bottom:24px;">
+  <form method="GET" action="/orders" style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:16px;">
+    <input type="search" name="search" class="form-input" style="flex:1;min-width:200px;"
+           placeholder="Rechercher par n° commande, client..." value="<%= currentFilters.search || '' %>">
+    <select name="status" class="form-select" style="flex:1;min-width:150px;" onchange="this.form.submit()">
+      <option value="" <%= !currentFilters.status ? 'selected' : '' %>>Tous les statuts</option>
+      <option value="nouvelle"      <%= currentFilters.status === 'nouvelle'      ? 'selected' : '' %>>Nouvelles</option>
+      <option value="confirmee"     <%= currentFilters.status === 'confirmee'     ? 'selected' : '' %>>Confirmées</option>
+      <option value="en_preparation"<%= currentFilters.status === 'en_preparation'? 'selected' : '' %>>En préparation</option>
+      <option value="en_livraison"  <%= currentFilters.status === 'en_livraison'  ? 'selected' : '' %>>En livraison</option>
+      <option value="livree"        <%= currentFilters.status === 'livree'        ? 'selected' : '' %>>Livrées</option>
+      <option value="annulee"       <%= currentFilters.status === 'annulee'       ? 'selected' : '' %>>Annulées</option>
     </select>
-    <button class="btn btn-secondary" data-action="export-orders">
-      📊 Exporter
-    </button>
-  </div>
+    <button class="btn btn-secondary" data-action="export-orders" type="button" style="flex:1;min-width:150px;">📊 Exporter</button>
+  </form>
 </div>
 
 <!-- Orders Table -->
@@ -52,31 +75,68 @@
           <th>Date</th>
           <th>Client</th>
           <th>Produit</th>
-          <th style="text-align: right;">Quantité</th>
-          <th style="text-align: right;">Montant</th>
+          <th style="text-align:right;">Qté</th>
+          <th style="text-align:right;">Montant</th>
           <th>Statut</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody id="ordersTableBody">
-        <tr>
-          <td colspan="8" style="text-align: center; padding: 48px;">
-            <div class="loader"></div>
-          </td>
-        </tr>
+        <% if (currentOrders.length === 0) { %>
+          <tr>
+            <td colspan="8" style="text-align:center;padding:48px;">
+              <div style="font-size:48px;margin-bottom:16px;">📭</div>
+              <p style="color:var(--color-secondary);">Aucune commande trouvée</p>
+            </td>
+          </tr>
+        <% } else { %>
+          <% currentOrders.forEach(order => { %>
+            <tr>
+              <td><strong><%= order.order_number %></strong></td>
+              <td><%= fmtDate(order.created_at) %></td>
+              <td>
+                <div><strong><%= order.customer_name %></strong></div>
+                <div style="font-size:12px;color:var(--color-secondary);"><%= order.customer_phone || '' %></div>
+              </td>
+              <td><%= order.product_name %></td>
+              <td style="text-align:right;"><%= order.quantity %></td>
+              <td style="text-align:right;"><strong><%= fmtCurrency(order.total_amount) %></strong></td>
+              <td><span class="badge badge-<%= statusColors[order.status] || 'info' %>"><%= statusLabels[order.status] || order.status %></span></td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn btn-secondary btn-sm" data-action="view-order" data-order-id="<%= order.id %>">👁</button>
+                  <button class="btn btn-outline btn-sm"   data-action="edit-order"   data-order-id="<%= order.id %>">✏️</button>
+                  <button class="btn btn-primary btn-sm"   data-action="change-status" data-order-id="<%= order.id %>" data-status="<%= order.status %>">🔄</button>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        <% } %>
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- Pagination -->
-<div id="pagination" class="flex-center" style="margin-top: 24px; gap: 8px;"></div>
+<!-- Pagination SSR -->
+<% if (totalPages > 1) { %>
+<div id="pagination" class="flex-center" style="margin-top:24px;gap:8px;">
+  <% if (currentPagination.page > 1) { %>
+    <a href="/orders?page=<%= currentPagination.page - 1 %>&status=<%= currentFilters.status || '' %>&search=<%= currentFilters.search || '' %>"
+       class="btn btn-secondary btn-sm">← Précédent</a>
+  <% } %>
+  <span style="padding:8px 16px;color:var(--color-secondary);font-size:13px;">
+    Page <%= currentPagination.page %> / <%= totalPages %>
+  </span>
+  <% if (currentPagination.page < totalPages) { %>
+    <a href="/orders?page=<%= currentPagination.page + 1 %>&status=<%= currentFilters.status || '' %>&search=<%= currentFilters.search || '' %>"
+       class="btn btn-secondary btn-sm">Suivant →</a>
+  <% } %>
+</div>
+<% } %>
 
-<!-- ========================================
-     MODAL CRÉER/MODIFIER COMMANDE
-     ======================================== -->
+<!-- MODALS (CRUD via API fetch - comportement conservé) -->
 <div class="modal-overlay" id="orderModal">
-  <div class="modal" style="max-width: 700px;">
+  <div class="modal" style="max-width:700px;">
     <div class="modal-header">
       <h3 class="modal-title" id="orderModalTitle">Nouvelle commande</h3>
       <button class="modal-close">✕</button>
@@ -84,53 +144,41 @@
     <form id="orderForm">
       <div class="modal-body">
         <input type="hidden" id="orderId">
-        
-        <!-- Sélection produit -->
         <div class="form-group">
           <label class="form-label required">Produit</label>
+          <input type="text" id="productSearch" class="form-input" placeholder="Rechercher un produit (tapez pour filtrer)..." style="margin-bottom: 8px;">
           <select id="productId" class="form-select" required>
             <option value="">-- Sélectionner un produit --</option>
           </select>
           <p class="form-help" id="productInfo"></p>
         </div>
-
-        <!-- Infos client -->
-        <div style="padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm); margin-bottom: 16px;">
-          <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">👤 Informations client</h4>
-          
+        <div style="padding:16px;background:var(--color-surface);border-radius:var(--radius-sm);margin-bottom:16px;">
+          <h4 style="font-size:16px;font-weight:700;margin-bottom:12px;">👤 Informations client</h4>
           <div class="form-group">
             <label class="form-label required">Nom du client</label>
             <input type="text" id="customerName" class="form-input" placeholder="Ex: lory basor" required>
           </div>
-
           <div class="form-group">
             <label class="form-label required">Téléphone</label>
             <input type="tel" id="customerPhone" class="form-input" placeholder="+237 6XX XXX XXX" required>
           </div>
-
           <div class="form-group">
             <label class="form-label">Adresse de livraison</label>
             <textarea id="customerAddress" class="form-textarea" rows="2" placeholder="Adresse complète..."></textarea>
           </div>
         </div>
-
-        <!-- Quantité -->
         <div class="form-group">
           <label class="form-label required">Quantité</label>
           <input type="number" id="quantity" class="form-input" min="1" value="1" required>
           <p class="form-help" id="stockInfo"></p>
         </div>
-
-        <!-- Montant total (calculé) -->
-        <div id="totalAmountDisplay" style="padding: 16px; background: var(--color-accent); border-radius: var(--radius-sm); margin-bottom: 16px; display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 16px;">Montant total :</strong>
-            <strong style="font-size: 24px; color: var(--color-primary);" id="totalAmount">0 FCFA</strong>
+        <div id="totalAmountDisplay" style="padding:16px;background:var(--color-accent);border-radius:var(--radius-sm);margin-bottom:16px;display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:16px;">Montant total :</strong>
+            <strong style="font-size:24px;color:var(--color-primary);" id="totalAmount">0 FCFA</strong>
           </div>
         </div>
-
-        <!-- Statut (seulement en édition) -->
-        <div class="form-group" id="statusGroup" style="display: none;">
+        <div class="form-group" id="statusGroup" style="display:none;">
           <label class="form-label">Statut</label>
           <select id="orderStatus" class="form-select">
             <option value="nouvelle">🆕 Nouvelle</option>
@@ -141,8 +189,6 @@
             <option value="annulee">❌ Annulée</option>
           </select>
         </div>
-
-        <!-- Notes -->
         <div class="form-group">
           <label class="form-label">Notes (optionnel)</label>
           <textarea id="orderNotes" class="form-textarea" rows="3" placeholder="Informations complémentaires..."></textarea>
@@ -156,27 +202,17 @@
   </div>
 </div>
 
-<!-- ========================================
-     MODAL DÉTAILS COMMANDE
-     ======================================== -->
 <div class="modal-overlay" id="orderDetailsModal">
-  <div class="modal" style="max-width: 700px;">
+  <div class="modal" style="max-width:700px;">
     <div class="modal-header">
       <h3 class="modal-title">📋 Détails de la commande</h3>
       <button class="modal-close">✕</button>
     </div>
-    <div class="modal-body" id="orderDetailsBody">
-      <div class="loader"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary modal-close">Fermer</button>
-    </div>
+    <div class="modal-body" id="orderDetailsBody"><div class="loader"></div></div>
+    <div class="modal-footer"><button class="btn btn-secondary modal-close">Fermer</button></div>
   </div>
 </div>
 
-<!-- ========================================
-     MODAL CHANGEMENT STATUT
-     ======================================== -->
 <div class="modal-overlay" id="statusModal">
   <div class="modal">
     <div class="modal-header">
@@ -207,5 +243,9 @@
   </div>
 </div>
 
-<!-- Script dédié -->
+<!-- Inject data for JS interactivity (SSR - no fetch needed) -->
+<script>
+  window.__SSR_ORDERS__ = <%- JSON.stringify(currentOrders) %>;
+  window.__SSR_PRODUCTS__ = <%- JSON.stringify(availableProducts || []) %>;
+</script>
 <script src="/js/orders.js"></script>

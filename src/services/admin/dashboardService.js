@@ -14,56 +14,24 @@ class AdminDashboardService {
       SELECT 
         -- Utilisateurs
         (SELECT COUNT(*) FROM users WHERE role = ? AND deleted_at IS NULL) as total_vendors,
-        (SELECT COUNT(*) FROM users WHERE role = ? AND account_status = 'active' AND deleted_at IS NULL) as active_vendors,
-        (SELECT COUNT(*) FROM users WHERE role = ? AND account_status = 'suspended' AND deleted_at IS NULL) as suspended_vendors,
-        (SELECT COUNT(*) FROM users WHERE role = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL) as new_vendors_30_days,
+        (SELECT COUNT(*) FROM users WHERE role = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL) as new_vendors_this_month,
         
         -- Produits
         (SELECT COUNT(*) FROM products WHERE deleted_at IS NULL) as total_products,
-        (SELECT COUNT(*) FROM products WHERE is_available = TRUE AND deleted_at IS NULL) as available_products,
+        (SELECT COUNT(*) FROM products WHERE is_available = TRUE AND deleted_at IS NULL) as active_products,
+        (SELECT SUM(view_count) FROM products WHERE deleted_at IS NULL) as total_views,
         
         -- Commandes
         (SELECT COUNT(*) FROM orders WHERE deleted_at IS NULL) as total_orders,
-        (SELECT COUNT(*) FROM orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL) as orders_last_30_days,
+        (SELECT COUNT(*) FROM orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL) as orders_this_month,
         (SELECT SUM(total_amount) FROM orders WHERE deleted_at IS NULL) as total_revenue,
-        (SELECT SUM(total_amount) FROM orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL) as revenue_last_30_days,
-        
-        -- Clients
-        (SELECT COUNT(*) FROM customers WHERE deleted_at IS NULL) as total_customers,
-        
-        -- Abonnements
-        (SELECT COUNT(*) FROM subscriptions WHERE status = 'trial') as trial_subscriptions,
-        (SELECT COUNT(*) FROM subscriptions WHERE status = 'active') as active_subscriptions,
-        (SELECT COUNT(*) FROM subscriptions WHERE status = 'expired') as expired_subscriptions
-    `, [USER_ROLES.USER, USER_ROLES.USER, USER_ROLES.USER, USER_ROLES.USER]);
+        (SELECT SUM(total_amount) FROM orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL) as revenue_this_month
+    `, [USER_ROLES.USER, USER_ROLES.USER]);
 
     return {
-      vendors: {
-        total: stats[0].total_vendors || 0,
-        active: stats[0].active_vendors || 0,
-        suspended: stats[0].suspended_vendors || 0,
-        new_last_30_days: stats[0].new_vendors_30_days || 0
-      },
-      products: {
-        total: stats[0].total_products || 0,
-        available: stats[0].available_products || 0
-      },
-      orders: {
-        total: stats[0].total_orders || 0,
-        last_30_days: stats[0].orders_last_30_days || 0
-      },
-      revenue: {
-        total: parseFloat(stats[0].total_revenue || 0),
-        last_30_days: parseFloat(stats[0].revenue_last_30_days || 0)
-      },
-      customers: {
-        total: stats[0].total_customers || 0
-      },
-      subscriptions: {
-        trial: stats[0].trial_subscriptions || 0,
-        active: stats[0].active_subscriptions || 0,
-        expired: stats[0].expired_subscriptions || 0
-      }
+      ...stats[0],
+      total_revenue: parseFloat(stats[0].total_revenue || 0),
+      revenue_this_month: parseFloat(stats[0].revenue_this_month || 0)
     };
   }
 
@@ -259,17 +227,17 @@ class AdminDashboardService {
   async getConversionRate() {
     const [stats] = await pool.execute(`
       SELECT 
-        (SELECT COUNT(*) FROM users WHERE role = ? AND deleted_at IS NULL) as total_signups,
-        (SELECT COUNT(DISTINCT user_id) FROM subscriptions WHERE status IN ('trial', 'active')) as active_users
-    `, [USER_ROLES.USER]);
+        (SELECT COALESCE(SUM(view_count), 0) FROM products WHERE deleted_at IS NULL) as total_views,
+        (SELECT COUNT(*) FROM orders WHERE deleted_at IS NULL) as total_orders
+    `);
 
-    const totalSignups = stats[0].total_signups || 0;
-    const activeUsers = stats[0].active_users || 0;
-    const conversionRate = totalSignups > 0 ? (activeUsers / totalSignups * 100).toFixed(2) : 0;
+    const totalViews = parseInt(stats[0].total_views || 0);
+    const totalOrders = parseInt(stats[0].total_orders || 0);
+    const conversionRate = totalViews > 0 ? (totalOrders / totalViews * 100).toFixed(2) : 0;
 
     return {
-      total_signups: totalSignups,
-      active_users: activeUsers,
+      total_views: totalViews,
+      total_orders: totalOrders,
       conversion_rate: parseFloat(conversionRate)
     };
   }

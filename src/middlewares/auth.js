@@ -4,30 +4,25 @@ const { unauthorizedResponse } = require('../utils/response');
 const { pool } = require('../config/database');
 
 /**
- * Middleware d'authentification JWT
- * Vérifie le token et charge les infos utilisateur dans req.user
+ * Middleware d'authentification JWT - Cookie Only
+ * Le token est lu UNIQUEMENT depuis le cookie httpOnly `aura_token`.
+ * Plus de support pour le header Authorization Bearer (sécurité renforcée).
  */
 async function authenticate(req, res, next) {
   try {
-    // Récupérer le token depuis l'en-tête Authorization
-    const authHeader = req.headers.authorization;
-    // Récupérer le token depuis le cookie
-    const authCookie = req.cookies.aura_token;
-    
-    if(!authCookie) {
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return unauthorizedResponse(res, 'Token manquant');
-      }
-    }
+    // Lire le token depuis le cookie httpOnly uniquement
+    const token = req.cookies.aura_token;
 
-    const token = authHeader ? authHeader.substring(7): authCookie; // Enlever "Bearer "
+    if (!token) {
+      return unauthorizedResponse(res, 'Non authentifié. Veuillez vous connecter.');
+    }
 
     // Vérifier et décoder le token
     let decoded;
     try {
       decoded = verifyToken(token);
     } catch (error) {
-      return unauthorizedResponse(res, "Erreur verification token :"+error.message);
+      return unauthorizedResponse(res, 'Session invalide ou expirée. Veuillez vous reconnecter.');
     }
 
     // Vérifier que l'utilisateur existe toujours en base
@@ -42,12 +37,10 @@ async function authenticate(req, res, next) {
 
     const user = users[0];
 
-    // Vérifier que le compte est actif
     if (!user.is_active) {
       return unauthorizedResponse(res, 'Compte désactivé');
     }
 
-    // Ajouter les infos utilisateur à la requête
     req.user = {
       id: user.id,
       email: user.email,
@@ -64,18 +57,16 @@ async function authenticate(req, res, next) {
 }
 
 /**
- * Middleware optionnel : charge l'utilisateur si token présent
- * Utile pour les routes publiques qui peuvent bénéficier du contexte user
+ * Middleware optionnel : charge l'utilisateur si cookie présent
  */
 async function optionalAuth(req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return next(); // Pas de token, on continue sans user
+    const token = req.cookies.aura_token;
+
+    if (!token) {
+      return next();
     }
 
-    const token = authHeader.substring(7);
     const decoded = verifyToken(token);
 
     const [users] = await pool.execute(
@@ -95,7 +86,8 @@ async function optionalAuth(req, res, next) {
 
     next();
   } catch (error) {
-    return res.redirect('/login');
+    // Token invalide dans optionalAuth → continuer sans user
+    next();
   }
 }
 

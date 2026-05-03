@@ -43,22 +43,35 @@ function generateOrderNumber() {
 
 /**
  * Construit un message WhatsApp pour commander un produit
- * @param {object} product - Objet produit
+ * @param {object} product - Objet produit (name, price, currency)
  * @param {string} vendorPhone - Numéro WhatsApp du vendeur
+ * @param {number} quantity - Quantité commandée
+ * @param {string} customTemplate - Modèle de message personnalisé (optionnel)
  * @returns {string} URL WhatsApp avec message pré-rempli
  */
-function buildWhatsAppOrderUrl(product, vendorPhone) {
-  const message = encodeURIComponent(
-    `Bonjour 👋\n\n` +
-    `Je suis intéressé(e) par ce produit :\n` +
-    `📦 ${product.name}\n` +
-    `💰 ${product.price} ${product.currency || 'FCFA'}\n\n` +
-    `Pouvez-vous me donner plus d'informations ?`
-  );
+function buildWhatsAppOrderUrl(product, vendorPhone, quantity = 1, customTemplate = null) {
+  let messageText = '';
+
+  if (customTemplate) {
+    messageText = customTemplate
+      .replace(/{{product_name}}/g, product.name)
+      .replace(/{{product_price}}/g, product.price.toLocaleString())
+      .replace(/{{currency}}/g, product.currency || 'FCFA')
+      .replace(/{{quantity}}/g, quantity);
+  } else {
+    messageText = 
+      `Bonjour 👋\n\n` +
+      `Je suis intéressé(e) par ce produit :\n` +
+      `📦 ${product.name}\n` +
+      `💰 ${product.price.toLocaleString()} ${product.currency || 'FCFA'}\n` +
+      `🔢 Quantité : ${quantity}\n\n` +
+      `Pouvez-vous me confirmer la disponibilité ?`;
+  }
   
-  // Format: https://wa.me/237xxxxxxxx?text=message
+  const encodedMessage = encodeURIComponent(messageText);
   const cleanPhone = vendorPhone.replace(/[^\d]/g, '');
-  return `https://wa.me/${cleanPhone}?text=${message}`;
+  
+  return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
 }
 
 /**

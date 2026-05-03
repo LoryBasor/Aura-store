@@ -64,13 +64,6 @@ router.post(
   authController.changePassword
 );
 
-router.post('/logout', (req, res) => {
-  res.clearCookie('aura_token', {
-    httpOnly: true,
-    sameSite: 'strict'
-  })
-
-  return successResponse(res, null, 'déconnexion réussie ');
-});
+router.post('/logout', authController.logout);
 
 module.exports = router;

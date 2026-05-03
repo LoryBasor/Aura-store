@@ -13,11 +13,15 @@ const dbConfig = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'saas_vendor_db',
   waitForConnections: true,
-  connectionLimit: 10, // Max 10 connexions simultanées
-  queueLimit: 0, // Pas de limite sur la file d'attente
+  connectionLimit: 10,
+  queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
-  timezone: '+00:00' // UTC pour cohérence
+  timezone: '+00:00',
+  ssl: process.env.DB_CA ? {
+    ca: process.env.DB_CA.replace(/\\n/g, '\n'),
+    rejectUnauthorized: true
+  } : null
 };
 
 // Création du pool

@@ -25,18 +25,39 @@ class AuthController {
    * Connexion
    * POST /api/auth/login
    */
-  async login(req, res, next) {
+    async login(req, res, next) {
     try {
       const { email, password } = req.body;
       const result = await authService.login(email, password);
+      
+      // Le token est stocké dans un cookie httpOnly sécurisé
       res.cookie('aura_token', result.token, {
         httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 70000000
+        path: '/',
+        maxAge: 24 * 60 * 60 * 1000 // 24 heures
       });
+
+      // On ne renvoie pas le token dans le corps de la réponse pour éviter le stockage en localStorage
+      delete result.token;
+      
       return successResponse(res, result, 'Connexion réussie');
     } catch (error) {
       next(error); 
+    }
+  }
+
+  /**
+   * Déconnexion
+   * POST /api/auth/logout
+   */
+  async logout(req, res, next) {
+    try {
+      res.clearCookie('aura_token', { path: '/' });
+      return successResponse(res, null, 'Déconnexion réussie');
+    } catch (error) {
+      next(error);
     }
   }
 

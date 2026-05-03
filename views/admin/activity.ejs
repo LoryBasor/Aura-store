@@ -1,6 +1,17 @@
-<!-- ========================================
-     views/admin/activity.ejs
-     ======================================== -->
+<%# ========================================
+    views/admin/activity.ejs - WITH PLAN PRICE MANAGEMENT
+    ======================================== %>
+
+<%
+  function fmtDate(d) { if(!d) return '-'; return new Date(d).toLocaleString('fr-FR'); }
+  function fmtCurrency(n) { return (parseFloat(n)||0).toLocaleString('fr-FR') + ' FCFA'; }
+  
+  const stats = globalStats || {};
+  const vendors = recentVendors || [];
+  const orders = recentOrders || [];
+  const logs = activityLogs || [];
+  const currentPlans = plans || [];
+%>
 
 <!-- Page Header -->
 <div class="page-header">
@@ -8,192 +19,207 @@
     <h1 class="page-title">📊 Activité de la Plateforme</h1>
     <p class="page-subtitle">Monitoring global en temps réel</p>
   </div>
-  <div style="display: flex; gap: 12px;">
-    <select class="form-select" style="width: 150px;" id="periodFilter">
-      <option value="today">Aujourd'hui</option>
-      <option value="7days" selected>7 jours</option>
-      <option value="30days">30 jours</option>
-      <option value="90days">90 jours</option>
-    </select>
-    <button class="btn btn-secondary" id="refreshBtn">
-      🔄 Actualiser
-    </button>
-    <button class="btn btn-primary" id="exportBtn">
-      📊 Exporter rapport
-    </button>
+  <div class="page-header-actions">
+    <button class="btn btn-secondary" onclick="location.reload()">🔄 Actualiser</button>
   </div>
 </div>
 
-<!-- Real-time Stats -->
-<div class="stats-grid" id="realtimeStats">
+<!-- Global Stats Row -->
+<div class="stats-grid" style="margin-bottom: 24px;">
   <div class="stat-card">
-    <div class="loader"></div>
+    <div class="stat-header">
+      <span class="stat-label">Total Vendeurs</span>
+      <div class="stat-icon">👥</div>
+    </div>
+    <div class="stat-value"><%= stats.total_vendors || 0 %></div>
+    <div class="stat-change">+<%= stats.new_vendors_this_month || 0 %> ce mois</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <span class="stat-label">Total Commandes</span>
+      <div class="stat-icon">🛒</div>
+    </div>
+    <div class="stat-value"><%= stats.total_orders || 0 %></div>
+    <div class="stat-change">+<%= stats.orders_this_month || 0 %> ce mois</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <span class="stat-label">Chiffre d'Affaires</span>
+      <div class="stat-icon">💰</div>
+    </div>
+    <div class="stat-value"><%= fmtCurrency(stats.total_revenue) %></div>
+    <div class="stat-change"><%= fmtCurrency(stats.revenue_this_month) %> ce mois</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <span class="stat-label">Total Produits</span>
+      <div class="stat-icon">📦</div>
+    </div>
+    <div class="stat-value"><%= stats.total_products || 0 %></div>
+    <div class="stat-change"><%= stats.active_products || 0 %> actifs</div>
   </div>
 </div>
 
 <!-- Charts Row -->
-<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
-  <!-- Activity Chart -->
+<div class="grid-auto-fit-400">
   <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">📈 Évolution de l'activité</h3>
-      <select class="form-select" style="width: 150px;" id="chartMetric">
-        <option value="signups">Inscriptions</option>
-        <option value="orders" selected>Commandes</option>
-        <option value="revenue">Revenus</option>
-        <option value="products">Produits</option>
-      </select>
-    </div>
-    <div id="activityChart" style="height: 300px;">
-      <div class="loader"></div>
-    </div>
+    <div class="card-header"><h3 class="card-title">📈 Évolution (30 jours)</h3></div>
+    <div class="chart-container"><canvas id="evolutionChart" style="max-height: 300px;"></canvas></div>
   </div>
-
-  <!-- Quick Stats -->
   <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">⚡ Statistiques rapides</h3>
-    </div>
-    <div id="quickStats">
-      <div class="loader"></div>
-    </div>
+    <div class="card-header"><h3 class="card-title">💰 Revenus (30 jours)</h3></div>
+    <div class="chart-container"><canvas id="revenueChart" style="max-height: 300px;"></canvas></div>
   </div>
 </div>
 
-<!-- Activity Feed -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-  <!-- Recent Signups -->
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">🆕 Nouvelles inscriptions</h3>
-      <span class="badge badge-success" id="signupsCount">0</span>
-    </div>
-    <div id="recentSignups">
-      <div class="loader"></div>
-    </div>
-  </div>
-
-  <!-- Recent Orders -->
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">🛒 Dernières commandes</h3>
-      <span class="badge badge-info" id="ordersCount">0</span>
-    </div>
-    <div id="recentOrders">
-      <div class="loader"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Platform Health -->
-<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 24px;">
-  <!-- Active Vendors -->
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">👥 Vendeurs actifs</h3>
-    </div>
-    <div id="activeVendors">
-      <div class="loader"></div>
-    </div>
-  </div>
-
-  <!-- System Status -->
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">🔧 État du système</h3>
-    </div>
-    <div id="systemStatus">
-      <div class="loader"></div>
-    </div>
-  </div>
-
-  <!-- Alerts -->
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">⚠️ Alertes</h3>
-    </div>
-    <div id="alertsPanel">
-      <div class="loader"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Detailed Tables -->
-<div class="card">
+<!-- Plan Pricing Section -->
+<div class="card" style="margin-bottom: 24px; border-left: 5px solid var(--color-primary);">
   <div class="card-header">
-    <h3 class="card-title">📋 Détails de l'activité</h3>
-    <div style="display: flex; gap: 12px;">
-      <button class="btn btn-sm btn-secondary" data-tab="vendors">Vendeurs</button>
-      <button class="btn btn-sm btn-secondary" data-tab="products">Produits</button>
-      <button class="btn btn-sm btn-secondary" data-tab="orders">Commandes</button>
-      <button class="btn btn-sm btn-secondary" data-tab="subscriptions">Abonnements</button>
+    <h3 class="card-title">🏷️ Gestion des Tarifs d'Abonnement</h3>
+  </div>
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr><th>Plan</th><th>Cycle</th><th>Prix Actuel</th><th>Statut</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <% currentPlans.forEach(plan => { %>
+          <tr>
+            <td><strong><%= plan.name %></strong></td>
+            <td><%= plan.billing_cycle %></td>
+            <td><strong style="color:var(--color-primary);"><%= fmtCurrency(plan.price) %></strong></td>
+            <td><span class="badge <%= plan.is_active ? 'badge-success' : 'badge-danger' %>"><%= plan.is_active ? 'Actif' : 'Inactif' %></span></td>
+            <td>
+              <button class="btn btn-sm btn-primary" onclick="openEditPrice('<%= plan.id %>', '<%= plan.name %>', '<%= plan.price %>')">
+                ✏️ Modifier Prix
+              </button>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Activity Lists -->
+<div class="grid-2col">
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">🆕 Nouvelles inscriptions</h3></div>
+    <div class="table-container">
+      <table class="table">
+        <thead><tr><th>Vendeur</th><th>Date</th><th>Statut</th></tr></thead>
+        <tbody>
+          <% if (vendors.length === 0) { %>
+            <tr><td colspan="3" style="text-align:center; padding:20px;">Aucune inscription récente</td></tr>
+          <% } else { %>
+            <% vendors.forEach(v => { %>
+              <tr>
+                <td><strong><%= v.business_name %></strong><br><small><%= v.email %></small></td>
+                <td><%= fmtDate(v.created_at) %></td>
+                <td><span class="badge badge-info"><%= v.account_status %></span></td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
     </div>
   </div>
-  <div id="activityDetails">
-    <div style="padding: 48px; text-align: center; color: var(--color-secondary);">
-      Sélectionnez un onglet pour voir les détails
+
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">🛒 Dernières commandes</h3></div>
+    <div class="table-container">
+      <table class="table">
+        <thead><tr><th>N°</th><th>Vendeur</th><th>Montant</th><th>Statut</th></tr></thead>
+        <tbody>
+          <% if (orders.length === 0) { %>
+            <tr><td colspan="4" style="text-align:center; padding:20px;">Aucune commande récente</td></tr>
+          <% } else { %>
+            <% orders.forEach(o => { %>
+              <tr>
+                <td><strong>#<%= o.order_number %></strong></td>
+                <td><%= o.vendor_name %></td>
+                <td><%= fmtCurrency(o.total_amount) %></td>
+                <td><span class="badge badge-success"><%= o.status %></span></td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<!-- Modal Export -->
-<div class="modal-overlay" id="exportModal">
+<!-- Admin Audit Logs -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header"><h3 class="card-title">📜 Journal d'audit Admin</h3></div>
+  <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+    <table class="table">
+      <thead style="position:sticky; top:0; z-index:10; background:var(--color-surface);">
+        <tr><th>Action</th><th>Entité</th><th>Admin</th><th>Date</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <% if (logs.length === 0) { %>
+          <tr><td colspan="5" style="text-align:center; padding:20px;">Aucun log d'audit trouvé</td></tr>
+        <% } else { %>
+          <% logs.forEach(log => { %>
+            <tr>
+              <td><span class="badge badge-info"><%= log.action %></span></td>
+              <td><%= log.entity_type %> (#<%= log.entity_id %>)</td>
+              <td><%= log.admin_name %><br><small><%= log.admin_email %></small></td>
+              <td><%= fmtDate(log.created_at) %></td>
+              <td><small><%= log.notes || '-' %></small></td>
+            </tr>
+          <% }); %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Edit Price -->
+<div class="modal-overlay" id="editPriceModal">
   <div class="modal">
     <div class="modal-header">
-      <h3 class="modal-title">📊 Exporter le rapport</h3>
+      <h3 class="modal-title">💰 Modifier le prix</h3>
       <button class="modal-close">✕</button>
     </div>
-    <form id="exportForm">
+    <form id="editPriceForm">
       <div class="modal-body">
+        <input type="hidden" id="editPlanId">
+        <p id="editPlanName" style="font-weight:700; margin-bottom:16px;"></p>
         <div class="form-group">
-          <label class="form-label">Format</label>
-          <select id="exportFormat" class="form-select">
-            <option value="csv">CSV</option>
-            <option value="json">JSON</option>
-            <option value="pdf">PDF (Bientôt)</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Période</label>
-          <select id="exportPeriod" class="form-select">
-            <option value="today">Aujourd'hui</option>
-            <option value="7days">7 derniers jours</option>
-            <option value="30days">30 derniers jours</option>
-            <option value="90days">90 derniers jours</option>
-            <option value="all">Toutes les données</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Inclure</label>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label style="display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="includeVendors" checked>
-              Vendeurs
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="includeOrders" checked>
-              Commandes
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="includeProducts">
-              Produits
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="includeSubscriptions">
-              Abonnements
-            </label>
-          </div>
+          <label class="form-label">Nouveau prix (FCFA)</label>
+          <input type="number" id="newPlanPrice" class="form-select" required min="0">
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary modal-close">Annuler</button>
-        <button type="submit" class="btn btn-primary">Générer le rapport</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Script dédié -->
+<style>
+  .table { width: 100%; border-collapse: collapse; }
+  .table th, .table td { padding: 12px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--color-border); }
+  .table th { font-weight: 700; color: var(--color-secondary); text-transform: uppercase; font-size: 11px; }
+  .table-container { background: white; border-radius: var(--radius-md); overflow: hidden; }
+  .badge-danger { background: rgba(244, 67, 54, 0.1); color: #f44336; }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  window.__ACTIVITY_TRENDS__ = <%- JSON.stringify(trends) %>;
+  
+  function openEditPrice(id, name, price) {
+    document.getElementById('editPlanId').value = id;
+    document.getElementById('editPlanName').textContent = 'Plan: ' + name;
+    document.getElementById('newPlanPrice').value = price;
+    document.getElementById('editPriceModal').classList.add('active');
+  }
+</script>
 <script src="/js/admin/activity.js"></script>

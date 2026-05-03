@@ -35,11 +35,17 @@ class StoreCustomizationService {
         primary_color,
         secondary_color,
         text_color,
+        title_color,
+        description_color,
+        background_color,
+        font_family,
+        product_layout,
+        button_style,
         order_message,
         show_product_count,
         show_social_links,
         show_contact_info
-      ) VALUES (?, '#4F46E5', '#10B981', '#1F2937', 
+      ) VALUES (?, '#4F46E5', '#10B981', '#1F2937', '#1F2937', '#4B5563', '#F3F4F6', 'Inter', 'grid', 'solid',
         'Merci pour votre commande ! Nous vous contacterons bientôt.',
         TRUE, TRUE, TRUE)`,
       [userId]
@@ -53,9 +59,18 @@ class StoreCustomizationService {
    */
   async updateCustomization(userId, updates) {
     const allowedFields = [
+      'store_title',
+      'store_description',
       'primary_color',
       'secondary_color',
       'text_color',
+      'title_color',
+      'description_color',
+      'background_color',
+      'font_family',
+      'product_layout',
+      'button_style',
+      'footer_text',
       'logo_url',
       'logo_public_id',
       'banner_url',
@@ -210,9 +225,18 @@ class StoreCustomizationService {
 
     // Les URLs Cloudinary sont déjà complètes
     return {
+      store_title: config.store_title,
+      store_description: config.store_description,
       primary_color: config.primary_color,
       secondary_color: config.secondary_color,
       text_color: config.text_color,
+      title_color: config.title_color,
+      description_color: config.description_color,
+      background_color: config.background_color,
+      font_family: config.font_family,
+      product_layout: config.product_layout,
+      button_style: config.button_style,
+      footer_text: config.footer_text,
       logo_url: config.logo_url,
       banner_url: config.banner_url,
       order_message: config.order_message,
@@ -247,9 +271,18 @@ class StoreCustomizationService {
 
     await pool.execute(
       `UPDATE store_customization SET
+        store_title = NULL,
+        store_description = NULL,
         primary_color = '#4F46E5',
         secondary_color = '#10B981',
         text_color = '#1F2937',
+        title_color = '#1F2937',
+        description_color = '#4B5563',
+        background_color = '#F3F4F6',
+        font_family = 'Inter',
+        product_layout = 'grid',
+        button_style = 'solid',
+        footer_text = NULL,
         logo_url = NULL,
         logo_public_id = NULL,
         banner_url = NULL,

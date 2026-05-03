@@ -1,6 +1,6 @@
 // src/services/orderService.js
 const { pool } = require('../config/database');
-const { generateOrderNumber, calculateOffset } = require('../utils/helpers');
+const { generateOrderNumber, calculateOffset, buildWhatsAppOrderUrl } = require('../utils/helpers');
 const { AppError } = require('../middlewares/errorHandler');
 const { ORDER_STATUS } = require('../config/constants');
 
@@ -25,6 +25,27 @@ class OrderService {
     }
 
     const product = products[0];
+
+    // --- VÉRIFICATION LIMITES PLAN GRATUIT ---
+    const [planInfo] = await pool.execute(`
+      SELECT COALESCE(LOWER(sp.name), 'free') as plan_slug
+      FROM users u
+      LEFT JOIN subscriptions s ON u.id = s.user_id AND (s.status = 'active' OR s.status = 'trial')
+      LEFT JOIN subscription_plans sp ON s.plan_id = sp.id
+      WHERE u.id = ?
+    `, [product.user_id]);
+    
+    const planSlug = planInfo.length > 0 ? planInfo[0].plan_slug : 'free';
+    if (planSlug === 'free' || planSlug === 'gratuit') {
+      // Compter les commandes de la semaine dernière
+      const [orderCount] = await pool.execute(
+        'SELECT COUNT(*) as count FROM orders WHERE user_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)',
+        [product.user_id]
+      );
+      if (orderCount[0].count >= 20) {
+        throw new AppError('Ce vendeur a atteint sa limite de commandes hebdomadaires (Plan Gratuit).', 403);
+      }
+    }
 
     if (!product.is_available) {
       throw new AppError('Produit indisponible', 400);
@@ -96,7 +117,39 @@ class OrderService {
       );
     }
 
-    return this.getOrderById(result.insertId, product.user_id);
+    // --- LOGIQUE REDIRECTION WHATSAPP ---
+    // 1. Récupérer les intégrations du vendeur
+    const [integrations] = await pool.execute(
+      'SELECT whatsapp_number, whatsapp_enabled, custom_order_message FROM social_integrations WHERE user_id = ?',
+      [product.user_id]
+    );
+
+    // 2. Vérifier si le vendeur a le plan Business
+    const [planAccess] = await pool.execute(
+      `SELECT plan_name FROM v_user_plan_access 
+       WHERE user_id = ? AND plan_name = 'Business' 
+       AND (subscription_status = 'active' OR subscription_status = 'trial')`,
+      [product.user_id]
+    );
+
+    let whatsappUrl = null;
+    if (integrations.length > 0) {
+      const config = integrations[0];
+      if (config.whatsapp_enabled && config.whatsapp_number) {
+        const isBusiness = planAccess.length > 0;
+        const template = isBusiness ? config.custom_order_message : null;
+        
+        whatsappUrl = buildWhatsAppOrderUrl(
+          product, 
+          config.whatsapp_number, 
+          quantity, 
+          template
+        );
+      }
+    }
+
+    const order = await this.getOrderById(result.insertId, product.user_id);
+    return { ...order, whatsapp_url: whatsappUrl };
   }
 
   /**

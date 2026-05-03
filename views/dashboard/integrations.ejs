@@ -46,7 +46,7 @@
           </label>
         </div>
 
-        <div style="display: flex; gap: 12px;">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
           <button type="submit" class="btn btn-primary">
             💾 Enregistrer
           </button>
@@ -172,5 +172,8 @@
 
 </div>
 
-<!-- Scripts -->
+<!-- Inject data for JS -->
+<script>
+  window.__SSR_INTEGRATIONS__ = <%- JSON.stringify(integrations || {}) %>;
+</script>
 <script src="/js/integrations.js"></script>

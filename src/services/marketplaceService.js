@@ -352,6 +352,116 @@ class MarketplaceService {
 
     return countries;
   }
+
+  /**
+   * Récupère les données publiques d'une boutique
+   */
+  async getStorePublicData(storeSlug, filters = {}) {
+    // 1. Récupérer les infos du vendeur
+    const [users] = await pool.execute(`
+      SELECT id, business_name, store_slug, city, country, is_verified, 
+             whatsapp_number, phone, email, created_at
+      FROM users 
+      WHERE store_slug = ? AND is_active = 1 AND deleted_at IS NULL
+    `, [storeSlug]);
+
+    if (users.length === 0) {
+      throw new AppError('Boutique introuvable', 404);
+    }
+
+    const store = users[0];
+
+    // 2. Récupérer la personnalisation
+    const [configs] = await pool.execute(
+      'SELECT * FROM store_customization WHERE user_id = ?',
+      [store.id]
+    );
+    const customization = configs.length > 0 ? configs[0] : null;
+
+    // 2.5 Vérifier le plan pour les limitations
+    const [planCheck] = await pool.execute(`
+      SELECT COALESCE(LOWER(sp.name), 'free') as plan_slug
+      FROM users u
+      LEFT JOIN subscriptions s ON u.id = s.user_id AND (s.status = 'active' OR s.status = 'trial')
+      LEFT JOIN subscription_plans sp ON s.plan_id = sp.id
+      WHERE u.id = ?
+    `, [store.id]);
+    const planSlug = planCheck.length > 0 ? planCheck[0].plan_slug : 'free';
+    const isFree = planSlug === 'free' || planSlug === 'gratuit';
+
+    // 3. Récupérer les produits paginés
+    let limit = parseInt(filters.limit ?? 20, 10) || 20;
+    let page = parseInt(filters.page ?? 1, 10) || 1;
+    let offset = (page - 1) * limit;
+
+    // Limitation Plan Gratuit : 5 produits max (les plus récents)
+    if (isFree) {
+      limit = 5;
+      offset = 0;
+      page = 1;
+    }
+
+    let productWhere = 'p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL';
+    let productParams = [store.id];
+
+    // Les filtres (catégorie, recherche) ne fonctionnent pas pour le plan Gratuit
+    if (!isFree) {
+      if (filters.category && filters.category !== 'all') {
+        productWhere += ' AND c.slug = ?';
+        productParams.push(filters.category);
+      }
+
+      if (filters.search) {
+        productWhere += ' AND (p.name LIKE ? OR p.description LIKE ?)';
+        productParams.push(`%${filters.search}%`, `%${filters.search}%`);
+      }
+    }
+
+    const [products] = await pool.execute(`
+      SELECT p.*, c.name as category_name, c.slug as category_slug,
+             pl.token as share_token
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN product_links pl ON p.id = pl.product_id
+      WHERE ${productWhere}
+      ORDER BY p.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `, productParams);
+
+    // Formater les images
+    products.forEach(p => p.image_url = getImageUrl(p.image_url));
+
+    // Compter le total
+    const [countResult] = await pool.execute(`
+      SELECT COUNT(*) as total
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE ${productWhere}
+    `, productParams);
+
+    // 4. Récupérer les catégories de cette boutique
+    const [storeCategories] = await pool.execute(`
+      SELECT DISTINCT c.name, c.slug, COUNT(p.id) as product_count
+      FROM categories c
+      JOIN products p ON c.id = p.category_id
+      WHERE p.user_id = ? AND p.is_available = 1 AND p.deleted_at IS NULL
+      GROUP BY c.id
+      ORDER BY c.name ASC
+    `, [store.id]);
+
+    return {
+      store,
+      customization,
+      products,
+      categories: storeCategories,
+      pagination: {
+        page,
+        limit,
+        total: countResult[0].total,
+        totalPages: Math.ceil(countResult[0].total / limit)
+      }
+    };
+  }
 }
 
 module.exports = new MarketplaceService();

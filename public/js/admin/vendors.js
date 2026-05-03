@@ -1,502 +1,165 @@
 /**
  * public/js/admin/vendors.js
- * ========================================
- * GESTION DES VENDEURS - SUPER ADMIN
- * ========================================
+ * Gestion des interactions de la page vendeurs admin
  */
 
-const AdminVendors = {
-  currentPage: 1,
-  currentStatus: null,
-  currentSearch: '',
+document.addEventListener('DOMContentLoaded', () => {
+  const vendorActionsModal = document.getElementById('vendorActionsModal');
+  const suspendModal = document.getElementById('suspendModal');
+  const resetPasswordModal = document.getElementById('resetPasswordModal');
+  const verifyModal = document.getElementById('verifyModal');
 
-  init() {
-    this.attachEventListeners();
-    this.loadVendors();
-  },
+  // Fermeture des modals
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+    });
+  });
 
-  attachEventListeners() {
-    // Recherche
-    const searchBtn = document.getElementById('searchBtn');
-    const searchInput = document.getElementById('searchInput');
-    
-    if (searchBtn) {
-      searchBtn.addEventListener('click', () => {
-        this.currentSearch = searchInput.value.trim();
-        this.currentPage = 1;
-        this.loadVendors();
-      });
-    }
+  // Action: Toggle Vérification direct depuis le tableau
+  document.querySelectorAll('[data-action="toggle-verify"]').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const vendorId = this.dataset.vendorId;
+      const isCurrentlyVerified = this.dataset.current === 'true';
+      const endpoint = isCurrentlyVerified ? 'unverify' : 'verify';
+      const actionLabel = isCurrentlyVerified ? 'retirer la vérification' : 'vérifier';
 
-    if (searchInput) {
-      searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          this.currentSearch = searchInput.value.trim();
-          this.currentPage = 1;
-          this.loadVendors();
+      if (!confirm(`Voulez-vous vraiment ${actionLabel} ce vendeur ?`)) return;
+
+      UI.showLoader();
+      try {
+        const resp = await fetch(`/api/admin/vendors/${vendorId}/${endpoint}`, { method: 'POST' });
+        if (resp.ok) {
+          UI.showNotification('Succès', 'Statut mis à jour.', 'success');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          const data = await resp.json();
+          UI.showNotification('Erreur', data.message || 'Échec de l\'opération', 'error');
         }
-      });
-    }
-
-    // Filtre statut
-    const statusFilter = document.getElementById('statusFilter');
-    if (statusFilter) {
-      statusFilter.addEventListener('change', (e) => {
-        this.currentStatus = e.target.value || null;
-        this.currentPage = 1;
-        this.loadVendors();
-      });
-    }
-
-    // Export
-    const exportBtn = document.getElementById('exportBtn');
-    if (exportBtn) {
-      exportBtn.addEventListener('click', () => this.exportVendors());
-    }
-
-    // Form suspension
-    const suspendForm = document.getElementById('suspendForm');
-    if (suspendForm) {
-      suspendForm.addEventListener('submit', (e) => this.handleSuspend(e));
-    }
-
-    // Reset password
-    const confirmResetBtn = document.getElementById('confirmResetPasswordBtn');
-    if (confirmResetBtn) {
-      confirmResetBtn.addEventListener('click', () => this.handleResetPassword());
-    }
-
-    const copyPasswordBtn = document.getElementById('copyPasswordBtn');
-    if (copyPasswordBtn) {
-      copyPasswordBtn.addEventListener('click', () => this.copyTemporaryPassword());
-    }
-  },
-
-  async loadVendors(page = 1) {
-    this.currentPage = page;
-    
-    try {
-      let url = `/admin/vendors`;
-      // if (this.currentStatus) url += `&status=${this.currentStatus}`;
-      // if (this.currentSearch) url += `&search=${encodeURIComponent(this.currentSearch)}`;
-
-      const data = await API.get(url, true);
-      
-      if (data && data.data) {
-        this.renderVendorsTable(data.data.vendors);
-        // this.renderPagination(data.data.pagination);
+      } catch (e) {
+        UI.showNotification('Erreur', 'Erreur réseau', 'error');
+      } finally {
+        UI.hideLoader();
       }
-    } catch (error) {
-      console.error('Erreur chargement vendeurs:', error);
-      UI.showNotification('Erreur', 'Impossible de charger les vendeurs', 'error');
-    }
-  },
+    });
+  });
 
-  renderVendorsTable(vendors) {
-    const tbody = document.getElementById('vendorsTableBody');
-    if (!tbody) return;
+  // Action: Ouvrir le menu d'actions (⚙️)
+  document.querySelectorAll('[data-action="vendor-actions"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const vendorId = this.dataset.vendorId;
+      const vendor = window.__SSR_VENDORS__.find(v => v.id == vendorId);
+      if (!vendor) return;
 
-    if (!vendors || vendors.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="9" style="text-align: center; padding: 48px;">
-            <div class="empty-state-text">Aucun vendeur trouvé</div>
-          </td>
-        </tr>
+      const body = document.getElementById('vendorActionsBody');
+      body.innerHTML = `
+        <div style="display:grid; gap:12px;">
+          <button class="btn btn-secondary w-100" onclick="window.location.href='/admin/vendors/${vendorId}'">👁️ Voir les détails</button>
+          
+          ${vendor.account_status === 'active' 
+            ? `<button class="btn btn-warning w-100" onclick="AdminVendors.openSuspendModal(${vendorId})">⛔ Suspendre le compte</button>`
+            : `<button class="btn btn-success w-100" onclick="AdminVendors.activateVendor(${vendorId})">✅ Réactiver le compte</button>`
+          }
+          
+          <button class="btn btn-primary w-100" onclick="AdminVendors.openResetPasswordModal(${vendorId})">🔑 Réinitialiser le mot de passe</button>
+        </div>
       `;
-      return;
-    }
-
-    const statusColors = {
-      'active': 'success',
-      'suspended': 'error',
-      'deactivated': 'neutral'
-    };
-
-    const statusLabels = {
-      'active': 'Actif',
-      'suspended': 'Suspendu',
-      'deactivated': 'Désactivé'
-    };
-
-    tbody.innerHTML = vendors.map(vendor => `
-      <tr>
-        <td>
-          <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 4px;">
-            ${vendor.business_name}
-          </div>
-          <div style="font-size: 13px; color: var(--color-secondary);">
-            ${vendor.store_slug}
-          </div>
-        </td>
-        <td>
-          <div style="margin-bottom: 4px;">${vendor.email}</div>
-          ${vendor.phone ? `<div style="font-size: 13px; color: var(--color-secondary);">${vendor.phone}</div>` : ''}
-        </td>
-        <td>
-          ${vendor.plan_name ? 
-            `<span class="badge badge-info">${vendor.plan_name}</span>` :
-            `<span class="badge badge-neutral">Aucun</span>`
-          }
-        </td>
-        <td style="text-align: center;">${vendor.products_count || 0}</td>
-        <td style="text-align: center;">${vendor.orders_count || 0}</td>
-        <td style="font-weight: 600;">${UI.formatCurrency(vendor.total_revenue || 0)}</td>
-        <td style="text-align: center;">
-          ${vendor.is_verified ? 
-            `<span class="badge badge-success">✓ Vérifié</span>` :
-            `<span class="badge badge-neutral">Non vérifié</span>`
-          }
-        </td>
-        <td>
-          <span class="badge badge-${vendor.account_status === 'active' ? 'success' : vendor.account_status === 'suspended' ? 'error' : 'neutral'}">
-            ${vendor.account_status === 'active' ? 'Actif' : vendor.account_status === 'suspended' ? 'Suspendu' : 'Désactivé'}
-          </span>
-        </td>
-        <td style="font-size: 13px; color: var(--color-secondary);">
-          ${UI.formatRelativeDate(vendor.created_at)}
-        </td>
-        <td>
-          <div class="table-actions">
-            <button class="table-action-btn" data-action="view-vendor" data-vendor-id="${vendor.id}" title="Voir détails">
-              👁️
-            </button>
-            <button class="table-action-btn" data-action="vendor-actions" data-vendor-id="${vendor.id}" title="Actions">
-              ⚙️
-            </button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
-
-    // Attacher les événements après le rendu
-    this.attachTableActions();
-  },
-
-  attachTableActions() {
-    // Voir détails
-    document.querySelectorAll('[data-action="view-vendor"]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const vendorId = e.target.closest('[data-vendor-id]').dataset.vendorId;
-        window.location.href = `/admin/vendors/${vendorId}`;
-      });
+      vendorActionsModal.classList.add('active');
     });
+  });
 
-    // Actions
-    document.querySelectorAll('[data-action="vendor-actions"]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const vendorId = e.target.closest('[data-vendor-id]').dataset.vendorId;
-        this.openVendorActions(vendorId);
-      });
-    });
-  },
+  // Global actions object
+  window.AdminVendors = {
+    // SUSPENSION
+    openSuspendModal(userId) {
+      document.getElementById('suspendUserId').value = userId;
+      vendorActionsModal.classList.remove('active');
+      suspendModal.classList.add('active');
+    },
 
-  renderPagination(pagination) {
-    const container = document.getElementById('pagination');
-    if (!container) return;
-
-    const { page, limit, total } = pagination;
-    const totalPages = Math.ceil(total / limit);
-
-    if (totalPages <= 1) {
-      container.innerHTML = '';
-      return;
-    }
-
-    let html = '';
-
-    if (page > 1) {
-      html += `<button class="btn btn-secondary btn-sm" id="prevPage">← Précédent</button>`;
-    }
-
-    html += `<span style="padding: 8px 16px; color: var(--color-secondary);">Page ${page} sur ${totalPages} (${total} vendeurs)</span>`;
-
-    if (page < totalPages) {
-      html += `<button class="btn btn-secondary btn-sm" id="nextPage">Suivant →</button>`;
-    }
-
-    container.innerHTML = html;
-
-    // Attacher événements pagination
-    const prevBtn = document.getElementById('prevPage');
-    const nextBtn = document.getElementById('nextPage');
-
-    if (prevBtn) {
-      prevBtn.addEventListener('click', () => this.loadVendors(this.currentPage - 1));
-    }
-
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => this.loadVendors(this.currentPage + 1));
-    }
-  },
-
-  async openVendorActions(id) {
-    try {
-      const data = await API.get(`/admin/vendors/${id}`, true);
-
-      if (data && data.data) {
-        const vendor = data.data.user;
-        const body = document.getElementById('vendorActionsBody');
-
-        const isSuspended = vendor.account_status === 'suspended';
-        const isDeactivated = vendor.account_status === 'deactivated';
-
-        body.innerHTML = `
-          <div style="margin-bottom: 24px; padding: 16px; background: var(--color-surface); border-radius: var(--radius-sm);">
-            <h4 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">${vendor.business_name}</h4>
-            <p style="color: var(--color-secondary); margin-bottom: 4px;">${vendor.email}</p>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-              <span class="badge badge-${vendor.account_status === 'active' ? 'success' : 'error'}">
-                ${vendor.account_status}
-              </span>
-              ${vendor.is_verified ? 
-                `<span class="badge badge-success">✓ Vérifié</span>` :
-                `<span class="badge badge-neutral">Non vérifié</span>`
-              }
-            </div>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            ${vendor.is_verified ? 
-              `<button class="btn btn-secondary w-full" data-action="unverify-vendor" data-vendor-id="${id}">
-                ✗ Retirer la vérification
-              </button>` :
-              `<button class="btn btn-success w-full" data-action="verify-vendor" data-vendor-id="${id}">
-                ✓ Marquer comme vérifié
-              </button>`
-            }
-            
-            ${!isSuspended && !isDeactivated ? 
-              `<button class="btn btn-danger w-full" data-action="suspend-vendor" data-vendor-id="${id}">
-                ⛔ Suspendre le vendeur
-              </button>` : ''
-            }
-            
-            ${isSuspended ? 
-              `<button class="btn btn-success w-full" data-action="activate-vendor" data-vendor-id="${id}">
-                ✅ Réactiver le vendeur
-              </button>` : ''
-            }
-
-            ${!isDeactivated ? 
-              `<button class="btn btn-warning w-full" data-action="deactivate-vendor" data-vendor-id="${id}">
-                🚫 Désactiver définitivement
-              </button>` : ''
-            }
-            
-            <button class="btn btn-secondary w-full" data-action="reset-password" data-vendor-id="${id}">
-              🔑 Réinitialiser mot de passe
-            </button>
-            
-            <button class="btn btn-outline w-full" data-action="view-vendor-details" data-vendor-id="${id}">
-              👁️ Voir tous les détails
-            </button>
-          </div>
-        `;
-
-        // Attacher événements actions
-        this.attachActionButtons(id);
-
-        ModalManager.openModal('vendorActionsModal');
+    async activateVendor(userId) {
+      if (!confirm('Voulez-vous vraiment réactiver ce vendeur ?')) return;
+      UI.showLoader();
+      try {
+        const resp = await fetch(`/api/admin/vendors/${userId}/activate`, { method: 'POST' });
+        const data = await resp.json();
+        if (resp.ok) {
+          UI.showNotification('Succès', 'Le vendeur a été réactivé.', 'success');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          UI.showNotification('Erreur', data.message || 'Échec de la réactivation', 'error');
+        }
+      } catch (e) {
+        UI.showNotification('Erreur', 'Erreur réseau', 'error');
+      } finally {
+        UI.hideLoader();
       }
-    } catch (error) {
-      console.error('Erreur chargement vendeur:', error);
-      UI.showNotification('Erreur', 'Impossible de charger les détails', 'error');
+    },
+
+    // PASSWORD RESET
+    openResetPasswordModal(userId) {
+      document.getElementById('resetPasswordUserId').value = userId;
+      document.getElementById('temporaryPasswordDisplay').style.display = 'none';
+      vendorActionsModal.classList.remove('active');
+      resetPasswordModal.classList.add('active');
     }
-  },
+  };
 
-  attachActionButtons(vendorId) {
-    // Vérifier
-    const verifyBtn = document.querySelector('[data-action="verify-vendor"]');
-    if (verifyBtn) {
-      verifyBtn.addEventListener('click', () => this.openVerifyModal(vendorId, true));
-    }
-
-    // Retirer vérification
-    const unverifyBtn = document.querySelector('[data-action="unverify-vendor"]');
-    if (unverifyBtn) {
-      unverifyBtn.addEventListener('click', () => this.openVerifyModal(vendorId, false));
-    }
-
-    // Suspendre
-    const suspendBtn = document.querySelector('[data-action="suspend-vendor"]');
-    if (suspendBtn) {
-      suspendBtn.addEventListener('click', () => this.openSuspendModal(vendorId));
-    }
-
-    // Activer
-    const activateBtn = document.querySelector('[data-action="activate-vendor"]');
-    if (activateBtn) {
-      activateBtn.addEventListener('click', () => this.activateVendor(vendorId));
-    }
-
-    // Désactiver
-    const deactivateBtn = document.querySelector('[data-action="deactivate-vendor"]');
-    if (deactivateBtn) {
-      deactivateBtn.addEventListener('click', () => this.deactivateVendor(vendorId));
-    }
-
-    // Reset password
-    const resetBtn = document.querySelector('[data-action="reset-password"]');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => this.openResetPasswordModal(vendorId));
-    }
-
-    // Voir détails
-    const viewBtn = document.querySelector('[data-action="view-vendor-details"]');
-    if (viewBtn) {
-      viewBtn.addEventListener('click', () => {
-        window.location.href = `/admin/vendors/${vendorId}`;
-      });
-    }
-  },
-
-  openVerifyModal(userId, isVerifying) {
-    document.getElementById('verifyUserId').value = userId;
-    const title = document.getElementById('verifyModalTitle');
-    const message = document.getElementById('verifyModalMessage');
-    const btn = document.getElementById('confirmVerifyBtn');
-    
-    if (isVerifying) {
-      title.textContent = '✓ Marquer comme vérifié';
-      message.textContent = 'Êtes-vous sûr de vouloir marquer ce vendeur comme vérifié ?';
-      btn.textContent = 'Marquer comme vérifié';
-      btn.dataset.action = 'verify';
-    } else {
-      title.textContent = '✗ Retirer la vérification';
-      message.textContent = 'Êtes-vous sûr de vouloir retirer la vérification de ce vendeur ?';
-      btn.textContent = 'Retirer la vérification';
-      btn.dataset.action = 'unverify';
-    }
-
-    // Attacher événement
-    btn.onclick = () => this.handleVerifyChange(userId, isVerifying);
-    
-    ModalManager.closeModal('vendorActionsModal');
-    ModalManager.openModal('verifyModal');
-  },
-
-  async handleVerifyChange(userId, isVerifying) {
-    try {
-      const endpoint = isVerifying ? `/admin/vendors/${userId}/verify` : `/admin/vendors/${userId}/unverify`;
-      await API.post(endpoint, {}, true);
-      
-      const message = isVerifying ? 'Vendeur marqué comme vérifié' : 'Vérification retirée';
-      UI.showNotification('Succès', message, 'success');
-      
-      ModalManager.closeModal('verifyModal');
-      this.loadVendors(this.currentPage);
-    } catch (error) {
-      console.error('Erreur vérification:', error);
-      UI.showNotification('Erreur', error.message || 'Impossible de mettre à jour la vérification', 'error');
-    }
-  },
-
-  openSuspendModal(userId) {
-    document.getElementById('suspendUserId').value = userId;
-    document.getElementById('suspendReason').value = '';
-    ModalManager.closeModal('vendorActionsModal');
-    ModalManager.openModal('suspendModal');
-  },
-
-  async handleSuspend(e) {
+  // Form: Suspend
+  document.getElementById('suspendForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const userId = document.getElementById('suspendUserId').value;
-    const reason = document.getElementById('suspendReason').value.trim();
+    const reason = document.getElementById('suspendReason').value;
 
-    if (!reason) {
-      UI.showNotification('Erreur', 'Veuillez préciser une raison', 'error');
-      return;
-    }
-
+    UI.showLoader();
     try {
-      await API.post(`/admin/vendors/${userId}/suspend`, { reason }, true);
-      UI.showNotification('Succès', 'Vendeur suspendu', 'success');
-      ModalManager.closeModal('suspendModal');
-      this.loadVendors(this.currentPage);
-    } catch (error) {
-      console.error('Erreur suspension:', error);
-    }
-  },
-
-  async activateVendor(id) {
-    const confirmed = await UI.confirm(
-      'Réactiver le vendeur',
-      'Êtes-vous sûr de vouloir réactiver ce vendeur ?'
-    );
-
-    if (confirmed) {
-      try {
-        await API.post(`/admin/vendors/${id}/activate`, {}, true);
-        UI.showNotification('Succès', 'Vendeur réactivé', 'success');
-        ModalManager.closeModal('vendorActionsModal');
-        this.loadVendors(this.currentPage);
-      } catch (error) {
-        console.error('Erreur réactivation:', error);
+      const resp = await fetch(`/api/admin/vendors/${userId}/suspend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        UI.showNotification('Succès', 'Vendeur suspendu.', 'success');
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        UI.showNotification('Erreur', data.message, 'error');
       }
+    } catch (e) {
+      UI.showNotification('Erreur', 'Erreur réseau', 'error');
+    } finally {
+      UI.hideLoader();
     }
-  },
+  });
 
-  async deactivateVendor(id) {
-    const confirmed = await UI.confirm(
-      'Désactiver définitivement',
-      'Cette action est définitive. Le vendeur ne pourra plus se connecter. Confirmer ?'
-    );
-
-    if (confirmed) {
-      try {
-        await API.post(`/admin/vendors/${id}/deactivate`, {}, true);
-        UI.showNotification('Succès', 'Vendeur désactivé', 'success');
-        ModalManager.closeModal('vendorActionsModal');
-        this.loadVendors(this.currentPage);
-      } catch (error) {
-        console.error('Erreur désactivation:', error);
-      }
-    }
-  },
-
-  openResetPasswordModal(userId) {
-    document.getElementById('resetPasswordUserId').value = userId;
-    document.getElementById('temporaryPasswordDisplay').style.display = 'none';
-    document.getElementById('confirmResetPasswordBtn').style.display = 'block';
-    ModalManager.closeModal('vendorActionsModal');
-    ModalManager.openModal('resetPasswordModal');
-  },
-
-  async handleResetPassword() {
+  // Action: Confirm Reset Password
+  document.getElementById('confirmResetPasswordBtn')?.addEventListener('click', async () => {
     const userId = document.getElementById('resetPasswordUserId').value;
-
+    UI.showLoader();
     try {
-      const data = await API.post(`/admin/vendors/${userId}/reset-password`, {}, true);
-
-      if (data && data.data && data.data.temporary_password) {
+      const resp = await fetch(`/api/admin/vendors/${userId}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ must_change_password: true })
+      });
+      const data = await resp.json();
+      if (resp.ok) {
         document.getElementById('temporaryPasswordValue').textContent = data.data.temporary_password;
         document.getElementById('temporaryPasswordDisplay').style.display = 'block';
-        document.getElementById('confirmResetPasswordBtn').style.display = 'none';
-        
-        UI.showNotification('Succès', 'Mot de passe réinitialisé', 'success');
+      } else {
+        UI.showNotification('Erreur', data.message, 'error');
       }
-    } catch (error) {
-      console.error('Erreur reset password:', error);
+    } catch (e) {
+      UI.showNotification('Erreur', 'Erreur réseau', 'error');
+    } finally {
+      UI.hideLoader();
     }
-  },
+  });
 
-  copyTemporaryPassword() {
-    const password = document.getElementById('temporaryPasswordValue').textContent;
-    navigator.clipboard.writeText(password).then(() => {
-      UI.showNotification('Copié !', 'Mot de passe copié dans le presse-papier', 'success');
-    });
-  },
-
-  exportVendors() {
-    UI.showNotification('Export', 'Fonctionnalité à venir', 'info');
-  }
-};
-
-// Initialisation
-document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('vendorsTableBody')) {
-    AdminVendors.init();
-  }
+  // Copy Password
+  document.getElementById('copyPasswordBtn')?.addEventListener('click', () => {
+    const pass = document.getElementById('temporaryPasswordValue').textContent;
+    navigator.clipboard.writeText(pass);
+    UI.showNotification('Copié', 'Mot de passe copié dans le presse-papier', 'success');
+  });
 });

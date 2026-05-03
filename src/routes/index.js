@@ -24,6 +24,10 @@ const router = express.Router();
 // Routes d'authentification
 router.use('/auth', authRoutes);
 
+// Routes publiques pour les commandes
+const publicOrderRoutes = require('./publicOrderRoutes');
+router.use('/public/orders', publicOrderRoutes);
+
 // Routes Super Admin (préfixe /admin)
 router.use('/admin', adminRoutes);
 

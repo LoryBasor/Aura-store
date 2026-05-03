@@ -1,0 +1,1042 @@
+/* ============================================================
+   AURA ADMIN — RESPONSIVE CSS
+   Mobile-first, adapté à tous les breakpoints
+   ============================================================
+   Breakpoints :
+     Mobile    : ≤ 480px
+     Tablette  : 481px – 768px
+     Laptop    : 769px – 1024px
+     Desktop   : ≥ 1025px
+   ============================================================ */
+
+/* ─────────────────────────────────────────
+   1. RESET & BASE MOBILE-FIRST
+   ───────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+img, canvas, video, iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ─────────────────────────────────────────
+   2. LAYOUT PRINCIPAL (sidebar + contenu)
+   ───────────────────────────────────────── */
+
+/* Variables de layout */
+:root {
+  --sidebar-width: 260px;
+  --topbar-height: 60px;
+  --content-padding: 24px;
+  --content-padding-mobile: 12px;
+}
+
+/* Sidebar : masquée sur mobile par défaut */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  z-index: 200;
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+}
+
+/* Contenu principal */
+.main-content,
+.content-wrapper,
+#mainContent {
+  margin-left: var(--sidebar-width);
+  padding: var(--content-padding);
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+/* ─────────────────────────────────────────
+   3. TOPBAR / HEADER ADMIN
+   ───────────────────────────────────────── */
+.topbar,
+.admin-topbar,
+header.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--content-padding);
+  height: var(--topbar-height);
+  gap: 12px;
+}
+
+/* Bouton hamburger (masqué sur desktop) */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-primary, #1e293b);
+}
+
+/* Overlay sidebar mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 190;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+}
+
+/* ─────────────────────────────────────────
+   4. PAGE HEADER
+   ───────────────────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.page-header > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-title {
+  font-size: clamp(18px, 4vw, 26px);
+  font-weight: 700;
+  margin: 0 0 4px;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.page-subtitle {
+  font-size: clamp(12px, 2.5vw, 14px);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.page-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────
+   5. STATS GRID
+   ───────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  padding: 20px;
+  border-radius: var(--radius-md, 12px);
+  min-width: 0;
+}
+
+.stat-value {
+  font-size: clamp(22px, 4vw, 32px);
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.stat-label {
+  font-size: clamp(11px, 2vw, 13px);
+}
+
+/* ─────────────────────────────────────────
+   6. CARDS
+   ───────────────────────────────────────── */
+.card {
+  border-radius: var(--radius-md, 12px);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 20px;
+}
+
+.card-title {
+  font-size: clamp(14px, 2.5vw, 16px);
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ─────────────────────────────────────────
+   7. TABLEAUX RESPONSIVE
+   ───────────────────────────────────────── */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-md, 12px);
+}
+
+/* Hint de scroll sur mobile */
+.table-scroll-hint {
+  display: none;
+  text-align: right;
+  font-size: 11px;
+  color: var(--color-secondary, #64748b);
+  padding: 4px 8px;
+  font-style: italic;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 12px 16px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────
+   8. GRILLES DE DASHBOARD (layout fixes)
+   ───────────────────────────────────────── */
+
+/* Remplacement des grids hardcodées en inline style */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.grid-2fr-1fr {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.grid-1fr-2fr {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.grid-auto-fit-400 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.grid-auto-fit-200 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* ─────────────────────────────────────────
+   9. FORMULAIRES (filtres, modals, inputs)
+   ───────────────────────────────────────── */
+.filter-bar {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  min-height: 42px;
+  font-size: 15px; /* Empêche le zoom iOS */
+  padding: 10px 14px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--color-border, #e2e8f0);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* ─────────────────────────────────────────
+   10. BOUTONS
+   ───────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 8px);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Groupe de boutons wrap sur petits écrans */
+.btn-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ─────────────────────────────────────────
+   11. MODALS
+   ───────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 300;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal {
+  background: white;
+  border-radius: var(--radius-lg, 16px);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  gap: 12px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  flex: 1;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.modal-body {
+  padding: 20px 24px;
+}
+
+.modal-footer {
+  padding: 16px 24px 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+/* ─────────────────────────────────────────
+   12. PAGINATION
+   ───────────────────────────────────────── */
+#pagination,
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+/* ─────────────────────────────────────────
+   13. BADGES
+   ───────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────
+   14. ACTION CARDS (subscription-details)
+   ───────────────────────────────────────── */
+.action-card {
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-radius: var(--radius-md, 12px);
+}
+
+.action-card:hover {
+  transform: translateY(-3px);
+}
+
+/* ─────────────────────────────────────────
+   15. CHART CONTAINER
+   ───────────────────────────────────────── */
+.chart-container {
+  position: relative;
+  padding: 16px 20px;
+}
+
+canvas {
+  max-width: 100% !important;
+}
+
+/* ─────────────────────────────────────────
+   16. UTILITY CLASSES
+   ───────────────────────────────────────── */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.w-full { width: 100%; }
+.overflow-hidden { overflow: hidden; }
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* ═══════════════════════════════════════════
+   BREAKPOINT : PETIT LAPTOP (769px – 1024px)
+   ═══════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .main-content,
+  .content-wrapper,
+  #mainContent {
+    padding: 20px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-2fr-1fr {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-1fr-2fr {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-bar {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+
+  .filter-bar .form-select {
+    width: 160px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   BREAKPOINT : TABLETTE (481px – 768px)
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Sidebar cachée, slide depuis la gauche */
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 30px rgba(0,0,0,0.2);
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+
+  /* Le contenu prend toute la largeur */
+  .main-content,
+  .content-wrapper,
+  #mainContent {
+    margin-left: 0;
+    padding: var(--content-padding-mobile);
+  }
+
+  /* Topbar */
+  .topbar,
+  .admin-topbar {
+    padding: 0 16px;
+  }
+
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Page header */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .page-header-actions,
+  .page-header > div:last-child {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .page-header-actions .btn,
+  .page-header > div:last-child .btn,
+  .page-header > div:last-child > a {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Stats grid : 2 colonnes */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 14px;
+  }
+
+  /* Toutes les grilles → colonne unique */
+  .grid-2col,
+  .grid-2fr-1fr,
+  .grid-1fr-2fr,
+  .grid-auto-fit-400,
+  [style*="grid-template-columns: 2fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns: 1fr 2fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Grille 3 colonnes → 2 colonnes sur tablette */
+  .grid-3col,
+  [style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Barre de filtres → stack vertical */
+  .filter-bar,
+  [style*="grid-template-columns: 1fr auto auto auto"],
+  [style*="display:grid"][style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .filter-bar .form-select,
+  .filter-bar .btn {
+    width: 100%;
+  }
+
+  /* Formulaires inline → block */
+  form[style*="display:grid"],
+  form[style*="display: grid"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  form[style*="display:grid"] select,
+  form[style*="display: grid"] select,
+  form[style*="display:grid"] input,
+  form[style*="display: grid"] input {
+    width: 100% !important;
+  }
+
+  /* Tables responsive → carte style */
+  .table-scroll-hint {
+    display: block;
+  }
+
+  /* Tables avec data-label → transformation cartes */
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards tr {
+    display: block;
+    margin-bottom: 16px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-md, 12px);
+    background: white;
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .table-cards td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border: none;
+    border-bottom: 1px dashed var(--color-border, #e2e8f0);
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .table-cards td:last-child {
+    border-bottom: none;
+    padding-top: 12px;
+  }
+
+  .table-cards td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--color-secondary, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    margin-right: 12px;
+    text-align: left;
+  }
+
+  .table-cards td:first-child {
+    background: var(--color-surface, #f8fafc);
+    margin: -12px -12px 0;
+    padding: 12px;
+    border-radius: var(--radius-md, 12px) var(--radius-md, 12px) 0 0;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Actions dans les cartes : pleine largeur */
+  .table-cards td[data-label="Actions"] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .table-cards td[data-label="Actions"]::before {
+    display: none;
+  }
+
+  .table-cards td[data-label="Actions"] .btn,
+  .table-cards td[data-label="Actions"] a {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Tables scroll horizontal (fallback) */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Boutons des actions inline → wrap */
+  td > div[style*="display:flex"],
+  td > div[style*="display: flex"] {
+    flex-wrap: wrap;
+  }
+
+  /* Modal : plein écran sur mobile */
+  .modal {
+    max-width: 100%;
+    max-height: 95vh;
+    margin: 0;
+    border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Card padding */
+  .card-header {
+    padding: 12px 16px;
+  }
+
+  /* Chart height réduite */
+  canvas {
+    max-height: 220px !important;
+  }
+
+  /* Pagination */
+  #pagination span {
+    font-size: 12px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   BREAKPOINT : MOBILE (≤ 480px)
+   ═══════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+  :root {
+    --content-padding-mobile: 10px;
+  }
+
+  /* Stats grid → 1 colonne sur très petit écran */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  /* Grille 3 colonnes → 1 colonne */
+  .grid-3col,
+  [style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Grid 2 colonnes auto-fit → 1 colonne */
+  .grid-auto-fit-200,
+  [style*="grid-template-columns: repeat(auto-fit, minmax(200px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .page-title {
+    font-size: 18px;
+  }
+
+  /* Topbar : compacte */
+  .topbar,
+  .admin-topbar {
+    padding: 0 10px;
+  }
+
+  /* Tableaux cartes */
+  .table-cards {
+    font-size: 12px;
+  }
+
+  /* Boutons plus petits */
+  .btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  /* Modals */
+  .modal-body,
+  .modal-header,
+  .modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .modal-title {
+    font-size: 16px;
+  }
+
+  /* Formulaires inline → stack sur mobile */
+  .filter-form-inline {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-form-inline > * {
+    width: 100%;
+  }
+
+  /* Chart */
+  canvas {
+    max-height: 180px !important;
+  }
+
+  /* Cards : padding réduit */
+  .card-header {
+    padding: 10px 12px;
+  }
+
+  .chart-container {
+    padding: 12px;
+  }
+
+  /* Action cards : 2 colonnes */
+  .grid-auto-fit-200.action-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   OVERRIDES SPÉCIFIQUES PAR PAGE
+   ═══════════════════════════════════════════ */
+
+/* ── DASHBOARD ── */
+@media (max-width: 768px) {
+  /* Le graphique d'évolution */
+  #trendsChart {
+    height: 200px !important;
+  }
+
+  /* Taux de conversion : 3 cols → 1 col */
+  #conversionStats > div,
+  [style*="grid-template-columns: repeat(3, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Top vendeurs & activité récente : 2 cols → 1 col */
+  #topVendors .table-container {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  #conversionStats > div {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── VENDORS ── */
+@media (max-width: 768px) {
+  /* Avatar vendeur dans les cartes */
+  .vendor-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* ── ACTIVITY ── */
+@media (max-width: 768px) {
+  /* Grille des 2 charts */
+  #evolutionChart,
+  #revenueChart {
+    height: 200px !important;
+  }
+
+  /* Audit log : scroll vertical limité */
+  .audit-table-container {
+    max-height: 320px;
+  }
+}
+
+/* ── PLANS / SUBSCRIPTIONS ── */
+@media (max-width: 768px) {
+  /* Filtre plan : grid → flex wrap */
+  #planFilter,
+  #statusFilter {
+    width: 100% !important;
+  }
+}
+
+/* ── SUBSCRIPTION DETAILS ── */
+@media (max-width: 480px) {
+  .action-card {
+    padding: 14px 10px;
+  }
+
+  .action-card h3 {
+    font-size: 14px !important;
+  }
+
+  .action-card > div:first-child {
+    font-size: 24px !important;
+  }
+}
+
+/* ── VENDOR DETAILS (1fr 2fr grid) ── */
+@media (max-width: 768px) {
+  /* Info card + stats : stack vertical */
+  .vendor-detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Detail info labels */
+  .vendor-info-label {
+    font-size: 11px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   AMÉLIORATIONS UX TOUCH
+   ═══════════════════════════════════════════ */
+
+/* Zones tactiles minimum 44px */
+@media (max-width: 768px) {
+  .btn,
+  .modal-close,
+  .hamburger-btn,
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  /* Éviter le zoom sur focus iOS */
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Meilleur feedback tactile */
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .stat-card:active,
+  .action-card:active {
+    transform: scale(0.99);
+  }
+
+  /* Scroll élastique sur les tables */
+  .table-container,
+  .table-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Spacing entre les cards */
+  .card {
+    margin-bottom: 14px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   PRINT (bonus)
+   ═══════════════════════════════════════════ */
+@media print {
+  .sidebar,
+  .topbar,
+  .hamburger-btn,
+  .sidebar-overlay,
+  .btn,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  .main-content,
+  .content-wrapper,
+  #mainContent {
+    margin: 0;
+    padding: 0;
+  }
+}

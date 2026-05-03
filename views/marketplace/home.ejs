@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %></title>
+  <link rel="icon" type="image/png" href="/images/logo.png">
   <link rel="stylesheet" href="/css/marketplace-home.css">
 </head>
 <body>
@@ -235,6 +236,38 @@
     </div>
   </section>
 
-  <script src="/js/marketplace-home.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('searchInput');
+      const searchBtn = document.getElementById('searchBtn');
+
+      const handleSearch = () => {
+        const query = searchInput.value.trim();
+        if (query) {
+          window.location.href = `/marketplace/products?search=${encodeURIComponent(query)}`;
+        }
+      };
+
+      searchBtn.addEventListener('click', handleSearch);
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSearch();
+      });
+
+      // Carousels (Simple scroll)
+      document.querySelectorAll('.carousel-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const carouselId = btn.getAttribute('data-carousel');
+          const track = document.querySelector(`.carousel-track[data-carousel="${carouselId}"]`);
+          const scrollAmount = track.clientWidth * 0.8;
+          
+          if (btn.classList.contains('carousel-prev')) {
+            track.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+          } else {
+            track.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+          }
+        });
+      });
+    });
+  </script>
 </body>
 </html>

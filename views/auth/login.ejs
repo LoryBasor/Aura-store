@@ -17,7 +17,7 @@
       </div>
 
       <!-- Formulaire de connexion -->
-      <form id="loginForm">
+      <form id="loginForm" data-ajax="true">
         <div class="form-group">
           <label for="email" class="form-label required">Email</label>
           <input 
@@ -26,7 +26,6 @@
             name="email" 
             class="form-input" 
             placeholder="votre@email.com"
-            required
           >
           <div class="form-error" id="emailError"></div>
         </div>
@@ -39,7 +38,6 @@
             name="password" 
             class="form-input" 
             placeholder="••••••••"
-            required
           >
           <div class="form-error" id="passwordError"></div>
         </div>
@@ -59,8 +57,61 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const form      = document.getElementById('loginForm');
+      const submitBtn = form.querySelector('button[type="submit"]');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email    = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        if (!email || !password) {
+          UI.showNotification('Champs manquants', 'Veuillez remplir tous les champs.', 'error');
+          return;
+        }
+
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+
+        try {
+          const resp = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+
+          const data = await resp.json();
+
+          if (resp.ok) {
+            UI.showNotification('Connexion réussie', 'Bienvenue ! Redirection en cours…', 'success');
+            setTimeout(() => { 
+              // Redirection intelligente selon le rôle
+              const user = data.data.user;
+              if (user.role === 'SUPER_ADMIN') {
+                window.location.href = '/admin/dashboard';
+              } else {
+                window.location.href = '/dashboard';
+              }
+            }, 800);
+          } else {
+            // Erreurs serveur spécifiques
+            const msg = data.message || data.error || 'Email ou mot de passe incorrect.';
+            UI.showNotification('Échec de connexion', msg, 'error');
+          }
+        } catch (err) {
+          UI.showNotification('Erreur réseau', 'Impossible de joindre le serveur. Réessayez.', 'error');
+        } finally {
+          UI.hideLoader();
+          submitBtn.classList.remove('loading');
+          submitBtn.disabled = false;
+        }
+      });
+    });
+  </script>
 </body>
 </html>

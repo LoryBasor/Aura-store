@@ -1,0 +1,519 @@
+<%# ========================================
+    views/dashboard/advanced-stats.ejs - SSR VERSION
+    ======================================== %>
+
+<%
+  function fmtCurrency(n) { return (parseFloat(n)||0).toLocaleString('fr-FR') + ' FCFA'; }
+  function fmtDate(d) { return new Date(d).toLocaleDateString('fr-FR'); }
+  const currentEvolution = evolution || [];
+  const currentByStatus  = byStatus  || [];
+  const currentTopProds  = topProducts || [];
+  const currentHourly    = hourlyStats || [];
+  const currentCategories = categoryPerformance || [];
+  const conv             = conversion  || {};
+  const cust             = customers   || {};
+  const fore             = forecast    || {};
+  const vis              = storeVisibility || 0;
+  
+  const statusLabels = { nouvelle:'Nouvelle', confirmee:'Confirmée', en_preparation:'En prép.', en_livraison:'En livraison', livree:'Livrée', annulee:'Annulée' };
+  const statusColorsMap = { nouvelle:'#3b82f6', confirmee:'#10b981', en_preparation:'#f59e0b', en_livraison:'#f59e0b', livree:'#10b981', annulee:'#ef4444' };
+%>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📊 Statistiques Avancées</h1>
+    <p class="page-subtitle">Analyse détaillée et visuelle de votre activité (30 derniers jours)</p>
+  </div>
+  <div style="display:flex;gap:12px;">
+    <button onclick="window.print()" class="btn btn-secondary">🖨️ Imprimer le rapport</button>
+  </div>
+</div>
+
+<!-- Métriques de conversion & Visibilité -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-header"><h3 class="card-title">📈 Vue d'ensemble des performances</h3></div>
+  <div style="padding:24px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;">
+      <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm); border-bottom: 3px solid #8b5cf6;">
+        <div style="font-size:28px;font-weight:700;color:var(--color-primary);"><%= vis %></div>
+        <div style="font-size:13px;color:var(--color-secondary);">Vues de la boutique</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm); border-bottom: 3px solid #3b82f6;">
+        <div style="font-size:28px;font-weight:700;color:var(--color-primary);"><%= conv.total_views || 0 %></div>
+        <div style="font-size:13px;color:var(--color-secondary);">Vues des produits</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm); border-bottom: 3px solid #10b981;">
+        <div style="font-size:28px;font-weight:700;color:var(--color-primary);"><%= conv.total_orders || 0 %></div>
+        <div style="font-size:13px;color:var(--color-secondary);">Commandes</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm); border-bottom: 3px solid #f59e0b;">
+        <div style="font-size:28px;font-weight:700;color:var(--color-primary);"><%= conv.conversion_rate || 0 %>%</div>
+        <div style="font-size:13px;color:var(--color-secondary);">Taux conversion</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm); border-bottom: 3px solid #ec4899;">
+        <div style="font-size:28px;font-weight:700;color:var(--color-primary);"><%= fmtCurrency(conv.avg_basket || 0) %></div>
+        <div style="font-size:13px;color:var(--color-secondary);">Panier moyen</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm); border-bottom: 3px solid #8b5cf6;">
+        <div style="font-size:28px;font-weight:700;color:var(--color-primary);"><%= fmtCurrency(conv.total_revenue || 0) %></div>
+        <div style="font-size:13px;color:var(--color-secondary);">CA total</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Évolution (Chart) -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-header"><h3 class="card-title">Évolution des revenus et des commandes</h3></div>
+  <div style="padding:24px; height: 400px;">
+    <canvas id="evolutionChart"></canvas>
+  </div>
+</div>
+
+<!-- Grille 2 colonnes (Statuts et Heures) -->
+<div class="grille2" style="margin-bottom:24px;">
+  <!-- Répartition par statut -->
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">📊 Commandes par statut</h3></div>
+    <div style="padding:24px; height: 350px; display: flex; justify-content: center; align-items: center;">
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Activité par heure -->
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">⏰ Pic d'activité (Commandes par heure)</h3></div>
+    <div style="padding:24px; height: 350px;">
+      <canvas id="hourlyChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Grille 2 colonnes (Top Produits et Catégories) -->
+<div class="grille2" style="margin-bottom:24px;">
+  <!-- Top Produits (Chart) -->
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">🏆 Revenus par Top 10 produits</h3></div>
+    <div style="padding:24px; height: 350px;">
+      <canvas id="topProductsChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Catégories (Chart) -->
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">📂 Catégories préférées</h3></div>
+    <div style="padding:24px; height: 350px;">
+      <canvas id="categoriesChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Grille 2 colonnes (Produits sollicités & Clients Fidèles) -->
+<div class="grille2" style="margin-bottom:24px;">
+  <!-- Produits sollicités -->
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">👀 Tendances (Produits les plus vus)</h3></div>
+    <div style="padding: 16px;">
+      <% if (!solicitedProducts || solicitedProducts.length === 0) { %>
+        <p style="text-align:center; color: var(--color-secondary); padding: 20px;">Aucune donnée de visibilité.</p>
+      <% } else { %>
+        <table class="table" style="font-size: 14px;">
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Vues</th>
+              <th>Prix</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% solicitedProducts.forEach(p => { %>
+              <tr>
+                <td><strong><%= p.name %></strong></td>
+                <td><span class="badge badge-info"><%= p.view_count %> vues</span></td>
+                <td><%= fmtCurrency(p.price) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Top Clients -->
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">⭐ Meilleurs clients (Fidèles)</h3></div>
+    <div style="padding: 16px;">
+      <% if (!topCustomersList || topCustomersList.length === 0) { %>
+        <p style="text-align:center; color: var(--color-secondary); padding: 20px;">Aucun client récurrent.</p>
+      <% } else { %>
+        <table class="table" style="font-size: 14px;">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Commandes</th>
+              <th>Total dépensé</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% topCustomersList.forEach(c => { %>
+              <tr>
+                <td><strong><%= c.name %></strong><br><span style="font-size: 12px; color: var(--color-secondary);"><%= c.phone %></span></td>
+                <td><span class="badge <%= c.total_orders > 1 ? 'badge-success' : 'badge-warning' %>"><%= c.total_orders %> cmd(s)</span></td>
+                <td><strong><%= fmtCurrency(c.total_spent) %></strong></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Grille 2 colonnes (Analyse Clients & Prévisions) -->
+<div class="grille2" style="margin-bottom: 24px;">
+  <!-- Analyse clients -->
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">👥 Fidélité & Potentiel</h3></div>
+    <div id="customerAnalysis" style="padding:24px;">
+      <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:16px;">
+        <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm);">
+          <div style="font-size:28px;font-weight:700;color:var(--color-primary);"><%= cust.total_customers || 0 %></div>
+          <div style="font-size:13px;color:var(--color-secondary);">Total clients</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm);">
+          <div style="font-size:28px;font-weight:700;color:var(--color-primary);"><%= cust.one_time_customers || 0 %></div>
+          <div style="font-size:13px;color:var(--color-secondary);">Clients potentiels (1 cmd)</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm);">
+          <div style="font-size:28px;font-weight:700;color:var(--color-success);"><%= cust.repeat_customers || 0 %></div>
+          <div style="font-size:13px;color:var(--color-secondary);">Clients fidèles (>1 cmd)</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--color-surface);border-radius:var(--radius-sm);">
+          <div style="font-size:28px;font-weight:700;color:var(--color-primary);"><%= cust.repeat_rate || 0 %>%</div>
+          <div style="font-size:13px;color:var(--color-secondary);">Taux de fidélité</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prévisions -->
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">🔮 Tendance & Prévisions</h3></div>
+    <div style="padding:24px;">
+      <% if (fore.last_30_days) { %>
+        <div style="margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between; margin-bottom: 8px;">
+            <span style="color:var(--color-secondary);">Commandes (30j)</span>
+            <strong style="font-size: 18px;"><%= fore.last_30_days.orders %></strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--color-secondary);">Chiffre d'affaires (30j)</span>
+            <strong style="font-size: 18px;"><%= fmtCurrency(fore.last_30_days.revenue) %></strong>
+          </div>
+        </div>
+        <% if (fore.growth) { %>
+          <div style="padding:16px;background:var(--color-surface);border-radius:var(--radius-sm); border-left: 4px solid <%= fore.growth.revenue >= 0 ? 'var(--color-success)' : 'var(--color-error)' %>;">
+            <div style="font-weight:700;margin-bottom:12px; font-size: 16px;">Croissance vs mois précédent</div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <span>Volume de commandes</span>
+              <span style="font-weight: 600; color:<%= fore.growth.orders >= 0 ? 'var(--color-success)' : 'var(--color-error)' %>;">
+                <%= fore.growth.orders >= 0 ? '↑' : '↓' %> <%= Math.abs(fore.growth.orders) %>%
+              </span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span>Revenus générés</span>
+              <span style="font-weight: 600; color:<%= fore.growth.revenue >= 0 ? 'var(--color-success)' : 'var(--color-error)' %>;">
+                <%= fore.growth.revenue >= 0 ? '↑' : '↓' %> <%= Math.abs(fore.growth.revenue) %>%
+              </span>
+            </div>
+          </div>
+        <% } %>
+      <% } else { %>
+        <p style="color:var(--color-secondary);text-align:center;">Pas assez de données pour les prévisions.</p>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Historique des abonnements -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header"><h3 class="card-title">📜 Historique de vos abonnements</h3></div>
+  <div style="padding: 16px;">
+    <% if (!subHistory || subHistory.length === 0) { %>
+      <p style="text-align:center; color: var(--color-secondary); padding: 20px;">Aucun abonnement enregistré.</p>
+    <% } else { %>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Plan</th>
+              <th>Statut</th>
+              <th>Date de début</th>
+              <th>Date de fin</th>
+              <th>Prix</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% subHistory.forEach(s => { %>
+              <tr>
+                <td><strong><%= s.plan_name %></strong></td>
+                <td>
+                  <% if(s.status === 'active') { %><span class="badge badge-success">Actif</span><% } %>
+                  <% if(s.status === 'expired') { %><span class="badge badge-error">Expiré</span><% } %>
+                  <% if(s.status === 'trial') { %><span class="badge badge-warning">Essai</span><% } %>
+                </td>
+                <td><%= fmtDate(s.start_date) %></td>
+                <td><%= s.end_date ? fmtDate(s.end_date) : 'À vie' %></td>
+                <td><%= fmtCurrency(s.price) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Data Injection -->
+<script>
+  window.__SSR_STATS__ = <%- JSON.stringify({ 
+    evolution: currentEvolution, 
+    byStatus: currentByStatus, 
+    topProducts: currentTopProds, 
+    hourlyStats: currentHourly,
+    categories: currentCategories,
+    statusLabelsMap: statusLabels,
+    statusColorsMap: statusColorsMap
+  }) %>;
+</script>
+
+<!-- Chart.js Initialization -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const data = window.__SSR_STATS__;
+  
+  // Formatters
+  const formatCurrency = (value) => new Intl.NumberFormat('fr-FR').format(value) + ' FCFA';
+
+  // Common Options
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = "#6b7280";
+  
+  // ==========================================
+  // 1. Evolution Chart (Line / Combo)
+  // ==========================================
+  const evCtx = document.getElementById('evolutionChart');
+  if (evCtx && data.evolution.length > 0) {
+    const labels = data.evolution.map(d => d.label || d.period);
+    const revenueData = data.evolution.map(d => d.revenue);
+    const ordersData = data.evolution.map(d => d.order_count);
+
+    new Chart(evCtx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Chiffre d'affaires (FCFA)",
+            data: revenueData,
+            borderColor: '#8b5cf6',
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            yAxisID: 'y'
+          },
+          {
+            label: "Nombre de commandes",
+            data: ordersData,
+            type: 'bar',
+            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+            borderRadius: 4,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: { display: true, text: 'Revenus (FCFA)' },
+            ticks: { callback: (val) => new Intl.NumberFormat('fr-FR').format(val) }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: { display: true, text: 'Commandes' },
+            grid: { drawOnChartArea: false },
+            ticks: { stepSize: 1 }
+          }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                if (context.datasetIndex === 0) {
+                  return "Chiffre d'affaires: " + formatCurrency(context.raw);
+                } else {
+                  return "Commandes: " + context.raw;
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ==========================================
+  // 2. Status Distribution Chart (Doughnut)
+  // ==========================================
+  const stCtx = document.getElementById('statusChart');
+  if (stCtx && data.byStatus.length > 0) {
+    const labels = data.byStatus.map(d => data.statusLabelsMap[d.status] || d.status);
+    const countData = data.byStatus.map(d => d.count);
+    const bgColors = data.byStatus.map(d => data.statusColorsMap[d.status] || '#94a3b8');
+
+    new Chart(stCtx.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: countData,
+          backgroundColor: bgColors,
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+
+  // ==========================================
+  // 3. Hourly Activity Chart (Bar)
+  // ==========================================
+  const hrCtx = document.getElementById('hourlyChart');
+  if (hrCtx && data.hourlyStats.length > 0) {
+    // Fill all 24 hours even if empty
+    const hoursArray = Array.from({length: 24}, (_, i) => i);
+    const orderCounts = new Array(24).fill(0);
+    
+    data.hourlyStats.forEach(stat => {
+      if(stat.hour >= 0 && stat.hour < 24) {
+        orderCounts[stat.hour] = stat.order_count;
+      }
+    });
+
+    const labels = hoursArray.map(h => h + 'h');
+
+    new Chart(hrCtx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Commandes',
+          data: orderCounts,
+          backgroundColor: 'rgba(245, 158, 11, 0.7)',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          }
+        }
+      }
+    });
+  }
+
+  // ==========================================
+  // 4. Top Products Chart (Bar Horizontal)
+  // ==========================================
+  const tpCtx = document.getElementById('topProductsChart');
+  if (tpCtx && data.topProducts.length > 0) {
+    const labels = data.topProducts.map(d => d.name.length > 15 ? d.name.substring(0, 15) + '...' : d.name);
+    const revenueData = data.topProducts.map(d => d.total_revenue);
+
+    new Chart(tpCtx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Revenus générés',
+          data: revenueData,
+          backgroundColor: 'rgba(16, 185, 129, 0.7)',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y', // Horizontal
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (context) => formatCurrency(context.raw) } }
+        },
+        scales: {
+          x: {
+            ticks: { callback: (val) => new Intl.NumberFormat('fr-FR').format(val) }
+          }
+        }
+      }
+    });
+  }
+
+  // ==========================================
+  // 5. Categories Performance Chart (Pie)
+  // ==========================================
+  const catCtx = document.getElementById('categoriesChart');
+  if (catCtx && data.categories.length > 0) {
+    const labels = data.categories.map(c => c.name);
+    const countData = data.categories.map(c => c.order_count);
+
+    new Chart(catCtx.getContext('2d'), {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: countData,
+          backgroundColor: [
+            '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#64748b'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+});
+</script>

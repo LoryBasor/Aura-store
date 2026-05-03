@@ -1,0 +1,211 @@
+<!-- views/dashboard/subscription.ejs -->
+<%
+  function fmtDate(d) { if(!d) return '-'; return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  function fmtCurrency(n) { return (parseFloat(n)||0).toLocaleString('fr-FR') + ' FCFA'; }
+  
+  const planColors = {
+    free: 'var(--color-secondary)',
+    pro: 'var(--color-primary)',
+    business: 'var(--color-success)'
+  };
+%>
+
+<!-- Page Header -->
+<div class="page-header">
+  <h1 class="page-title">💳 Mon Abonnement</h1>
+  <p class="page-subtitle">Gérez votre plan et suivez votre utilisation</p>
+</div>
+
+<div class="grille2" style="gap: 24px;">
+  <!-- Colonne Gauche : Plan Actuel & Utilisation -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    
+    <!-- Carte Plan Actuel -->
+    <div class="card">
+      <div class="card-header" style="background: <%= subscription ? planColors[subscription.plan_slug] || 'var(--color-surface)' : 'var(--color-surface)' %>; color: <%= subscription ? 'white' : 'inherit' %>;">
+        <h3 class="card-title">Plan Actuel</h3>
+      </div>
+      <div style="padding: 24px;">
+        <% if (subscription) { %>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+              <h2 style="font-size: 28px; font-weight: 800; color: var(--color-primary); margin: 0;">
+                <%= subscription.plan_name %>
+              </h2>
+              <span class="badge badge-<%= subscription.subscription_status === 'active' ? 'success' : 'warning' %>">
+                <%= subscription.subscription_status === 'active' ? 'Actif' : 'Période d\'essai' %>
+              </span>
+            </div>
+            <div style="text-align: right;">
+              <p style="font-size: 14px; color: var(--color-tertiary); margin: 0;">Expire le</p>
+              <p style="font-weight: 700;"><%= fmtDate(subscription.expires_at) %></p>
+              <p style="font-size: 12px; color: var(--color-secondary);"><%= subscription.days_remaining %> jours restants</p>
+            </div>
+          </div>
+          
+          <div style="background: var(--color-surface); padding: 16px; border-radius: 12px; border: 1px solid var(--color-border);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 14px; font-weight: 600;">Statut du compte</span>
+              <span style="color: var(--color-success); font-weight: 700;">Opérationnel</span>
+            </div>
+            <p style="font-size: 13px; color: var(--color-tertiary); margin: 0;">
+              Votre abonnement est géré par l'administration d'Aura. Contactez le support pour toute modification.
+            </p>
+          </div>
+        <% } else { %>
+          <div style="text-align: center; padding: 20px;">
+            <p>Aucun abonnement actif trouvé.</p>
+            <a href="#plans" class="btn btn-primary">Choisir un plan</a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Carte Utilisation -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">📊 Utilisation des ressources</h3>
+      </div>
+      <div style="padding: 24px;">
+        <!-- Limite Produits -->
+        <div style="margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-weight: 600;">Produits</span>
+            <span style="font-size: 14px; color: var(--color-tertiary);">
+              <%= subscription ? subscription.current_products : 0 %> / 
+              <%= (subscription && subscription.max_products === 999999) ? 'Illimités' : (subscription ? subscription.max_products : 0) %>
+            </span>
+          </div>
+          <div style="height: 8px; background: #eee; border-radius: 4px; overflow: hidden;">
+            <% 
+              let productPct = 0;
+              if (subscription && subscription.max_products > 0) {
+                productPct = Math.min(100, (subscription.current_products / subscription.max_products) * 100);
+              }
+            %>
+            <div style="width: <%= productPct %>%; height: 100%; background: var(--color-primary); border-radius: 4px;"></div>
+          </div>
+        </div>
+
+        <!-- Limite Commandes -->
+        <div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-weight: 600;">Commandes (ce mois)</span>
+            <span style="font-size: 14px; color: var(--color-tertiary);">
+              <%= subscription ? subscription.current_month_orders : 0 %> / 
+              <%= (subscription && subscription.max_orders_per_month === 999999) ? 'Illimitées' : (subscription ? subscription.max_orders_per_month : 0) %>
+            </span>
+          </div>
+          <div style="height: 8px; background: #eee; border-radius: 4px; overflow: hidden;">
+            <% 
+              let orderPct = 0;
+              if (subscription && subscription.max_orders_per_month > 0) {
+                orderPct = Math.min(100, (subscription.current_month_orders / subscription.max_orders_per_month) * 100);
+              }
+            %>
+            <div style="width: <%= orderPct %>%; height: 100%; background: var(--color-success); border-radius: 4px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Historique -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">📜 Historique récent</h3>
+      </div>
+      <div style="padding: 0;">
+        <% if (history && history.length > 0) { %>
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>Plan</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% history.forEach(item => { %>
+                  <tr>
+                    <td style="text-transform: capitalize;"><%= item.action %></td>
+                    <td><%= item.plan_name %></td>
+                    <td><%= fmtDate(item.created_at) %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } else { %>
+          <p style="padding: 24px; text-align: center; color: var(--color-tertiary);">Aucun historique disponible.</p>
+        <% } %>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Colonne Droite : Comparaison des Plans -->
+  <div id="plans" style="display: flex; flex-direction: column; gap: 24px;">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">🚀 Evoluez avec Aura</h3>
+      </div>
+      <div style="padding: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <% plans.forEach(plan => { %>
+            <div style="padding: 20px; border: 2px solid <%= (subscription && subscription.plan_slug === plan.slug) ? 'var(--color-primary)' : 'var(--color-border)' %>; border-radius: 16px; position: relative;">
+              <% if (subscription && subscription.plan_slug === plan.slug) { %>
+                <span style="position: absolute; top: -12px; right: 20px; background: var(--color-primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700;">
+                  PLAN ACTUEL
+                </span>
+              <% } %>
+              
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <div>
+                  <h4 style="font-size: 20px; font-weight: 800; margin: 0;"><%= plan.name %></h4>
+                  <p style="font-size: 14px; color: var(--color-tertiary); margin-top: 4px;"><%= plan.description %></p>
+                </div>
+                <div style="text-align: right;">
+                  <p style="font-size: 24px; font-weight: 900; color: var(--color-primary); margin: 0;">
+                    <%= plan.price > 0 ? fmtCurrency(plan.price) : 'Gratuit' %>
+                  </p>
+                  <p style="font-size: 12px; color: var(--color-tertiary);">/ mois</p>
+                </div>
+              </div>
+
+              <ul style="list-style: none; padding: 0; margin: 0 0 16px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <li style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                  <span style="color: var(--color-success);">✓</span> 
+                  <%= plan.max_products >= 999999 ? 'Produits illimités' : plan.max_products + ' Produits' %>
+                </li>
+                <li style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                  <span style="color: var(--color-success);">✓</span> 
+                  <%= plan.max_orders_per_month >= 999999 ? 'Commandes illimitées' : plan.max_orders_per_month + ' Com./mois' %>
+                </li>
+                <% if (plan.has_analytics) { %>
+                  <li style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                    <span style="color: var(--color-success);">✓</span> Stats avancées
+                  </li>
+                <% } %>
+                <% if (plan.slug === 'business') { %>
+                  <li style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                    <span style="color: var(--color-success);">✓</span> Personnalisation
+                  </li>
+                  <li style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                    <span style="color: var(--color-success);">✓</span> Réseaux Sociaux
+                  </li>
+                <% } %>
+              </ul>
+
+              <% if (subscription && subscription.plan_slug !== plan.slug) { %>
+                <button class="btn btn-outline btn-block" onclick="UI.showNotification('Info', 'Contactez l\'administration pour changer de plan.', 'info')">
+                  Choisir ce plan
+                </button>
+              <% } %>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

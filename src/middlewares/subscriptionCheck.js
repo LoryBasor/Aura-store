@@ -165,15 +165,36 @@ function requireFeature(feature) {
  */
 async function incrementOrderCount(req, res, next) {
   try {
-    // Ne pas incrémenter pour super admin
-    if (req.user.role === USER_ROLES.SUPER_ADMIN) {
-      return next();
+    let userId = null;
+
+    // Cas 1: Commande faite par le vendeur (manuelle)
+    if (req.user) {
+      if (req.user.role === USER_ROLES.SUPER_ADMIN) return next();
+      userId = req.user.id;
+    } 
+    // Cas 2: Commande publique (req.user est indéfini)
+    else if (req.body.product_id || req.body.product_token) {
+      if (req.body.product_id) {
+        const [products] = await pool.execute(
+          'SELECT user_id FROM products WHERE id = ?',
+          [req.body.product_id]
+        );
+        if (products.length > 0) userId = products[0].user_id;
+      } else {
+        const [products] = await pool.execute(
+          'SELECT p.user_id FROM product_links pl JOIN products p ON pl.product_id = p.id WHERE pl.token = ?',
+          [req.body.product_token]
+        );
+        if (products.length > 0) userId = products[0].user_id;
+      }
     }
 
-    await pool.execute(
-      'UPDATE subscriptions SET current_month_orders = current_month_orders + 1 WHERE user_id = ? AND status IN (?, ?)',
-      [req.user.id, SUBSCRIPTION_STATUS.TRIAL, SUBSCRIPTION_STATUS.ACTIVE]
-    );
+    if (userId) {
+      await pool.execute(
+        'UPDATE subscriptions SET current_month_orders = current_month_orders + 1 WHERE user_id = ? AND status IN (?, ?)',
+        [userId, SUBSCRIPTION_STATUS.TRIAL, SUBSCRIPTION_STATUS.ACTIVE]
+      );
+    }
 
     next();
   } catch (error) {
