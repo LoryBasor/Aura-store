@@ -81,10 +81,12 @@ const productSchema = Joi.object({
     .integer()
     .positive()
     .optional()
-    .allow(null),
+    .allow('', null),
   stock_quantity: Joi.number()
     .integer()
     .min(0)
+    .optional()
+    .allow('', null)
     .default(0),
   is_available: Joi.boolean()
     .default(true)
@@ -227,7 +229,7 @@ const updateOrderStatusSchema = Joi.object({
 module.exports = {
   registerSchema,
   loginSchema,
-  productSchema,orderSchema,
+  productSchema, orderSchema,
   manualOrderSchema,
   updateOrderSchema,
   updateOrderStatusSchema,
