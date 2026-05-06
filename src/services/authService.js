@@ -4,6 +4,7 @@ const { pool } = require('../config/database');
 const { generateToken } = require('../config/jwt');
 const { slugify } = require('../utils/helpers');
 const { AppError } = require('../middlewares/errorHandler');
+const subscriptionService = require('./admin/subscriptionService');
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 12;
 
@@ -57,10 +58,21 @@ class AuthService {
       [email, password_hash, business_name, phone || null, whatsapp_number || null, store_slug]
     );
 
+    const userId = result.insertId;
+
+    // Assigner le plan Business (ID 3) par défaut pour 1 mois (30 jours)
+    try {
+      await subscriptionService.createSubscription(userId, 3, { 
+        notes: 'Plan Business offert à l\'inscription (1 mois)' 
+      });
+    } catch (subError) {
+      console.error('Erreur lors de la création de l\'abonnement par défaut:', subError);
+    }
+
     // Récupérer l'utilisateur créé
     const [users] = await pool.execute(
       'SELECT id, email, business_name, store_slug, created_at FROM users WHERE id = ?',
-      [result.insertId]
+      [userId]
     );
 
     const user = users[0];
