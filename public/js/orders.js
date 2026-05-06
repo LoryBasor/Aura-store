@@ -143,6 +143,14 @@ document.addEventListener('DOMContentLoaded', () => {
               <p><strong>${order.customer_name}</strong></p>
               <p>${order.customer_phone}</p>
               <p>${order.customer_address || 'Pas d\'adresse'}</p>
+              <div style="margin-top:12px;">
+                <a href="https://wa.me/${order.customer_phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bonjour ${order.customer_name}, je vous contacte concernant votre commande n° ${order.order_number}.`)}" 
+                   target="_blank" 
+                   class="btn btn-sm" 
+                   style="background:#25D366;color:white;border:none;display:inline-flex;align-items:center;gap:6px;">
+                   <span>💬 WhatsApp</span>
+                </a>
+              </div>
             </div>
           </div>
           <div style="padding-top:16px;border-top:1px solid var(--color-border);">

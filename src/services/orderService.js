@@ -34,7 +34,7 @@ class OrderService {
       LEFT JOIN subscription_plans sp ON s.plan_id = sp.id
       WHERE u.id = ?
     `, [product.user_id]);
-    
+
     const planSlug = planInfo.length > 0 ? planInfo[0].plan_slug : 'free';
     if (planSlug === 'free' || planSlug === 'gratuit') {
       // Compter les commandes de la semaine dernière
@@ -138,11 +138,11 @@ class OrderService {
       if (config.whatsapp_enabled && config.whatsapp_number) {
         const isBusiness = planAccess.length > 0;
         const template = isBusiness ? config.custom_order_message : null;
-        
+
         whatsappUrl = buildWhatsAppOrderUrl(
-          product, 
-          config.whatsapp_number, 
-          quantity, 
+          product,
+          config.whatsapp_number,
+          quantity,
           template
         );
       }
@@ -184,7 +184,7 @@ class OrderService {
 
     if (existingCustomers.length > 0) {
       customerId = existingCustomers[0].id;
-      
+
       // Mettre à jour le nom si différent
       await pool.execute(
         'UPDATE customers SET name = ? WHERE id = ?',
@@ -270,7 +270,7 @@ class OrderService {
    */
   async getOrdersByUser(userId, { page = 1, limit = 20, status = null }) {
     const offset = calculateOffset(page, limit);
-    
+
     let query = `
       SELECT o.*, c.name as customer_name_full
       FROM orders o
@@ -335,16 +335,16 @@ class OrderService {
     // Quantity (recalculer le total)
     if (updates.quantity !== undefined && updates.quantity !== currentOrder.quantity) {
       const newQuantity = parseInt(updates.quantity);
-      
+
       if (newQuantity < 1) {
         throw new AppError('Quantité invalide', 400);
       }
 
       const newTotal = currentOrder.product_price * newQuantity;
-      
+
       fields.push('quantity = ?');
       values.push(newQuantity);
-      
+
       fields.push('total_amount = ?');
       values.push(newTotal);
 
@@ -430,20 +430,20 @@ class OrderService {
     const [stats] = await pool.execute(
       `SELECT 
         COUNT(*) as total_orders,
-        SUM(CASE WHEN status = 'nouvelle' THEN 1 ELSE 0 END) as nouvelles,
-        SUM(CASE WHEN status = 'confirmee' THEN 1 ELSE 0 END) as confirmees,
-        SUM(CASE WHEN status = 'en_preparation' THEN 1 ELSE 0 END) as en_preparation,
-        SUM(CASE WHEN status = 'en_livraison' THEN 1 ELSE 0 END) as en_livraison,
-        SUM(CASE WHEN status = 'livree' THEN 1 ELSE 0 END) as livrees,
-        SUM(CASE WHEN status = 'annulee' THEN 1 ELSE 0 END) as annulees,
-        SUM(total_amount) as total_revenue,
-        SUM (CASE WHEN status IN ('confirmees', 'en_preparation', 'en_livraison') THEN 1 ELSE 0 END) as total_en_cours
+        SUM(CASE WHEN status IN ('nouvelle', 'confirmee', 'en_preparation', 'en_livraison') THEN 1 ELSE 0 END) as pending_orders,
+        SUM(CASE WHEN status = 'livree' THEN 1 ELSE 0 END) as delivered_orders,
+        SUM(CASE WHEN status = 'annulee' THEN 1 ELSE 0 END) as cancelled_orders,
+        COALESCE(SUM(total_amount), 0) as total_revenue
        FROM orders
        WHERE user_id = ? AND deleted_at IS NULL`,
       [userId]
     );
 
-    return stats[0];
+    const s = stats[0];
+    return {
+      ...s,
+      avg_order_value: s.total_orders > 0 ? s.total_revenue / s.total_orders : 0
+    };
   }
 }
 

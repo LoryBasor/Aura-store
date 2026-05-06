@@ -69,7 +69,12 @@ function buildWhatsAppOrderUrl(product, vendorPhone, quantity = 1, customTemplat
   }
   
   const encodedMessage = encodeURIComponent(messageText);
-  const cleanPhone = vendorPhone.replace(/[^\d]/g, '');
+  let cleanPhone = vendorPhone.replace(/[^\d]/g, '');
+  
+  // Si c'est un numéro à 9 chiffres (Cameroun), ajouter le code pays 237
+  if (cleanPhone.length === 9) {
+    cleanPhone = '237' + cleanPhone;
+  }
   
   return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
 }
