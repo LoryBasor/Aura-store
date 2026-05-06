@@ -11,6 +11,7 @@ const Joi = require('joi');
 const adminUserController = require('../controllers/admin/userController');
 const adminSubscriptionController = require('../controllers/admin/subscriptionController');
 const adminDashboardController = require('../controllers/admin/dashboardController');
+const adminProductController = require('../controllers/admin/adminProductController');
 
 const router = express.Router();
 
@@ -158,5 +159,15 @@ router.post(
   })),
   adminSubscriptionController.cancelSubscription
 );
+
+// ==============================================
+// ROUTES GESTION PRODUITS
+// ==============================================
+
+// Basculer l'indisponibilité admin
+router.patch('/products/:id/toggle-admin-disable', adminProductController.toggleAdminDisable);
+
+// Supprimer produit
+router.delete('/products/:id', adminProductController.deleteProduct);
 
 module.exports = router;

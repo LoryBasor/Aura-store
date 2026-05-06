@@ -643,7 +643,7 @@ app.get('/orders', authenticateView, async (req, res, next) => {
       user: req.user,
       orders: orderData.orders,
       pagination: orderData.pagination,
-      orderStats: orderStats.stats,
+      orderStats,
       filters: { status, search, page },
       availableProducts: productData.products || []
     });

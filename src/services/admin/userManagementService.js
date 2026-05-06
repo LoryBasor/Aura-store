@@ -134,6 +134,16 @@ class UserManagementService {
       [userId]
     );
 
+    // Produits du vendeur
+    const [products] = await pool.execute(
+      `SELECT p.*, c.name as category_name
+       FROM products p
+       LEFT JOIN categories c ON p.category_id = c.id
+       WHERE p.user_id = ? AND p.deleted_at IS NULL
+       ORDER BY p.created_at DESC`,
+      [userId]
+    );
+
     return {
       user,
       stats: {
@@ -143,7 +153,8 @@ class UserManagementService {
         total_customers: stats[0].total_customers || 0,
         orders_last_30_days: stats[0].orders_last_30_days || 0
       },
-      recent_orders: recentOrders
+      recent_orders: recentOrders,
+      products: products
     };
   }
 

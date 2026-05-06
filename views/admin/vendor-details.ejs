@@ -13,6 +13,12 @@
     <p class="page-subtitle" id="vendorEmail"><%= v.email %> • Inscrit le <%= fmtDate(v.created_at) %></p>
   </div>
   <div class="page-header-actions">
+    <% if (v.whatsapp_number || v.phone) { 
+        const waNum = (v.whatsapp_number || v.phone).replace(/\D/g, '');
+        const finalWaNum = waNum.length <= 9 ? '237' + waNum : waNum;
+    %>
+      <a href="https://wa.me/<%= finalWaNum %>" target="_blank" class="btn btn-success">💬 WhatsApp</a>
+    <% } %>
     <a href="/admin/vendors" class="btn btn-secondary">← Retour</a>
     <a href="/admin/subscriptions/<%= v.id %>" class="btn btn-primary">📋 Gérer l'abonnement</a>
   </div>
@@ -33,7 +39,15 @@
       </div>
       <div style="margin-bottom: 16px;">
         <label style="display:block; font-size:12px; color:var(--color-secondary); text-transform:uppercase;">WhatsApp</label>
-        <div style="font-weight:600;"><%= v.whatsapp_number || '-' %></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-weight:600;"><%= v.whatsapp_number || '-' %></div>
+          <% if (v.whatsapp_number || v.phone) { 
+              const waNum = (v.whatsapp_number || v.phone).replace(/\D/g, '');
+              const finalWaNum = waNum.length <= 9 ? '237' + waNum : waNum;
+          %>
+            <a href="https://wa.me/<%= finalWaNum %>" target="_blank" title="Contacter sur WhatsApp" style="text-decoration:none; font-size:18px;">💬</a>
+          <% } %>
+        </div>
       </div>
       <div style="margin-bottom: 16px;">
         <label style="display:block; font-size:12px; color:var(--color-secondary); text-transform:uppercase;">Localisation</label>
@@ -95,5 +109,155 @@
         </table>
       </div>
     </div>
+
+    <!-- Catalogue Produits -->
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 class="card-title">🛍️ Catalogue Produits</h3>
+        <div style="display:flex; gap:12px;">
+          <input type="text" id="productSearch" class="form-input" placeholder="🔍 Rechercher..." style="width:200px; padding:6px 12px; margin:0;">
+          <select id="statusFilter" class="form-input" style="width:150px; padding:6px 12px; margin:0;">
+            <option value="all">Tous les statuts</option>
+            <option value="available">Disponible</option>
+            <option value="disabled">Désactivé (Admin)</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="table" id="productsTable">
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Catégorie</th>
+              <th>Prix</th>
+              <th>Stock</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (vendor.products && vendor.products.length > 0) { %>
+              <% vendor.products.forEach(p => { %>
+                <tr data-name="<%= p.name.toLowerCase() %>" data-status="<%= p.admin_disabled ? 'disabled' : 'available' %>">
+                  <td style="display:flex; align-items:center; gap:12px;">
+                    <% if (p.image_url) { %>
+                      <img src="<%= p.image_url %>" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">
+                    <% } else { %>
+                      <div style="width:40px; height:40px; border-radius:8px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-size:20px;">📦</div>
+                    <% } %>
+                    <div>
+                      <div style="font-weight:600;"><%= p.name %></div>
+                      <div style="font-size:11px; color:var(--color-tertiary);">ID: <%= p.id %></div>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-info"><%= p.category_name || '-' %></span></td>
+                  <td><strong><%= fmtCurrency(p.price) %></strong></td>
+                  <td><%= p.stock_quantity %></td>
+                  <td>
+                    <% if (p.admin_disabled) { %>
+                      <span class="badge badge-error">Indisponible (Admin)</span>
+                    <% } else { %>
+                      <span class="badge badge-<%= p.is_available ? 'success' : 'warning' %>">
+                        <%= p.is_available ? 'Disponible' : 'Masqué (Vendeur)' %>
+                      </span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <div style="display:flex; gap:8px;">
+                      <button class="btn-icon <%= p.admin_disabled ? 'btn-success' : 'btn-warning' %>" 
+                              onclick="toggleProductStatus(<%= p.id %>, <%= p.admin_disabled %>)"
+                              title="<%= p.admin_disabled ? 'Réactiver' : 'Rendre indisponible' %>">
+                        <%= p.admin_disabled ? '🔓' : '🔒' %>
+                      </button>
+                      <button class="btn-icon btn-error" onclick="deleteProduct(<%= p.id %>)" title="Supprimer">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+              <% }); %>
+            <% } else { %>
+              <tr><td colspan="6" style="text-align:center; padding:40px;">Aucun produit dans le catalogue</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
+
+<script>
+  // Filtrage des produits
+  const searchInput = document.getElementById('productSearch');
+  const statusFilter = document.getElementById('statusFilter');
+  const tableRows = document.querySelectorAll('#productsTable tbody tr');
+
+  function filterProducts() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const statusTerm = statusFilter.value;
+
+    tableRows.forEach(row => {
+      const name = row.dataset.name || '';
+      const status = row.dataset.status || '';
+      
+      const matchesSearch = name.includes(searchTerm);
+      const matchesStatus = statusTerm === 'all' || status === statusTerm;
+
+      if (matchesSearch && matchesStatus) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+
+  if (searchInput) searchInput.addEventListener('input', filterProducts);
+  if (statusFilter) statusFilter.addEventListener('change', filterProducts);
+
+  // Actions Admin
+  async function toggleProductStatus(productId, isCurrentlyDisabled) {
+    const action = isCurrentlyDisabled ? 'réactiver' : 'rendre indisponible';
+    if (!confirm(`Êtes-vous sûr de vouloir ${action} ce produit ?`)) return;
+
+    try {
+      UI.showLoader();
+      const resp = await fetch(`/api/admin/products/${productId}/toggle-admin-disable`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await resp.json();
+      if (resp.ok) {
+        UI.showNotification('Succès', data.message, 'success');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        UI.showNotification('Erreur', data.message, 'error');
+      }
+    } catch (err) {
+      UI.showNotification('Erreur', 'Erreur réseau', 'error');
+    } finally {
+      UI.hideLoader();
+    }
+  }
+
+  async function deleteProduct(productId) {
+    if (!confirm('Supprimer définitivement ce produit ? Cette action est irréversible.')) return;
+
+    try {
+      UI.showLoader();
+      const resp = await fetch(`/api/admin/products/${productId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await resp.json();
+      if (resp.ok) {
+        UI.showNotification('Succès', 'Produit supprimé', 'success');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        UI.showNotification('Erreur', data.message, 'error');
+      }
+    } catch (err) {
+      UI.showNotification('Erreur', 'Erreur réseau', 'error');
+    } finally {
+      UI.hideLoader();
+    }
+  }
+</script>

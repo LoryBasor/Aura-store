@@ -44,8 +44,8 @@ class ProductService {
     // Créer le produit avec URL et public_id Cloudinary + category_id
     const [result] = await pool.execute(
       `INSERT INTO products 
-       (user_id, category_id, name, slug, description, price, currency, image_url, image_public_id, stock_quantity, is_available)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (user_id, category_id, name, slug, description, price, currency, image_url, image_public_id, stock_quantity, is_available, admin_disabled)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         category_id || null,
@@ -57,7 +57,8 @@ class ProductService {
         imageData?.url || null,
         imageData?.public_id || null,
         stock_quantity || 0, 
-        is_available ?? true
+        is_available ?? true,
+        false
       ]
     );
 
@@ -83,7 +84,8 @@ class ProductService {
       `SELECT p.*, 
               pl.token as share_token,
               c.id as category_id,
-              c.name as category_name
+              c.name as category_name,
+              p.admin_disabled
        FROM products p
        LEFT JOIN product_links pl ON p.id = pl.product_id
        LEFT JOIN categories c ON p.category_id = c.id
@@ -119,7 +121,8 @@ class ProductService {
              pl.token as share_token, 
              pl.click_count,
              c.id as category_id,
-             c.name as category_name
+             c.name as category_name,
+             p.admin_disabled
       FROM products p
       LEFT JOIN product_links pl ON p.id = pl.product_id
       LEFT JOIN categories c ON p.category_id = c.id
@@ -228,8 +231,10 @@ class ProductService {
     }
 
     if (updates.is_available !== undefined) {
+      // Si admin_disabled est vrai, le vendeur ne peut pas le rendre disponible
+      const isAvailable = currentProduct.admin_disabled ? false : updates.is_available;
       fields.push('is_available = ?');
-      values.push(updates.is_available);
+      values.push(isAvailable);
     }
 
     
@@ -324,7 +329,7 @@ class ProductService {
        JOIN users u ON p.user_id = u.id
        JOIN product_links pl ON p.id = pl.product_id
        LEFT JOIN categories c ON p.category_id = c.id
-       WHERE pl.token = ? AND p.is_available = 1 AND p.deleted_at IS NULL AND u.is_active = 1`,
+       WHERE pl.token = ? AND p.is_available = 1 AND p.admin_disabled = 0 AND p.deleted_at IS NULL AND u.is_active = 1`,
       [token]
     );
 
