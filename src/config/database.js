@@ -18,10 +18,10 @@ const dbConfig = {
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   timezone: '+00:00',
-  ssl: process.env.DB_CA ? {
-    ca: process.env.DB_CA.replace(/\\n/g, '\n'),
-    rejectUnauthorized: false
-  } : null
+  ssl: {
+    ca: fs.readFileSync(__dirname + '/ca.pem'),
+    rejectUnauthorized: true
+  }
 };
 
 // Création du pool
