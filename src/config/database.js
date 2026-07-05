@@ -20,7 +20,7 @@ const dbConfig = {
   timezone: '+00:00',
   ssl: process.env.DB_CA ? {
     ca: process.env.DB_CA.replace(/\\n/g, '\n'),
-    rejectUnauthorized: true
+    rejectUnauthorized: false
   } : null
 };
 
