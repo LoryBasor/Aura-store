@@ -19,10 +19,6 @@ const dbConfig = {
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   timezone: '+00:00',
-  ssl: {
-    ca: fs.readFileSync(__dirname + '/ca.pem'),
-    rejectUnauthorized: true
-  }
 };
 
 // Création du pool
