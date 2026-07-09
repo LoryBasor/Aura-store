@@ -17,10 +17,10 @@
         const waNum = (v.whatsapp_number || v.phone).replace(/\D/g, '');
         const finalWaNum = waNum.length <= 9 ? '237' + waNum : waNum;
     %>
-      <a href="https://wa.me/<%= finalWaNum %>" target="_blank" class="btn btn-success">💬 WhatsApp</a>
+      <a href="https://wa.me/<%= finalWaNum %>" target="_blank" class="btn btn-success"><svg class="svg-icon svg-icon-fi-rr-comment-alt" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 0 1-4.06 7.2A8.5 8.5 0 0 1 4 15.8L3 21l5.2-1a8.5 8.5 0 0 1 3.8.9 8.38 8.38 0 0 1 4-1 8.5 8.5 0 0 1 5-8.2z"></path></svg> WhatsApp</a>
     <% } %>
     <a href="/admin/vendors" class="btn btn-secondary">← Retour</a>
-    <a href="/admin/subscriptions/<%= v.id %>" class="btn btn-primary">📋 Gérer l'abonnement</a>
+    <a href="/admin/subscriptions/<%= v.id %>" class="btn btn-primary"><svg class="svg-icon svg-icon-fi-rr-clipboard" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Gérer l'abonnement</a>
   </div>
 </div>
 
@@ -45,7 +45,7 @@
               const waNum = (v.whatsapp_number || v.phone).replace(/\D/g, '');
               const finalWaNum = waNum.length <= 9 ? '237' + waNum : waNum;
           %>
-            <a href="https://wa.me/<%= finalWaNum %>" target="_blank" title="Contacter sur WhatsApp" style="text-decoration:none; font-size:18px;">💬</a>
+            <a href="https://wa.me/<%= finalWaNum %>" target="_blank" title="Contacter sur WhatsApp" style="text-decoration:none; font-size:18px;"><svg class="svg-icon svg-icon-fi-rr-comment-alt" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 0 1-4.06 7.2A8.5 8.5 0 0 1 4 15.8L3 21l5.2-1a8.5 8.5 0 0 1 3.8.9 8.38 8.38 0 0 1 4-1 8.5 8.5 0 0 1 5-8.2z"></path></svg></a>
           <% } %>
         </div>
       </div>
@@ -84,7 +84,7 @@
     <!-- Recent Orders -->
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">📦 Commandes récentes</h3>
+        <h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-box" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><line x1="10" y1="12" x2="14" y2="12"></line></svg> Commandes récentes</h3>
       </div>
       <div class="table-container">
         <table class="table">
@@ -113,9 +113,9 @@
     <!-- Catalogue Produits -->
     <div class="card">
       <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <h3 class="card-title">🛍️ Catalogue Produits</h3>
+        <h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-shopping-bag" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>️ Catalogue Produits</h3>
         <div style="display:flex; gap:12px;">
-          <input type="text" id="productSearch" class="form-input" placeholder="🔍 Rechercher..." style="width:200px; padding:6px 12px; margin:0;">
+          <input type="text" id="productSearch" class="form-input" placeholder="<svg class="svg-icon svg-icon-fi-rr-search" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> Rechercher..." style="width:200px; padding:6px 12px; margin:0;">
           <select id="statusFilter" class="form-input" style="width:150px; padding:6px 12px; margin:0;">
             <option value="all">Tous les statuts</option>
             <option value="available">Disponible</option>
@@ -143,7 +143,7 @@
                     <% if (p.image_url) { %>
                       <img src="<%= p.image_url %>" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">
                     <% } else { %>
-                      <div style="width:40px; height:40px; border-radius:8px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-size:20px;">📦</div>
+                      <div style="width:40px; height:40px; border-radius:8px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-size:20px;"><svg class="svg-icon svg-icon-fi-rr-box" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><line x1="10" y1="12" x2="14" y2="12"></line></svg></div>
                     <% } %>
                     <div>
                       <div style="font-weight:600;"><%= p.name %></div>
@@ -167,9 +167,9 @@
                       <button class="btn-icon <%= p.admin_disabled ? 'btn-success' : 'btn-warning' %>" 
                               onclick="toggleProductStatus(<%= p.id %>, <%= p.admin_disabled %>)"
                               title="<%= p.admin_disabled ? 'Réactiver' : 'Rendre indisponible' %>">
-                        <%= p.admin_disabled ? '🔓' : '🔒' %>
+                        <%= p.admin_disabled ? '<svg class="svg-icon svg-icon-fi-rr-lock-open-alt" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>' : '<svg class="svg-icon svg-icon-fi-rr-lock" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>' %>
                       </button>
-                      <button class="btn-icon btn-error" onclick="deleteProduct(<%= p.id %>)" title="Supprimer">🗑️</button>
+                      <button class="btn-icon btn-error" onclick="deleteProduct(<%= p.id %>)" title="Supprimer"><svg class="svg-icon svg-icon-fi-rr-trash" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>️</button>
                     </div>
                   </td>
                 </tr>
@@ -184,80 +184,4 @@
   </div>
 </div>
 
-<script>
-  // Filtrage des produits
-  const searchInput = document.getElementById('productSearch');
-  const statusFilter = document.getElementById('statusFilter');
-  const tableRows = document.querySelectorAll('#productsTable tbody tr');
-
-  function filterProducts() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const statusTerm = statusFilter.value;
-
-    tableRows.forEach(row => {
-      const name = row.dataset.name || '';
-      const status = row.dataset.status || '';
-      
-      const matchesSearch = name.includes(searchTerm);
-      const matchesStatus = statusTerm === 'all' || status === statusTerm;
-
-      if (matchesSearch && matchesStatus) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
-    });
-  }
-
-  if (searchInput) searchInput.addEventListener('input', filterProducts);
-  if (statusFilter) statusFilter.addEventListener('change', filterProducts);
-
-  // Actions Admin
-  async function toggleProductStatus(productId, isCurrentlyDisabled) {
-    const action = isCurrentlyDisabled ? 'réactiver' : 'rendre indisponible';
-    if (!confirm(`Êtes-vous sûr de vouloir ${action} ce produit ?`)) return;
-
-    try {
-      UI.showLoader();
-      const resp = await fetch(`/api/admin/products/${productId}/toggle-admin-disable`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const data = await resp.json();
-      if (resp.ok) {
-        UI.showNotification('Succès', data.message, 'success');
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        UI.showNotification('Erreur', data.message, 'error');
-      }
-    } catch (err) {
-      UI.showNotification('Erreur', 'Erreur réseau', 'error');
-    } finally {
-      UI.hideLoader();
-    }
-  }
-
-  async function deleteProduct(productId) {
-    if (!confirm('Supprimer définitivement ce produit ? Cette action est irréversible.')) return;
-
-    try {
-      UI.showLoader();
-      const resp = await fetch(`/api/admin/products/${productId}`, {
-        method: 'DELETE'
-      });
-
-      const data = await resp.json();
-      if (resp.ok) {
-        UI.showNotification('Succès', 'Produit supprimé', 'success');
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        UI.showNotification('Erreur', data.message, 'error');
-      }
-    } catch (err) {
-      UI.showNotification('Erreur', 'Erreur réseau', 'error');
-    } finally {
-      UI.hideLoader();
-    }
-  }
-</script>
+<script src="/js/admin/vendor-details.js"></script>

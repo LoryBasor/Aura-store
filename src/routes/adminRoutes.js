@@ -170,4 +170,37 @@ router.patch('/products/:id/toggle-admin-disable', adminProductController.toggle
 // Supprimer produit
 router.delete('/products/:id', adminProductController.deleteProduct);
 
+// ==============================================
+// ROUTES NOTIFICATIONS ADMIN
+// ==============================================
+const notificationService = require('../services/notificationService');
+
+// Récupérer les notifications
+router.get('/notifications', async (req, res, next) => {
+  try {
+    const { page, unreadOnly } = req.query;
+    const result = await notificationService.getAdminNotifications({
+      page: parseInt(page) || 1,
+      unreadOnly: unreadOnly === 'true'
+    });
+    res.json({ success: true, data: result });
+  } catch (error) { next(error); }
+});
+
+// Marquer une notification comme lue
+router.put('/notifications/:id/read', async (req, res, next) => {
+  try {
+    const result = await notificationService.markAsRead(req.params.id);
+    res.json({ success: true, data: result });
+  } catch (error) { next(error); }
+});
+
+// Marquer toutes comme lues
+router.put('/notifications/read-all', async (req, res, next) => {
+  try {
+    const result = await notificationService.markAllAsRead();
+    res.json({ success: true, data: result });
+  } catch (error) { next(error); }
+});
+
 module.exports = router;

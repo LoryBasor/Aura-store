@@ -100,7 +100,7 @@ class ExportService {
       `SELECT 
         (SELECT COUNT(*) FROM products WHERE user_id = ? AND deleted_at IS NULL) as total_products,
         (SELECT COUNT(*) FROM orders WHERE user_id = ? AND deleted_at IS NULL) as total_orders,
-        (SELECT SUM(total_amount) FROM orders WHERE user_id = ? AND deleted_at IS NULL) as total_revenue,
+        (SELECT SUM(total_amount) FROM orders WHERE user_id = ? AND deleted_at IS NULL AND status IN ('livree', 'confirmee')) as total_revenue,
         (SELECT COUNT(*) FROM customers WHERE user_id = ? AND deleted_at IS NULL) as total_customers`,
       [userId, userId, userId, userId]
     );

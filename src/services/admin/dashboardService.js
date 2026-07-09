@@ -24,8 +24,8 @@ class AdminDashboardService {
         -- Commandes
         (SELECT COUNT(*) FROM orders WHERE deleted_at IS NULL) as total_orders,
         (SELECT COUNT(*) FROM orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL) as orders_this_month,
-        (SELECT SUM(total_amount) FROM orders WHERE deleted_at IS NULL) as total_revenue,
-        (SELECT SUM(total_amount) FROM orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL) as revenue_this_month
+        (SELECT SUM(total_amount) FROM orders WHERE deleted_at IS NULL AND status IN ('livree', 'confirmee')) as total_revenue,
+        (SELECT SUM(total_amount) FROM orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL AND status IN ('livree', 'confirmee')) as revenue_this_month
     `, [USER_ROLES.USER, USER_ROLES.USER]);
 
     return {
@@ -48,7 +48,7 @@ class AdminDashboardService {
         u.store_slug,
         sp.name as plan_name,
         COUNT(DISTINCT o.id) as total_orders,
-        SUM(o.total_amount) as total_revenue,
+        SUM(CASE WHEN o.status IN ('livree', 'confirmee') THEN o.total_amount ELSE 0 END) as total_revenue,
         COUNT(DISTINCT p.id) as total_products,
         u.created_at
       FROM users u
@@ -144,7 +144,7 @@ class AdminDashboardService {
       `SELECT 
         DATE(created_at) as date,
         COUNT(*) as order_count,
-        SUM(total_amount) as revenue
+        SUM(CASE WHEN status IN ('livree', 'confirmee') THEN total_amount ELSE 0 END) as revenue
       FROM orders
       WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
         AND deleted_at IS NULL

@@ -363,6 +363,8 @@
       .product-price { font-size: 32px; }
     }
   </style>
+
+  <style>.svg-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0;}</style>
 </head>
 <body>
 
@@ -374,13 +376,11 @@
       </a>
       <% if (isBusiness && integrations) { %>
         <% if (integrations.instagram_enabled && integrations.instagram_url) { %>
-          <a href="<%= integrations.instagram_url.startsWith('http') ? integrations.instagram_url : 'https://instagram.com/' + integrations.instagram_url.replace('@','') %>" target="_blank" title="Instagram">
-            📷 <span class="hide-mobile">Instagram</span>
+          <a href="<%= integrations.instagram_url.startsWith('http') ? integrations.instagram_url : 'https://instagram.com/' + integrations.instagram_url.replace('@','') %>" target="_blank" title="Instagram"><svg class="svg-icon svg-icon-fi-brands-instagram" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg> <span class="hide-mobile">Instagram</span>
           </a>
         <% } %>
         <% if (integrations.facebook_enabled && integrations.facebook_url) { %>
-          <a href="<%= integrations.facebook_url.startsWith('http') ? integrations.facebook_url : 'https://facebook.com/' + integrations.facebook_url %>" target="_blank" title="Facebook">
-            👥 <span class="hide-mobile">Facebook</span>
+          <a href="<%= integrations.facebook_url.startsWith('http') ? integrations.facebook_url : 'https://facebook.com/' + integrations.facebook_url %>" target="_blank" title="Facebook"><svg class="svg-icon svg-icon-fi-brands-facebook" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/></svg> <span class="hide-mobile">Facebook</span>
           </a>
         <% } %>
       <% } %>
@@ -396,7 +396,7 @@
       <% if (product.image_url) { %>
         <img src="<%= product.image_url %>" alt="<%= product.name %>" class="product-main-img">
       <% } else { %>
-        <div class="product-img-placeholder">📦</div>
+        <div class="product-img-placeholder"><svg class="svg-icon svg-icon-fi-rr-box" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><line x1="10" y1="12" x2="14" y2="12"></line></svg></div>
       <% } %>
 
       <% if (product.store_slug) { %>
@@ -433,9 +433,9 @@
       <div class="vendor-card">
         <div class="vendor-avatar"><%= (c.store_title || product.business_name || 'V').charAt(0).toUpperCase() %></div>
         <div>
-          <div class="vendor-name">🏬 <%= product.business_name %></div>
+          <div class="vendor-name"><svg class="svg-icon svg-icon-fi-rr-building" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="2" width="16" height="20" rx="1"></rect><line x1="8" y1="6" x2="8" y2="6.01"></line><line x1="12" y1="6" x2="12" y2="6.01"></line><line x1="16" y1="6" x2="16" y2="6.01"></line><line x1="8" y1="10" x2="8" y2="10.01"></line><line x1="12" y1="10" x2="12" y2="10.01"></line><line x1="16" y1="10" x2="16" y2="10.01"></line><line x1="8" y1="14" x2="8" y2="14.01"></line><line x1="12" y1="14" x2="12" y2="14.01"></line><line x1="16" y1="14" x2="16" y2="14.01"></line><path d="M9 22v-4h6v4"></path></svg> <%= product.business_name %></div>
           <% if (product.city || product.country) { %>
-            <div class="vendor-location">📍 <%= [product.city, product.country].filter(Boolean).join(', ') %></div>
+            <div class="vendor-location"><svg class="svg-icon svg-icon-fi-rr-marker" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> <%= [product.city, product.country].filter(Boolean).join(', ') %></div>
           <% } %>
         </div>
       </div>
@@ -451,11 +451,11 @@
       <div class="product-stats">
         <div class="stat-pill">
           <div class="stat-value"><%= product.view_count || 0 %></div>
-          <div class="stat-label">👁️ Vues</div>
+          <div class="stat-label"><svg class="svg-icon svg-icon-fi-rr-eye" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>️ Vues</div>
         </div>
         <div class="stat-pill">
           <div class="stat-value"><%= product.order_count || 0 %></div>
-          <div class="stat-label">🛒 Commandes</div>
+          <div class="stat-label"><svg class="svg-icon svg-icon-fi-rr-shopping-cart" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Commandes</div>
         </div>
       </div>
 
@@ -470,13 +470,19 @@
       <% } else { %>
         <button class="btn-order" disabled>Produit indisponible</button>
       <% } %>
+
+      <div style="text-align: center; margin-top: 16px;">
+        <button id="openReportModalBtn" style="background: none; border: none; color: var(--store-desc); font-size: 13px; text-decoration: underline; cursor: pointer; opacity: 0.7;">
+          <svg class="svg-icon svg-icon-fi-rr-flag" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg> Signaler ce produit
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Footer -->
   <footer class="store-footer">
-    <% if (c.show_social_links) { %><div style="font-size:22px;margin-bottom:12px;">📱 🌐 💬</div><% } %>
-    <%= c.footer_text || `© ${new Date().getFullYear()} ${c.store_title || product.business_name}. Tous droits réservés.` %>
+    <% if (c.show_social_links) { %><div style="font-size:22px;margin-bottom:12px;"><svg class="svg-icon svg-icon-fi-rr-smartphone" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg> <svg class="svg-icon svg-icon-fi-rr-world" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg> <svg class="svg-icon svg-icon-fi-rr-comment-alt" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 0 1-4.06 7.2A8.5 8.5 0 0 1 4 15.8L3 21l5.2-1a8.5 8.5 0 0 1 3.8.9 8.38 8.38 0 0 1 4-1 8.5 8.5 0 0 1 5-8.2z"></path></svg></div><% } %>
+    <%- c.footer_text || `<svg class="svg-icon svg-icon-fi-rr-copyright" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M14.83 9a4 4 0 1 0 0 6"></path></svg> ${new Date().getFullYear()} ${c.store_title || product.business_name}. Tous droits réservés.` %>
     <div style="margin-top:8px;font-size:12px;opacity:0.6;">
       Propulsé par <a href="/" style="color:var(--store-primary);font-weight:700;text-decoration:none;">AURA</a>
     </div>
@@ -486,7 +492,7 @@
   <div class="modal-overlay" id="orderModalOverlay">
     <div class="modal">
       <div class="modal-header">
-        <h3>🛒 Passer commande</h3>
+        <h3><svg class="svg-icon svg-icon-fi-rr-shopping-cart" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Passer commande</h3>
         <button class="modal-close" id="closeModal">&times;</button>
       </div>
       <form id="publicOrderForm">
@@ -499,7 +505,7 @@
 
           <div class="form-group">
             <label class="form-label" for="clientName">Nom complet *</label>
-            <input type="text" id="clientName" name="customer_name" class="form-input" placeholder="Ex: Jean Dupont" required>
+            <input type="text" id="clientName" name="customer_name" class="form-input" placeholder="Ex: Nom Prénom" required>
             <span class="form-error" id="nameError"></span>
           </div>
 
@@ -533,103 +539,65 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-cancel" id="cancelOrder">Annuler</button>
-          <button type="submit" class="btn-confirm" id="submitOrder">✅ Confirmer la commande</button>
+          <button type="submit" class="btn-confirm" id="submitOrder"><svg class="svg-icon svg-icon-fi-rr-check-circle" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Confirmer la commande</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script>
-    // SSR data
-    window.__SSR_PRODUCT__ = <%- JSON.stringify({
+  <!-- REPORT MODAL -->
+  <div class="modal-overlay" id="reportModalOverlay">
+    <div class="modal" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3><svg class="svg-icon svg-icon-fi-rr-flag" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg> Signaler ce produit</h3>
+        <button class="modal-close" id="closeReportModal">&times;</button>
+      </div>
+      <form id="publicReportForm">
+        <div class="modal-body">
+          <p style="font-size: 14px; color: var(--store-desc); margin-top: 0; margin-bottom: 20px;">
+            Aidez-nous à garder Aura Marketplace sûr. Pourquoi signalez-vous ce produit ?
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Raison du signalement *</label>
+            <select id="reportReason" class="form-input" required>
+              <option value="" disabled selected>Sélectionnez une raison</option>
+              <option value="Arnaque">Arnaque suspectée</option>
+              <option value="Produit interdit">Produit interdit ou illégal</option>
+              <option value="Faux produit">Contrefaçon / Faux produit</option>
+              <option value="Mauvaise description">Description trompeuse</option>
+              <option value="Spam">Spam</option>
+              <option value="Autre">Autre raison</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Plus de détails (optionnel)</label>
+            <textarea id="reportDescription" class="form-textarea" rows="4" placeholder="Précisez votre signalement..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="cancelReport">Annuler</button>
+          <button type="submit" class="btn-confirm" id="submitReport" style="background: #ef4444; border-color: #ef4444;">Signaler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SSR Data (JSON) -->
+  <script id="ssr-product-data" type="application/json">
+    <%- JSON.stringify({
       id: product.id,
       name: product.name,
       price: product.price,
       currency: product.currency,
       token: product.share_token
-    }) %>;
-    window.__SSR_CUSTOM_MESSAGE__ = <%- JSON.stringify(customMessage || '') %>;
-
-    // Modal logic
-    const overlay = document.getElementById('orderModalOverlay');
-    document.getElementById('openOrderBtn')?.addEventListener('click', () => {
-      overlay.classList.add('open');
-
-      // Charger les infos sauvegardées
-      const savedInfo = localStorage.getItem('aura_customer_info');
-      if (savedInfo) {
-        try {
-          const info = JSON.parse(savedInfo);
-          if (info.name) document.getElementById('clientName').value = info.name;
-          if (info.phone) document.getElementById('clientPhone').value = info.phone;
-          if (info.address) document.getElementById('clientAddress').value = info.address;
-          document.getElementById('saveInfo').checked = true;
-        } catch(e) {}
-      }
-    });
-    document.getElementById('closeModal')?.addEventListener('click', () => overlay.classList.remove('open'));
-    document.getElementById('cancelOrder')?.addEventListener('click', () => overlay.classList.remove('open'));
-    overlay?.addEventListener('click', (e) => { if(e.target === overlay) overlay.classList.remove('open'); });
-
-    // Form submission
-    document.getElementById('publicOrderForm')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('submitOrder');
-      
-      const customer_name = document.getElementById('clientName').value;
-      const customer_phone = document.getElementById('clientPhone').value;
-      const customer_address = document.getElementById('clientAddress').value;
-
-      // Sauvegarder dans le localStorage si la case est cochée
-      if (document.getElementById('saveInfo')?.checked) {
-        localStorage.setItem('aura_customer_info', JSON.stringify({
-          name: customer_name,
-          phone: customer_phone,
-          address: customer_address
-        }));
-      } else {
-        localStorage.removeItem('aura_customer_info');
-      }
-
-      btn.disabled = true;
-      btn.textContent = 'Envoi...';
-
-      const payload = {
-        customer_name,
-        customer_phone,
-        quantity: parseInt(document.getElementById('clientQuantity').value),
-        customer_address,
-        notes: document.getElementById('clientNotes').value,
-        product_id: window.__SSR_PRODUCT__.id
-      };
-
-      try {
-        const resp = await fetch('/api/public/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await resp.json();
-        if (resp.ok) {
-          overlay.classList.remove('open');
-          
-          const order = data.data.order;
-          if (order.whatsapp_url) {
-            // Redirection WhatsApp
-            window.location.href = order.whatsapp_url;
-          } else {
-            alert('✅ Commande envoyée ! Le vendeur vous contactera bientôt.');
-          }
-        } else {
-          alert('Erreur : ' + (data.message || 'Veuillez réessayer.'));
-        }
-      } catch(err) {
-        alert('Erreur réseau.');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = '✅ Confirmer la commande';
-      }
-    });
+    }) %>
   </script>
+  <script id="ssr-custom-message-data" type="application/json">
+    <%- JSON.stringify(customMessage || '') %>
+  </script>
+  <script src="/js/public-product.js"></script>
+
 </body>
 </html>

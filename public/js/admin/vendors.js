@@ -48,7 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-action="vendor-actions"]').forEach(btn => {
     btn.addEventListener('click', function() {
       const vendorId = this.dataset.vendorId;
-      const vendor = window.__SSR_VENDORS__.find(v => v.id == vendorId);
+      let vendors = [];
+      try {
+        const ssrEl = document.getElementById('ssr-vendors-data');
+        if (ssrEl) {
+          vendors = JSON.parse(ssrEl.textContent || '[]');
+        }
+      } catch(e) { console.error('Erreur lecture vendors SSR:', e); }
+
+      const vendor = vendors.find(v => v.id == vendorId);
       if (!vendor) return;
 
       const body = document.getElementById('vendorActionsBody');

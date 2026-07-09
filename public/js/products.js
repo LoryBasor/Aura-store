@@ -9,10 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalTitle = document.getElementById('modalTitle');
   const productsGrid = document.getElementById('productsGrid');
 
-  // Utility to fetch products from the globally injected window.__SSR_PRODUCTS__
+  // Utility to fetch products from the SSR JSON block
   function getProductData(id) {
-    if (!window.__SSR_PRODUCTS__) return null;
-    return window.__SSR_PRODUCTS__.find(p => p.id == id);
+    try {
+      const ssrEl = document.getElementById('ssr-products-data');
+      if (ssrEl) {
+        const data = JSON.parse(ssrEl.textContent || '{}');
+        if (data.products) return data.products.find(p => p.id == id);
+      }
+    } catch(e) { console.error('Erreur lecture produits:', e); }
+    return null;
   }
 
   // --- ACTIONS ---
