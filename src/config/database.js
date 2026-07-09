@@ -61,7 +61,11 @@ async function initializeDatabase() {
     throw error;
   }
 }
-initializeDatabase();
+if (process.env.NODE_ENV !== 'production') {
+  initializeDatabase().catch(err => {
+    console.error("⚠️ Impossible de lancer le tunnel en local:", err.message);
+  });
+}
 const poolProxy = new Proxy({}, {
   get(target, prop) {
     if (!realPool) {
