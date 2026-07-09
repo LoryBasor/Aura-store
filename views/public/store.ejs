@@ -407,13 +407,13 @@
       <% if (isBusiness && integrations) { %>
       <div style="margin-top: 16px; display: flex; justify-content: center; gap: 12px;">
         <% if (integrations.instagram_enabled && integrations.instagram_url) { %>
-          <a href="<%= integrations.instagram_url.startsWith('http') ? integrations.instagram_url : 'https://instagram.com/' + integrations.instagram_url.replace('@','') %>" 
-             target="_blank" class="social-link" title="Instagram"><svg class="svg-icon svg-icon-fi-brands-instagram" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+          <a href="<%= integrations.instagram_url.startsWith('http') ? integrations.instagram_url : 'https://instagram.com/' + integrations.instagram_url.replace('@','') %>"  style="color: mediumorchid;"  
+             target="_blank" class="social-link" title="Instagram"><svg class="svg-icon svg-icon-fi-brands-instagram" viewBox="0 0 24 24" width=34 height=34 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
           </a>
         <% } %>
         <% if (integrations.facebook_enabled && integrations.facebook_url) { %>
           <a href="<%= integrations.facebook_url.startsWith('http') ? integrations.facebook_url : 'https://facebook.com/' + integrations.facebook_url %>" 
-             target="_blank" class="social-link" title="Facebook"><svg class="svg-icon svg-icon-fi-brands-facebook" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/></svg>
+             target="_blank" class="social-link" title="Facebook"><svg class="svg-icon svg-icon-fi-brands-facebook" viewBox="0 0 24 24" width=34 height=34 fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/></svg>
           </a>
         <% } %>
       </div>
