@@ -433,7 +433,7 @@ class OrderService {
         SUM(CASE WHEN status IN ('nouvelle', 'confirmee', 'en_preparation', 'en_livraison') THEN 1 ELSE 0 END) as pending_orders,
         SUM(CASE WHEN status = 'livree' THEN 1 ELSE 0 END) as delivered_orders,
         SUM(CASE WHEN status = 'annulee' THEN 1 ELSE 0 END) as cancelled_orders,
-        COALESCE(SUM(total_amount), 0) as total_revenue
+        COALESCE(SUM(CASE WHEN status IN ('livree', 'confirmee') THEN total_amount ELSE 0 END), 0) as total_revenue
        FROM orders
        WHERE user_id = ? AND deleted_at IS NULL`,
       [userId]

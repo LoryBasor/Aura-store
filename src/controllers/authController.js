@@ -28,7 +28,21 @@ class AuthController {
     async login(req, res, next) {
     try {
       const { email, password } = req.body;
-      const result = await authService.login(email, password);
+      let result;
+      try {
+        result = await authService.login(email, password);
+      } catch (error) {
+        if (error.message === 'EMAIL_NOT_VERIFIED') {
+          // Rediriger vers la page de vérification OTP
+          return res.status(403).json({
+            success: false,
+            requiresOTP: true,
+            email,
+            message: 'Votre email n\'est pas encore vérifié. Un code a été renvoyé à votre adresse.'
+          });
+        }
+        throw error;
+      }
       
       // Le token est stocké dans un cookie httpOnly sécurisé
       res.cookie('aura_token', result.token, {
@@ -103,6 +117,54 @@ class AuthController {
     } catch (error) {
       next(error);
     }
+  }
+
+  /**
+   * Vérifier le code OTP d'inscription
+   * POST /api/auth/verify-email
+   */
+  async verifyEmail(req, res, next) {
+    try {
+      const { email, code } = req.body;
+      const result = await authService.verifyEmailOTP(email, code);
+      return successResponse(res, result, result.message);
+    } catch (error) { next(error); }
+  }
+
+  /**
+   * Renvoyer le code OTP d'inscription
+   * POST /api/auth/resend-otp
+   */
+  async resendEmailOTP(req, res, next) {
+    try {
+      const { email } = req.body;
+      const result = await authService.resendEmailOTP(email);
+      return successResponse(res, result, result.message);
+    } catch (error) { next(error); }
+  }
+
+  /**
+   * Mot de passe oublié — envoyer OTP
+   * POST /api/auth/forgot-password
+   */
+  async forgotPassword(req, res, next) {
+    try {
+      const { email } = req.body;
+      const result = await authService.forgotPassword(email);
+      return successResponse(res, result, result.message);
+    } catch (error) { next(error); }
+  }
+
+  /**
+   * Réinitialiser le mot de passe avec OTP
+   * POST /api/auth/reset-password
+   */
+  async resetPassword(req, res, next) {
+    try {
+      const { email, code, new_password } = req.body;
+      const result = await authService.resetPassword(email, code, new_password);
+      return successResponse(res, result, result.message);
+    } catch (error) { next(error); }
   }
 }
 

@@ -359,7 +359,80 @@ const AdminDashboard = {
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('globalStats')) {
-    AdminDashboard.init();
+  // ── 1. Graphique d'évolution (Chart.js) — lit les données SSR injectées ──
+  const ssrDataEl = document.getElementById('ssr-admin-data');
+  if (ssrDataEl) {
+    try {
+      const trends = JSON.parse(ssrDataEl.textContent || '{}');
+      const ctx = document.getElementById('trendsChart')?.getContext('2d');
+
+      if (ctx && trends.orders && trends.orders.length > 0) {
+        const data = trends.orders;
+        const labels = data.map(d => new Date(d.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Commandes',
+                data: data.map(d => d.count),
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                yAxisID: 'y'
+              },
+              {
+                label: 'Revenu (FCFA)',
+                data: data.map(d => d.revenue),
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+              y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: { display: true, text: 'Nb. Commandes' },
+                grid: { drawOnChartArea: false }
+              },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: { display: true, text: 'Revenu (FCFA)' },
+                ticks: { callback: value => value.toLocaleString('fr-FR') }
+              }
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.error('[Dashboard] Erreur lecture données SSR graphique:', e);
+    }
   }
-});
+
+  // ── 2. Pastille de notifications non lues (lecture data-attribute SSR) ──
+  const countBadge = document.getElementById('unreadNotifCount');
+  if (countBadge) {
+    const unread = parseInt(countBadge.getAttribute('data-unread') || '0', 10);
+    if (unread > 0) {
+      countBadge.style.display = 'inline-block';
+    }
+  }
+});

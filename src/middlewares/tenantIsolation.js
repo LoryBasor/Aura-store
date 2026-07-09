@@ -10,7 +10,7 @@ const { forbiddenResponse, notFoundResponse } = require('../utils/response');
  * @param {string} idParam - Nom du paramètre ID dans la route (ex: 'id', 'productId')
  * @returns {function} Middleware Express
  */
-function ensureOwnership(table, idParam = 'id') {
+function ensureOwnership(table, idParam = 'id') { 
   return async (req, res, next) => {
     try {
       const resourceId = req.params[idParam];

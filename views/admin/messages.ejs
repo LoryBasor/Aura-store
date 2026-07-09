@@ -1,0 +1,168 @@
+<!-- views/admin/messages.ejs -->
+<style>
+  @media (max-width: 768px) {
+    .messages-container {
+      flex-direction: column !important;
+      height: calc(100vh - 150px) !important;
+      min-height: 0 !important;
+    }
+    .conversations-list {
+      width: 100% !important;
+      height: 100% !important;
+      max-height: none !important;
+    }
+    .chat-area {
+      height: 100% !important;
+      width: 100% !important;
+    }
+    .msg-bubble {
+      max-width: 95% !important;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .message-input-container {
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+    .message-input-container .form-input {
+      min-height: 80px !important;
+    }
+    .message-input-container .btn {
+      width: 100% !important;
+      margin-top: 5px;
+    }
+    .messages-container.has-active-ticket .conversations-list {
+      display: none !important;
+    }
+    .messages-container:not(.has-active-ticket) .chat-area {
+      display: none !important;
+    }
+    .mobile-back-btn {
+      display: block !important;
+    }
+  }
+</style>
+
+<div class="dashboard-header">
+  <div class="header-content">
+    <h2>Messagerie & Support Client</h2>
+    <p class="subtitle">Répondez aux vendeurs et aux visiteurs de la plateforme.</p>
+  </div>
+</div>
+
+<div class="messages-container <%= activeTicket ? 'has-active-ticket' : '' %>" style="display: flex; gap: 20px; height: calc(100vh - 200px); min-height: 500px;">
+
+  <!-- Liste des conversations (SSR) -->
+  <div class="conversations-list" style="width: 350px; background: var(--bg-card,#fff); border-radius: var(--radius,12px); border: 1px solid var(--border,#ddd); display: flex; flex-direction: column; overflow: hidden;">
+    <div style="padding: 16px; border-bottom: 1px solid var(--border,#ddd); font-weight: bold;">
+      Tickets Récents
+    </div>
+    <div style="overflow-y: auto; flex: 1;">
+      <% if (!conversations || conversations.length === 0) { %>
+        <div style="padding: 20px; text-align: center; color: #888; font-size: 13px;">Aucun ticket.</div>
+      <% } else { %>
+        <% conversations.forEach(conv => {
+          const date = new Date(conv.updated_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+          const senderLabel = conv.guest_name ? 'Visiteur : ' + conv.guest_name : 'Vendeur : ' + (conv.vendor_name || 'N/A');
+          const isActive = activeTicket && activeTicket.id == conv.id;
+          const isUnread = conv.unread_count > 0;
+        %>
+          <a href="/admin/messages?ticket=<%= conv.id %>" style="text-decoration: none; color: inherit; display: block;">
+            <div class="conv-item <%= isActive ? 'active' : '' %> <%= isUnread && !isActive ? 'unread' : '' %>" style="padding: 16px; border-bottom: 1px solid var(--border,#eee); cursor: pointer; transition: background 0.2s; background: <%= isActive ? '#f1f5f9' : (isUnread ? '#fef2f2' : 'white') %>; border-left: 3px solid <%= isActive ? '#5C6C73' : (isUnread ? '#ef4444' : 'transparent') %>;">
+              <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #333;"><%= conv.subject %></div>
+              <div style="font-size: 12px; color: #666; margin-bottom: 4px;"><%= senderLabel %></div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 11px; color: <%= conv.status === 'open' ? '#e74c3c' : '#94a3b8' %>;">
+                  <%- conv.status === 'open' ? '<svg class="svg-icon svg-icon-fi-ss-circle" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" style="color:#ef4444;" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/></svg> Ouvert' : '<svg class="svg-icon svg-icon-fi-rr-circle" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle></svg> Fermé' %>
+                </div>
+                <div style="font-size: 11px; color: #888;"><%= date %></div>
+              </div>
+            </div>
+          </a>
+        <% }) %>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Zone de chat (SSR) -->
+  <div class="chat-area" style="flex: 1; background: var(--bg-card,#fff); border-radius: var(--radius,12px); border: 1px solid var(--border,#ddd); display: flex; flex-direction: column; overflow: hidden;">
+
+    <!-- En-tête -->
+    <div style="padding: 16px; border-bottom: 1px solid var(--border,#ddd); display: flex; justify-content: space-between; flex-direction: column; background: #f9fafb;">
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <a href="/admin/messages" class="mobile-back-btn" style="display: none; text-decoration: none; color: #333; font-size: 20px;" title="Retour aux tickets">&larr;</a>
+        <div>
+          <div style="font-weight: bold; font-size: 16px; color: var(--text-primary,#333);">
+            <%= activeTicket ? activeTicket.subject : 'Sélectionnez une conversation' %>
+          </div>
+        <% if (activeTicket) { %>
+          <div style="font-size: 12px; color: #666;">
+            <%= activeTicket.guest_name ? activeTicket.guest_name + ' (' + (activeTicket.guest_email || '') + ')' : (activeTicket.vendor_name || '') + ' (' + (activeTicket.vendor_email || '') + ')' %>
+          </div>
+        <% } %>
+      </div>
+      <% if (activeTicket) { %>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <% if (activeTicket.status === 'open') { %>
+            <!-- input caché pour l'id du ticket actif -->
+            <input type="hidden" id="currentConversationId" value="<%= activeTicket.id %>">
+            <button onclick="closeTicket(<%= activeTicket.id %>)" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;">Clôturer</button>
+          <% } %>
+          <span style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background: <%= activeTicket.status === 'open' ? '#fee2e2' : '#f1f5f9' %>; color: <%= activeTicket.status === 'open' ? '#991b1b' : '#475569' %>;">
+            <%= activeTicket.status === 'open' ? 'Ticket Ouvert' : 'Ticket Clôturé' %>
+          </span>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Messages -->
+    <div id="chatMessages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; background: #fafafa;">
+      <% if (!activeTicket) { %>
+        <div style="text-align: center; color: var(--text-secondary,#999); margin: auto;">
+          Aucune conversation sélectionnée
+        </div>
+      <% } else if (!activeMessages || activeMessages.length === 0) { %>
+        <div style="text-align: center; color: #888; margin: auto;">Aucun message dans ce ticket.</div>
+      <% } else { %>
+        <% activeMessages.forEach(msg => {
+          const isMe = msg.sender_role === 'admin';
+          const time = new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        %>
+          <div class="msg-bubble <%= isMe ? 'msg-sent' : 'msg-received' %>" style="max-width:80%; padding:12px 16px; border-radius:12px; font-size:14px; line-height:1.4; align-self:<%= isMe ? 'flex-end' : 'flex-start' %>; background:<%= isMe ? 'var(--primary,#5C6C73)' : 'white' %>; color:<%= isMe ? 'white' : '#333' %>; border:<%= isMe ? 'none' : '1px solid #ddd' %>;">
+            <div><%= msg.content.replace(/\n/g, '<br>') %></div>
+            <% if (msg.attachments && msg.attachments.length > 0) { %>
+              <div style="margin-top: 8px;">
+                <% msg.attachments.forEach(att => { %>
+                  <a href="<%= att.file_url %>" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.1);border-radius:6px;margin-top:4px;color:inherit;text-decoration:none;font-size:13px;">
+                    <svg class="svg-icon svg-icon-fi-rr-paperclip" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21.44 11.05 12.25 20.24a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95L9.41 17.41a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"></path></svg> <%= att.file_name %>
+                  </a>
+                <% }) %>
+              </div>
+            <% } %>
+            <div style="font-size: 11px; margin-top: 6px; opacity: 0.7; text-align: right;"><%= time %></div>
+          </div>
+        <% }) %>
+      <% } %>
+    </div>
+
+    <!-- Formulaire d'envoi (affiché uniquement si ticket ouvert) -->
+    <% if (activeTicket && activeTicket.status === 'open') { %>
+      <div style="padding: 16px; border-top: 1px solid var(--border,#ddd); background: white;">
+        <form id="sendAdminMessageForm" style="display: flex; flex-direction: column; gap: 10px;">
+          <input type="hidden" id="currentConversationId" value="<%= activeTicket.id %>">
+          <div class="message-input-container" style="display: flex; gap: 10px; align-items: flex-end;">
+            <textarea id="messageContent" class="form-input" rows="2" placeholder="Écrivez votre réponse..." style="flex: 1; resize: none; border-radius: 8px;"></textarea>
+            <!-- <label class="btn btn-secondary" style="padding: 10px; cursor: pointer; border-radius: 8px;" title="Joindre un fichier">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+              <input type="file" id="messageAttachment" style="display: none;" multiple disabled>
+            </label> -->
+            <button type="submit" id="sendBtn" class="btn btn-primary" style="padding: 10px 20px; border-radius: 8px;">Répondre</button>
+          </div>
+        </form>
+      </div>
+    <% } %>
+
+  </div>
+</div>
+
+<script src="/js/admin-actions.js"></script>

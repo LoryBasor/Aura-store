@@ -7,10 +7,10 @@
 <!-- Page Header -->
 <div class="page-header">
   <div>
-    <h1 class="page-title">🎨 Personnalisation Avancée</h1>
+    <h1 class="page-title"><svg class="svg-icon svg-icon-fi-rr-palette" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 9 0 1 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.4-1.01-.24-.26-.39-.61-.39-.99 0-.83.67-1.5 1.5-1.5H16a4 4 0 0 0 4-4c0-4.97-4.48-9-8-9z"></path><circle cx="6.5" cy="11.5" r="1.2"></circle><circle cx="9.5" cy="7.5" r="1.2"></circle><circle cx="14.5" cy="7.5" r="1.2"></circle><circle cx="17.5" cy="11.5" r="1.2"></circle></svg> Personnalisation Avancée</h1>
     <p class="page-subtitle">Façonnez l'apparence et le comportement de votre boutique de A à Z</p>
   </div>
-  <button class="btn btn-danger" data-action="reset-customization">🔄 Réinitialiser par défaut</button>
+  <button class="btn btn-danger" data-action="reset-customization"><svg class="svg-icon svg-icon-fi-rr-refresh" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Réinitialiser par défaut</button>
 </div>
 
 <style>
@@ -24,7 +24,7 @@
       
       <!-- 1. En-tête de Boutique -->
       <div class="card">
-        <div class="card-header"><h3 class="card-title">📝 En-tête & Textes</h3></div>
+        <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-edit" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg> En-tête & Textes</h3></div>
         <form id="headerForm" data-ajax="true">
           <div style="padding:24px;">
             <div class="form-group">
@@ -44,7 +44,7 @@
               <textarea id="orderMessage" class="form-textarea" rows="2"
                         placeholder="Ex: Livraison gratuite à partir de 20 000 FCFA !"><%= c.order_message || '' %></textarea>
             </div>
-            <button type="submit" class="btn btn-primary">💾 Enregistrer les textes</button>
+            <button type="submit" class="btn btn-primary"><svg class="svg-icon svg-icon-fi-rr-disk" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Enregistrer les textes</button>
           </div>
         </form>
       </div>
@@ -86,14 +86,14 @@
               </select>
             </div>
 
-            <button type="submit" class="btn btn-primary">💾 Enregistrer l'agencement</button>
+            <button type="submit" class="btn btn-primary"><svg class="svg-icon svg-icon-fi-rr-disk" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Enregistrer l'agencement</button>
           </div>
         </form>
       </div>
 
       <!-- 3. Couleurs (Étendu) -->
       <div class="card">
-        <div class="card-header"><h3 class="card-title">🎨 Palette de Couleurs</h3></div>
+        <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-palette" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 9 0 1 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.4-1.01-.24-.26-.39-.61-.39-.99 0-.83.67-1.5 1.5-1.5H16a4 4 0 0 0 4-4c0-4.97-4.48-9-8-9z"></path><circle cx="6.5" cy="11.5" r="1.2"></circle><circle cx="9.5" cy="7.5" r="1.2"></circle><circle cx="14.5" cy="7.5" r="1.2"></circle><circle cx="17.5" cy="11.5" r="1.2"></circle></svg> Palette de Couleurs</h3></div>
         <form id="colorsForm" data-ajax="true">
           <div style="padding:24px;">
             <div class="form-grid-2">
@@ -122,14 +122,14 @@
                 <input type="color" id="textColor" class="form-input" style="height:40px;padding:2px;" value="<%= c.text_color || '#1f2937' %>">
               </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="margin-top:16px;">💾 Enregistrer les couleurs</button>
+            <button type="submit" class="btn btn-primary" style="margin-top:16px;"><svg class="svg-icon svg-icon-fi-rr-disk" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Enregistrer les couleurs</button>
           </div>
         </form>
       </div>
 
       <!-- 4. Logo et Bannière -->
       <div class="card">
-        <div class="card-header"><h3 class="card-title">🖼️ Médias</h3></div>
+        <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-picture" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>️ Médias</h3></div>
         <div style="padding:24px;">
           <div class="form-group">
             <label class="form-label">Logo de la marque</label>
@@ -137,7 +137,7 @@
               <div style="margin-bottom:12px;">
                 <img src="<%= c.logo_url %>" alt="Logo" style="max-height:80px;border-radius:var(--radius-sm); border: 1px solid #e5e7eb;">
               </div>
-              <div id="deleteLogo"><button type="button" class="btn btn-danger btn-sm" data-action="delete-logo">🗑 Supprimer</button></div>
+              <div id="deleteLogo"><button type="button" class="btn btn-danger btn-sm" data-action="delete-logo"><svg class="svg-icon svg-icon-fi-rr-trash" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Supprimer</button></div>
             <% } else { %>
               <div id="deleteLogo"></div>
             <% } %>
@@ -151,7 +151,7 @@
               <div style="margin-bottom:12px;">
                 <img src="<%= c.banner_url %>" alt="Bannière" style="max-height:120px;width:100%;object-fit:cover;border-radius:var(--radius-sm);">
               </div>
-              <div id="deleteBanner"><button type="button" class="btn btn-danger btn-sm" data-action="delete-banner">🗑 Supprimer</button></div>
+              <div id="deleteBanner"><button type="button" class="btn btn-danger btn-sm" data-action="delete-banner"><svg class="svg-icon svg-icon-fi-rr-trash" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Supprimer</button></div>
             <% } else { %>
               <div id="deleteBanner"></div>
             <% } %>
@@ -163,13 +163,13 @@
 
       <!-- 5. Pied de page & Visibilité -->
       <div class="card">
-        <div class="card-header"><h3 class="card-title">⚙️ Footer & Options</h3></div>
+        <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-settings" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>️ Footer & Options</h3></div>
         <form id="optionsForm" data-ajax="true">
           <div style="padding:24px;">
             <div class="form-group">
               <label class="form-label">Texte du pied de page (Footer)</label>
               <input type="text" id="footerText" class="form-input" 
-                     placeholder="© 2026 Mon Entreprise. Tous droits réservés."
+                     placeholder="<svg class="svg-icon svg-icon-fi-rr-copyright" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M14.83 9a4 4 0 1 0 0 6"></path></svg> 2026 Mon Entreprise. Tous droits réservés."
                      value="<%= c.footer_text || '' %>">
             </div>
             <div class="form-group">
@@ -184,7 +184,7 @@
                 <span>Afficher les icônes de réseaux sociaux</span>
               </label>
             </div>
-            <button type="submit" class="btn btn-primary" style="margin-top: 16px;">💾 Enregistrer les options</button>
+            <button type="submit" class="btn btn-primary" style="margin-top: 16px;"><svg class="svg-icon svg-icon-fi-rr-disk" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Enregistrer les options</button>
           </div>
         </form>
       </div>
@@ -195,7 +195,7 @@
     <div style="position:sticky;top:24px; height: 100%;">
       <div class="card" style="height: 100%; display: flex; flex-direction: column;">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-          <h3 class="card-title">👁️ Aperçu en Direct</h3>
+          <h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-eye" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>️ Aperçu en Direct</h3>
           <a href="/store/<%= user && user.store_slug ? user.store_slug : '' %>" target="_blank" class="btn btn-secondary btn-sm">Ouvrir la boutique ↗</a>
         </div>
         
@@ -301,7 +301,7 @@
                 <div style="width: 24px; height: 24px; background: <%= c.description_color || '#4b5563' %>; border-radius: 50%;"></div>
               </div>
               <p id="previewFooterText" style="font-size: 11px; color: <%= c.description_color || '#4b5563' %>;">
-                <%= c.footer_text || '© 2026 ' + (user.business_name || 'Boutique') %>
+                <%= c.footer_text || '<svg class="svg-icon svg-icon-fi-rr-copyright" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M14.83 9a4 4 0 1 0 0 6"></path></svg> 2026 ' + (user.business_name || 'Boutique') %>
               </p>
             </div>
 
@@ -313,7 +313,7 @@
 </div>
 
 <!-- Inject customization data for JS -->
-<script>
-  window.__SSR_CUSTOMIZATION__ = <%- JSON.stringify(c) %>;
+<script id="ssr-customization-data" type="application/json">
+  <%- JSON.stringify(c) %>
 </script>
 <script src="/js/customization.js"></script>

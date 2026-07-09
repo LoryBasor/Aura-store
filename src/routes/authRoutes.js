@@ -24,12 +24,55 @@ router.post(
   authController.register
 );
 
+// Vérification OTP (Inscription)
+router.post(
+  '/verify-email',
+  authLimiter,
+  validateRequest(Joi.object({
+    email: Joi.string().email().required(),
+    code: Joi.string().length(6).required()
+  })),
+  authController.verifyEmail
+);
+
+// Renvoi OTP (Inscription)
+router.post(
+  '/resend-otp',
+  authLimiter,
+  validateRequest(Joi.object({
+    email: Joi.string().email().required()
+  })),
+  authController.resendEmailOTP
+);
+
 // Connexion
 router.post(
   '/login',
   authLimiter,
   validateRequest(loginSchema),
   authController.login
+);
+
+// Mot de passe oublié (Envoi OTP)
+router.post(
+  '/forgot-password',
+  authLimiter,
+  validateRequest(Joi.object({
+    email: Joi.string().email().required()
+  })),
+  authController.forgotPassword
+);
+
+// Réinitialisation mot de passe (Vérification OTP + Nouveau MDP)
+router.post(
+  '/reset-password',
+  authLimiter,
+  validateRequest(Joi.object({
+    email: Joi.string().email().required(),
+    code: Joi.string().length(6).required(),
+    new_password: Joi.string().min(8).required()
+  })),
+  authController.resetPassword
 );
 
 // Profil (protégé)

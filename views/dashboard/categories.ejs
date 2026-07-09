@@ -24,7 +24,7 @@
     <div id="categoriesList">
       <% if (currentCategories.length === 0) { %>
         <div class="empty-categories" style="text-align:center;padding:64px 24px;">
-          <div class="empty-categories-icon" style="font-size:64px;margin-bottom:16px;">🏷️</div>
+          <div class="empty-categories-icon" style="font-size:64px;margin-bottom:16px;"><svg class="svg-icon svg-icon-fi-rr-label" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20.59 13.41 12 22l-9-9V4a2 2 0 0 1 2-2h8.59a2 2 0 0 1 1.41.59l7 7a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>️</div>
           <h3 class="empty-categories-title" style="font-size:20px;font-weight:700;color:var(--color-primary);margin-bottom:8px;">Aucune catégorie</h3>
           <p class="empty-categories-text" style="color:var(--color-secondary);margin-bottom:24px;">Créez vos premières catégories pour organiser vos produits</p>
           <button class="btn btn-primary" data-action="new-category">+ Nouvelle catégorie</button>
@@ -46,9 +46,9 @@
               </div>
             </div>
             <div class="category-actions">
-              <button class="btn btn-secondary btn-sm" data-action="edit-category" data-category-id="<%= cat.id %>">✏️ Modifier</button>
+              <button class="btn btn-secondary btn-sm" data-action="edit-category" data-category-id="<%= cat.id %>"><svg class="svg-icon svg-icon-fi-rr-pencil" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>️ Modifier</button>
               <button class="btn btn-danger btn-sm" data-action="delete-category" data-category-id="<%= cat.id %>"
-                      <%= cat.product_count > 0 ? 'disabled title="Des produits utilisent cette catégorie"' : '' %>>🗑</button>
+                      <%= cat.product_count > 0 ? 'disabled title="Des produits utilisent cette catégorie"' : '' %>><svg class="svg-icon svg-icon-fi-rr-trash" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
             </div>
           </div>
         <% }); %>
@@ -62,7 +62,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 class="modal-title" id="modalTitle">Nouvelle catégorie</h3>
-      <button class="modal-close">✕</button>
+      <button class="modal-close"><svg class="svg-icon svg-icon-fi-rr-cross-small" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <form id="categoryForm">
       <div class="modal-body">
@@ -86,8 +86,8 @@
 </div>
 
 <!-- Inject categories JSON pour JS (drag & drop) -->
-<script>
-  window.__SSR_CATEGORIES__ = <%- JSON.stringify(currentCategories) %>;
+<script id="ssr-categories-data" type="application/json">
+  <%- JSON.stringify(currentCategories) %>
 </script>
 
 <script src="/js/categories.js"></script>

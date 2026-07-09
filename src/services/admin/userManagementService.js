@@ -38,7 +38,7 @@ class UserManagementService {
         sp.slug as plan_slug,
         (SELECT COUNT(*) FROM products p WHERE p.user_id = u.id AND p.deleted_at IS NULL) as products_count,
         (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id AND o.deleted_at IS NULL) as orders_count,
-        (SELECT SUM(o.total_amount) FROM orders o WHERE o.user_id = u.id AND o.deleted_at IS NULL) as total_revenue
+        (SELECT SUM(o.total_amount) FROM orders o WHERE o.user_id = u.id AND o.deleted_at IS NULL AND o.status IN ('livree', 'confirmee')) as total_revenue
       FROM users u
       LEFT JOIN subscriptions s ON u.id = s.user_id AND s.status IN ('trial', 'active')
       LEFT JOIN subscription_plans sp ON s.plan_id = sp.id
@@ -121,7 +121,7 @@ class UserManagementService {
       `SELECT 
         (SELECT COUNT(*) FROM products WHERE user_id = ? AND deleted_at IS NULL) as total_products,
         (SELECT COUNT(*) FROM orders WHERE user_id = ? AND deleted_at IS NULL) as total_orders,
-        (SELECT SUM(total_amount) FROM orders WHERE user_id = ? AND deleted_at IS NULL) as total_revenue,
+        (SELECT SUM(total_amount) FROM orders WHERE user_id = ? AND deleted_at IS NULL AND status IN ('livree', 'confirmee')) as total_revenue,
         (SELECT COUNT(*) FROM customers WHERE user_id = ? AND deleted_at IS NULL) as total_customers,
         (SELECT COUNT(*) FROM orders WHERE user_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL) as orders_last_30_days`,
       [userId, userId, userId, userId, userId]

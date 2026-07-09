@@ -109,6 +109,26 @@ router.get(
   advancedStatsController.getCompleteStats
 );
 
+/**
+ * Stats pour une plage de dates personnalisée
+ * GET /api/features/stats/by-date-range?start=YYYY-MM-DD&end=YYYY-MM-DD
+ */
+router.get(
+  '/stats/by-date-range',
+  requireMinimalPlan('pro'),
+  advancedStatsController.getStatsByDateRange
+);
+
+/**
+ * Comparaison entre deux périodes
+ * GET /api/features/stats/compare?p1Start=...&p1End=...&p2Start=...&p2End=...
+ */
+router.get(
+  '/stats/compare',
+  requireMinimalPlan('pro'),
+  advancedStatsController.compareStatsPeriods
+);
+
 // ============================================
 // ROUTES EXPORT (PRO et BUSINESS)
 // ============================================

@@ -1,15 +1,25 @@
 /**
  * public/js/orders.js
  * Gestion des commandes - 100% SSR-compatible
- * - Les produits sont injectés via window.__SSR_PRODUCTS__ (rendu serveur)
+ * - Les données sont lues depuis les blocs JSON (#ssr-orders-data, #ssr-products-data)
  * - Les appels API utilisent les cookies httpOnly (pas de token localStorage)
  */
 
+
 document.addEventListener('DOMContentLoaded', () => {
 
-  // ── Données injectées par le serveur ──────────────────────────────────────
-  const orders = window.__SSR_ORDERS__ || [];
-  const availableProducts = window.__SSR_PRODUCTS__ || [];
+  // ── Données injectées par le serveur (SSR JSON) ───────────────────────────
+  let orders = [];
+  let availableProducts = [];
+  try {
+    const ssrEl = document.getElementById('ssr-orders-data');
+    if (ssrEl) {
+      const data = JSON.parse(ssrEl.textContent || '{}');
+      orders = data.orders || [];
+      availableProducts = data.products || [];
+    }
+  } catch(e) { console.error('Erreur lecture commandes/produits SSR:', e); }
+
 
   // ── Éléments du DOM ───────────────────────────────────────────────────────
   const orderForm       = document.getElementById('orderForm');

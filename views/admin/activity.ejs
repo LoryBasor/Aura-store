@@ -16,11 +16,11 @@
 <!-- Page Header -->
 <div class="page-header">
   <div>
-    <h1 class="page-title">📊 Activité de la Plateforme</h1>
+    <h1 class="page-title"><svg class="svg-icon svg-icon-fi-rr-chart-histogram" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Activité de la Plateforme</h1>
     <p class="page-subtitle">Monitoring global en temps réel</p>
   </div>
   <div class="page-header-actions">
-    <button class="btn btn-secondary" onclick="location.reload()">🔄 Actualiser</button>
+    <button class="btn btn-secondary" onclick="location.reload()"><svg class="svg-icon svg-icon-fi-rr-refresh" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualiser</button>
   </div>
 </div>
 
@@ -29,7 +29,7 @@
   <div class="stat-card">
     <div class="stat-header">
       <span class="stat-label">Total Vendeurs</span>
-      <div class="stat-icon">👥</div>
+      <div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-users" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
     </div>
     <div class="stat-value"><%= stats.total_vendors || 0 %></div>
     <div class="stat-change">+<%= stats.new_vendors_this_month || 0 %> ce mois</div>
@@ -38,7 +38,7 @@
   <div class="stat-card">
     <div class="stat-header">
       <span class="stat-label">Total Commandes</span>
-      <div class="stat-icon">🛒</div>
+      <div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-shopping-cart" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></div>
     </div>
     <div class="stat-value"><%= stats.total_orders || 0 %></div>
     <div class="stat-change">+<%= stats.orders_this_month || 0 %> ce mois</div>
@@ -47,7 +47,7 @@
   <div class="stat-card">
     <div class="stat-header">
       <span class="stat-label">Chiffre d'Affaires</span>
-      <div class="stat-icon">💰</div>
+      <div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-sack-dollar" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5 7 2h10l-2 3"></path><path d="M7 5c-3 3-4.5 6.5-4.5 9.5A7.5 7.5 0 0 0 10 22h4a7.5 7.5 0 0 0 7.5-7.5c0-3-1.5-6.5-4.5-9.5z"></path><path d="M12 9v7"></path><path d="M14 11a2 2 0 0 0-2-2h0a2 2 0 0 0 0 4h0a2 2 0 0 1 0 4h0a2 2 0 0 1-2-2"></path></svg></div>
     </div>
     <div class="stat-value"><%= fmtCurrency(stats.total_revenue) %></div>
     <div class="stat-change"><%= fmtCurrency(stats.revenue_this_month) %> ce mois</div>
@@ -56,7 +56,7 @@
   <div class="stat-card">
     <div class="stat-header">
       <span class="stat-label">Total Produits</span>
-      <div class="stat-icon">📦</div>
+      <div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-box" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><line x1="10" y1="12" x2="14" y2="12"></line></svg></div>
     </div>
     <div class="stat-value"><%= stats.total_products || 0 %></div>
     <div class="stat-change"><%= stats.active_products || 0 %> actifs</div>
@@ -66,11 +66,11 @@
 <!-- Charts Row -->
 <div class="grid-auto-fit-400">
   <div class="card">
-    <div class="card-header"><h3 class="card-title">📈 Évolution (30 jours)</h3></div>
+    <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-stats-up" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Évolution (30 jours)</h3></div>
     <div class="chart-container"><canvas id="evolutionChart" style="max-height: 300px;"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-header"><h3 class="card-title">💰 Revenus (30 jours)</h3></div>
+    <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-sack-dollar" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5 7 2h10l-2 3"></path><path d="M7 5c-3 3-4.5 6.5-4.5 9.5A7.5 7.5 0 0 0 10 22h4a7.5 7.5 0 0 0 7.5-7.5c0-3-1.5-6.5-4.5-9.5z"></path><path d="M12 9v7"></path><path d="M14 11a2 2 0 0 0-2-2h0a2 2 0 0 0 0 4h0a2 2 0 0 1 0 4h0a2 2 0 0 1-2-2"></path></svg> Revenus (30 jours)</h3></div>
     <div class="chart-container"><canvas id="revenueChart" style="max-height: 300px;"></canvas></div>
   </div>
 </div>
@@ -78,7 +78,7 @@
 <!-- Plan Pricing Section -->
 <div class="card" style="margin-bottom: 24px; border-left: 5px solid var(--color-primary);">
   <div class="card-header">
-    <h3 class="card-title">🏷️ Gestion des Tarifs d'Abonnement</h3>
+    <h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-label" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20.59 13.41 12 22l-9-9V4a2 2 0 0 1 2-2h8.59a2 2 0 0 1 1.41.59l7 7a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>️ Gestion des Tarifs d'Abonnement</h3>
   </div>
   <div class="table-container">
     <table class="table">
@@ -94,7 +94,7 @@
             <td><span class="badge <%= plan.is_active ? 'badge-success' : 'badge-danger' %>"><%= plan.is_active ? 'Actif' : 'Inactif' %></span></td>
             <td>
               <button class="btn btn-sm btn-primary" onclick="openEditPrice('<%= plan.id %>', '<%= plan.name %>', '<%= plan.price %>')">
-                ✏️ Modifier Prix
+                <svg class="svg-icon svg-icon-fi-rr-pencil" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>️ Modifier Prix
               </button>
             </td>
           </tr>
@@ -129,7 +129,7 @@
   </div>
 
   <div class="card">
-    <div class="card-header"><h3 class="card-title">🛒 Dernières commandes</h3></div>
+    <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-shopping-cart" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Dernières commandes</h3></div>
     <div class="table-container">
       <table class="table">
         <thead><tr><th>N°</th><th>Vendeur</th><th>Montant</th><th>Statut</th></tr></thead>
@@ -154,7 +154,7 @@
 
 <!-- Admin Audit Logs -->
 <div class="card" style="margin-bottom: 24px;">
-  <div class="card-header"><h3 class="card-title">📜 Journal d'audit Admin</h3></div>
+  <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-document" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Journal d'audit Admin</h3></div>
   <div class="table-container" style="max-height: 400px; overflow-y: auto;">
     <table class="table">
       <thead style="position:sticky; top:0; z-index:10; background:var(--color-surface);">
@@ -183,8 +183,8 @@
 <div class="modal-overlay" id="editPriceModal">
   <div class="modal">
     <div class="modal-header">
-      <h3 class="modal-title">💰 Modifier le prix</h3>
-      <button class="modal-close">✕</button>
+      <h3 class="modal-title"><svg class="svg-icon svg-icon-fi-rr-sack-dollar" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5 7 2h10l-2 3"></path><path d="M7 5c-3 3-4.5 6.5-4.5 9.5A7.5 7.5 0 0 0 10 22h4a7.5 7.5 0 0 0 7.5-7.5c0-3-1.5-6.5-4.5-9.5z"></path><path d="M12 9v7"></path><path d="M14 11a2 2 0 0 0-2-2h0a2 2 0 0 0 0 4h0a2 2 0 0 1 0 4h0a2 2 0 0 1-2-2"></path></svg> Modifier le prix</h3>
+      <button class="modal-close"><svg class="svg-icon svg-icon-fi-rr-cross-small" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <form id="editPriceForm">
       <div class="modal-body">
@@ -211,15 +211,9 @@
   .badge-danger { background: rgba(244, 67, 54, 0.1); color: #f44336; }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  window.__ACTIVITY_TRENDS__ = <%- JSON.stringify(trends) %>;
-  
-  function openEditPrice(id, name, price) {
-    document.getElementById('editPlanId').value = id;
-    document.getElementById('editPlanName').textContent = 'Plan: ' + name;
-    document.getElementById('newPlanPrice').value = price;
-    document.getElementById('editPriceModal').classList.add('active');
-  }
+<!-- Injection SSR des données pour les graphiques -->
+<script id="ssr-activity-data" type="application/json">
+  <%- JSON.stringify(trends || {}) %>
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/js/admin/activity.js"></script>

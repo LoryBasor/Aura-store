@@ -1,0 +1,40 @@
+<!-- views/partials/report-modal.ejs -->
+<div id="reportModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+  <div class="modal-content" style="background: var(--bg-card, #fff); width: 100%; max-width: 500px; border-radius: var(--radius, 12px); padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative;">
+    <button type="button" class="close-modal-btn" onclick="closeReportModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary, #666);">&times;</button>
+    
+    <h2 style="margin-top: 0; color: var(--text-primary, #333); font-size: 20px; color: #e74c3c;">Signaler un abus</h2>
+    <p style="color: var(--text-secondary, #666); font-size: 14px; margin-bottom: 20px;">Aidez-nous à maintenir la qualité de la plateforme en signalant les contenus inappropriés.</p>
+    
+    <form id="reportForm">
+      <!-- Champs cachés injectés lors de l'ouverture de la modale -->
+      <input type="hidden" id="reportType" name="reportType">
+      <input type="hidden" id="reportTargetId" name="reportTargetId">
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label for="reportReason" class="form-label required" style="display: block; margin-bottom: 8px; font-weight: 500;">Raison du signalement</label>
+        <select id="reportReason" name="reason" class="form-select" style="width: 100%; padding: 10px; border: 1px solid var(--border, #ddd); border-radius: 8px; background: white;" required>
+          <option value="">Sélectionnez une raison...</option>
+          <option value="spam">Spam / Publicité indésirable</option>
+          <option value="scam">Arnaque / Fraude suspectée</option>
+          <option value="inappropriate">Contenu inapproprié ou offensant</option>
+          <option value="counterfeit">Contrefaçon / Violation de droits</option>
+          <option value="other">Autre raison</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label for="reportDetails" class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">Détails (Optionnel)</label>
+        <textarea id="reportDetails" name="details" class="form-input" rows="4" placeholder="Donnez plus de détails pour aider les administrateurs..." style="width: 100%; padding: 10px; border: 1px solid var(--border, #ddd); border-radius: 8px; resize: vertical;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button type="button" class="btn btn-secondary" onclick="closeReportModal()" style="padding: 10px 16px; border: 1px solid var(--border, #ddd); background: white; border-radius: 6px; cursor: pointer;">Annuler</button>
+        <button type="submit" class="btn" id="reportSubmitBtn" style="padding: 10px 16px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer;">Envoyer le signalement</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Le script modals.js est déjà inclus via feedback-modal.ejs, mais par précaution ou indépendance : -->
+<!-- <script src="/js/modals.js"></script> -->
