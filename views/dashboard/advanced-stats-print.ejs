@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --primary:#6d28d9;--secondary:#2563eb;--success:#059669;
+      --warning:#d97706;--danger:#dc2626;--text:#111827;
+      --muted:#6b7280;--border:#e5e7eb;--bg:#f9fafb;
+    }
+    body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;padding:32px;font-size:13px;line-height:1.6}
+
+    /* ── HEADER ── */
+    .rpt-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;margin-bottom:32px;border-bottom:3px solid var(--primary)}
+    .rpt-brand{display:flex;align-items:center;gap:12px}
+    .rpt-logo{width:48px;height:48px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px}
+    .rpt-title h1{font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .rpt-title p{color:var(--muted);font-size:12px;margin-top:2px}
+    .rpt-meta{text-align:right;font-size:12px;color:var(--muted)}
+    .rpt-meta strong{color:var(--text);font-weight:600}
+    .period-pill{display:inline-block;background:linear-gradient(135deg,rgba(109,40,217,.1),rgba(37,99,235,.1));border:1px solid rgba(109,40,217,.2);border-radius:20px;padding:4px 12px;color:var(--primary);font-weight:600;font-size:11px;margin-top:6px}
+
+    /* ── KPI GRID ── */
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+    .kpi-card{padding:20px;border-radius:14px;border:1px solid var(--border);position:relative;overflow:hidden;background:#fff}
+    .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--c,var(--primary))}
+    .kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px}
+    .kpi-value{font-size:26px;font-weight:800;color:var(--c,var(--primary));line-height:1.1}
+    .kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+    /* ── SECTION HEADERS ── */
+    .section{margin-bottom:28px}
+    .section-title{font-size:14px;font-weight:700;color:var(--text);padding:10px 14px;background:var(--bg);border-left:4px solid var(--primary);border-radius:0 8px 8px 0;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+    /* ── 2-COL GRID ── */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
+
+    /* ── CHART BOXES ── */
+    .chart-box{border:1px solid var(--border);border-radius:12px;padding:16px;background:#fff}
+    .chart-box h4{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+    .chart-wrap{position:relative;height:200px}
+
+    /* ── TABLES ── */
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{background:var(--bg);color:var(--muted);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.5px;padding:10px 12px;text-align:left;border-bottom:2px solid var(--border)}
+    td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+    .badge-blue{background:#dbeafe;color:#1d4ed8}
+    .badge-green{background:#d1fae5;color:#065f46}
+    .badge-amber{background:#fef3c7;color:#92400e}
+    .badge-red{background:#fee2e2;color:#991b1b}
+
+    /* ── GROWTH CARD ── */
+    .growth-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .growth-item{padding:12px;border-radius:8px;border:1px solid var(--border)}
+    .growth-item .lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px}
+    .growth-item .val{font-size:20px;font-weight:800}
+    .trend-up{color:var(--success)}
+    .trend-down{color:var(--danger)}
+
+    /* ── FOOTER ── */
+    .rpt-footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--muted)}
+
+    /* ── PRINT ── */
+    .no-print{display:none}
+    @media print{
+      body{padding:0}
+      @page{margin:1.5cm;size:A4}
+      .page-break{page-break-before:always}
+      .chart-wrap{height:160px}
+    }
+    @media screen{
+      .no-print{display:flex;gap:12px;justify-content:center;padding:20px;background:#f3f4f6;border-radius:12px;margin-bottom:24px}
+      .btn-print{padding:10px 24px;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit}
+      .btn-back{padding:10px 24px;background:#fff;border:1px solid var(--border);border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;font-family:inherit;text-decoration:none;color:var(--text);display:inline-flex;align-items:center}
+    }
+  </style>
+  <%
+    function fmtCurrency(n) { return (parseFloat(n)||0).toLocaleString('fr-FR') + ' FCFA'; }
+    function fmtDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '—'; }
+    const statusLabels = { nouvelle:'Nouvelle', confirmee:'Confirmée', en_preparation:'En préparation', en_livraison:'En livraison', livree:'Livrée', annulee:'Annulée' };
+    const statusBadge  = { nouvelle:'badge-blue', confirmee:'badge-green', en_preparation:'badge-amber', en_livraison:'badge-amber', livree:'badge-green', annulee:'badge-red' };
+    const conv = conversion || {};
+  %>
+</head>
+<body>
+
+<!-- ── Actions (écran seulement) ── -->
+<div class="no-print">
+  <a href="/advanced-stats<%= typeof filterPeriod !== 'undefined' ? '?period='+filterPeriod+(filterStart?'&start='+filterStart:'')+(filterEnd?'&end='+filterEnd:'') : '' %>" class="btn-back">← Retour</a>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimer / Exporter PDF</button>
+</div>
+
+<!-- ── En-tête ── -->
+<div class="rpt-header">
+  <div class="rpt-brand">
+    <div class="rpt-logo">A</div>
+    <div class="rpt-title">
+      <h1>Rapport de Performance</h1>
+      <p>Boutique : <strong><%= user.business_name %></strong></p>
+    </div>
+  </div>
+  <div class="rpt-meta">
+    <p>Généré le : <strong><%= generatedAt %></strong></p>
+    <div class="period-pill">📅 <%= typeof periodLabel !== 'undefined' ? periodLabel : '30 derniers jours' %></div>
+  </div>
+</div>
+
+<!-- ── KPI Principaux ── -->
+<div class="section">
+  <div class="section-title">📊 Indicateurs Clés de Performance</div>
+  <div class="kpi-grid">
+    <div class="kpi-card" style="--c:#6d28d9">
+      <div class="kpi-label">Chiffre d'Affaires</div>
+      <div class="kpi-value"><%= fmtCurrency(conv.total_revenue || 0) %></div>
+      <div class="kpi-sub">Sur la période sélectionnée</div>
+    </div>
+    <div class="kpi-card" style="--c:#2563eb">
+      <div class="kpi-label">Commandes</div>
+      <div class="kpi-value"><%= conv.total_orders || 0 %></div>
+      <div class="kpi-sub"><%= conv.unique_customers || 0 %> clients uniques</div>
+    </div>
+    <div class="kpi-card" style="--c:#059669">
+      <div class="kpi-label">Panier Moyen</div>
+      <div class="kpi-value"><%= fmtCurrency(conv.avg_basket || 0) %></div>
+      <div class="kpi-sub">Par commande livrée</div>
+    </div>
+    <div class="kpi-card" style="--c:#d97706">
+      <div class="kpi-label">Taux de Conversion</div>
+      <div class="kpi-value"><%= conv.conversion_rate || 0 %>%</div>
+      <div class="kpi-sub"><%= conv.total_views || 0 %> vues produits</div>
+    </div>
+    <div class="kpi-card" style="--c:#ec4899">
+      <div class="kpi-label">Vues Boutique</div>
+      <div class="kpi-value"><%= storeVisibility || 0 %></div>
+      <div class="kpi-sub">Visites totales</div>
+    </div>
+    <div class="kpi-card" style="--c:#06b6d4">
+      <div class="kpi-label">Produits Actifs</div>
+      <div class="kpi-value"><%= conv.total_products || 0 %></div>
+      <div class="kpi-sub">Dans votre catalogue</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Graphiques Principaux ── -->
+<div class="grid-2">
+  <!-- Évolution -->
+  <div class="chart-box" style="grid-column:1/-1">
+    <h4>📈 Évolution des Revenus & Commandes</h4>
+    <div class="chart-wrap">
+      <canvas id="printEvolutionChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <!-- Statuts -->
+  <div class="chart-box">
+    <h4>📋 Répartition par Statut</h4>
+    <div class="chart-wrap">
+      <canvas id="printStatusChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Heures -->
+  <div class="chart-box">
+    <h4>⏰ Activité par Heure</h4>
+    <div class="chart-wrap">
+      <canvas id="printHourlyChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <!-- Top Produits -->
+  <div class="chart-box">
+    <h4>🏆 Top Produits (Revenus)</h4>
+    <div class="chart-wrap">
+      <canvas id="printTopProductsChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Catégories -->
+  <div class="chart-box">
+    <h4>📁 Performance Catégories</h4>
+    <div class="chart-wrap">
+      <canvas id="printCategoryChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ── Répartition par statut (table) ── -->
+<div class="section">
+  <div class="section-title">📋 Détail des Commandes par Statut</div>
+  <table>
+    <thead><tr><th>Statut</th><th>Commandes</th><th>Revenus</th><th>Valeur Moy.</th></tr></thead>
+    <tbody>
+      <% (byStatus || []).forEach(s => {
+           const lbl = statusLabels[s.status] || s.status;
+           const cls = statusBadge[s.status] || 'badge-blue';
+      %>
+      <tr>
+        <td><span class="badge <%= cls %>"><%= lbl %></span></td>
+        <td><strong><%= s.count %></strong></td>
+        <td><%= fmtCurrency(s.total_revenue) %></td>
+        <td><%= fmtCurrency(s.avg_value) %></td>
+      </tr>
+      <% }) %>
+      <% if(!(byStatus && byStatus.length)) { %><tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:20px">Aucune donnée</td></tr><% } %>
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Top Produits (table) ── -->
+<div class="section">
+  <div class="section-title">🏆 Top 10 Produits par Revenus</div>
+  <table>
+    <thead><tr><th>#</th><th>Produit</th><th>Ventes</th><th>Revenus</th><th>Panier Moy.</th></tr></thead>
+    <tbody>
+      <% (topProducts || []).slice(0,10).forEach((p, i) => { %>
+      <tr>
+        <td><strong style="color:var(--primary)">#<%= i+1 %></strong></td>
+        <td><strong><%= p.name %></strong><br><span style="color:var(--muted);font-size:11px"><%= fmtCurrency(p.price) %> / unité</span></td>
+        <td><span class="badge badge-blue"><%= p.sales_count || 0 %> cmd</span></td>
+        <td style="font-weight:700;color:var(--success)"><%= fmtCurrency(p.total_revenue) %></td>
+        <td><%= fmtCurrency(p.avg_order_value) %></td>
+      </tr>
+      <% }) %>
+      <% if(!(topProducts && topProducts.length)) { %><tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px">Aucune donnée</td></tr><% } %>
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Meilleurs Clients ── -->
+<div class="section">
+  <div class="section-title">⭐ Meilleurs Clients</div>
+  <table>
+    <thead><tr><th>Client</th><th>Téléphone</th><th>Commandes</th><th>Total Dépensé</th><th>Dernière commande</th></tr></thead>
+    <tbody>
+      <% (topCustomersList || []).forEach(c => { %>
+      <tr>
+        <td><strong><%= c.name %></strong></td>
+        <td><%= c.phone || '—' %></td>
+        <td><span class="badge <%= c.total_orders > 1 ? 'badge-green' : 'badge-amber' %>"><%= c.total_orders %> cmd</span></td>
+        <td style="font-weight:700;color:var(--primary)"><%= fmtCurrency(c.total_spent) %></td>
+        <td style="color:var(--muted)"><%= fmtDate(c.last_order_at) %></td>
+      </tr>
+      <% }) %>
+      <% if(!(topCustomersList && topCustomersList.length)) { %><tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px">Aucun client récurrent</td></tr><% } %>
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Croissance ── -->
+<% if(forecast && forecast.last_30_days) { %>
+<div class="section">
+  <div class="section-title">📈 Tendance & Croissance (30 jours glissants)</div>
+  <div class="growth-grid">
+    <div class="growth-item">
+      <div class="lbl">Commandes (30j)</div>
+      <div class="val"><%= forecast.last_30_days.orders %></div>
+    </div>
+    <div class="growth-item">
+      <div class="lbl">Revenus (30j)</div>
+      <div class="val" style="font-size:16px"><%= fmtCurrency(forecast.last_30_days.revenue) %></div>
+    </div>
+    <% if(forecast.growth) { %>
+    <div class="growth-item">
+      <div class="lbl">Croissance commandes</div>
+      <div class="val <%= forecast.growth.orders >= 0 ? 'trend-up' : 'trend-down' %>">
+        <%= forecast.growth.orders >= 0 ? '↑' : '↓' %> <%= Math.abs(forecast.growth.orders) %>%
+      </div>
+    </div>
+    <div class="growth-item">
+      <div class="lbl">Croissance revenus</div>
+      <div class="val <%= forecast.growth.revenue >= 0 ? 'trend-up' : 'trend-down' %>">
+        <%= forecast.growth.revenue >= 0 ? '↑' : '↓' %> <%= Math.abs(forecast.growth.revenue) %>%
+      </div>
+    </div>
+    <% } %>
+  </div>
+</div>
+<% } %>
+
+<!-- ── Footer ── -->
+<div class="rpt-footer">
+  Rapport généré automatiquement par <strong>Aura Platform</strong> pour <strong><%= user.business_name %></strong> &nbsp;|&nbsp; <%= generatedAt %>
+</div>
+
+<!-- ── Données SSR pour graphiques ── -->
+<script id="print-data" type="application/json">
+  <%- JSON.stringify({
+    evolution: evolution || [],
+    byStatus: byStatus || [],
+    topProducts: (topProducts || []).slice(0, 10),
+    hourlyStats: hourlyStats || [],
+    categories: categoryPerformance || []
+  }) %>
+</script>
+
+<script>
+(function() {
+  let d = {};
+  try { d = JSON.parse(document.getElementById('print-data').textContent); } catch(e) {}
+
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = '#6b7280';
+
+  const fmt = (v) => new Intl.NumberFormat('fr-FR', { notation: 'compact' }).format(v);
+
+  // 1. Evolution
+  const evEl = document.getElementById('printEvolutionChart');
+  if (evEl && d.evolution && d.evolution.length) {
+    new Chart(evEl, {
+      type: 'line',
+      data: {
+        labels: d.evolution.map(x => x.label || x.period),
+        datasets: [
+          { label: "CA (FCFA)", data: d.evolution.map(x => x.revenue), borderColor: '#6d28d9', backgroundColor: 'rgba(109,40,217,0.08)', borderWidth: 2, fill: true, tension: 0.4, yAxisID: 'y', pointRadius: 2 },
+          { label: "Commandes", data: d.evolution.map(x => x.order_count), type: 'bar', backgroundColor: 'rgba(37,99,235,0.5)', borderRadius: 4, yAxisID: 'y1' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { labels: { padding: 12, usePointStyle: true } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } },
+          y: { position: 'left', ticks: { callback: fmt }, title: { display: true, text: 'Revenus' } },
+          y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { stepSize: 1 }, title: { display: true, text: 'Cmds' } }
+        }
+      }
+    });
+  }
+
+  // 2. Status Doughnut
+  const stEl = document.getElementById('printStatusChart');
+  const statusColors = { nouvelle:'#3b82f6', confirmee:'#10b981', en_preparation:'#f59e0b', en_livraison:'#f59e0b', livree:'#059669', annulee:'#ef4444' };
+  const statusNames = { nouvelle:'Nouvelle', confirmee:'Confirmée', en_preparation:'En prép.', en_livraison:'En livraison', livree:'Livrée', annulee:'Annulée' };
+  if (stEl && d.byStatus && d.byStatus.length) {
+    new Chart(stEl, {
+      type: 'doughnut',
+      data: {
+        labels: d.byStatus.map(s => statusNames[s.status] || s.status),
+        datasets: [{ data: d.byStatus.map(s => s.count), backgroundColor: d.byStatus.map(s => statusColors[s.status] || '#94a3b8'), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { padding: 10 } } } }
+    });
+  }
+
+  // 3. Hourly
+  const hrEl = document.getElementById('printHourlyChart');
+  if (hrEl && d.hourlyStats) {
+    const counts = new Array(24).fill(0);
+    d.hourlyStats.forEach(s => { if (s.hour >= 0 && s.hour < 24) counts[s.hour] = s.order_count; });
+    const mx = Math.max(...counts, 1);
+    new Chart(hrEl, {
+      type: 'bar',
+      data: {
+        labels: Array.from({ length: 24 }, (_, i) => i + 'h'),
+        datasets: [{ data: counts, backgroundColor: counts.map(c => `rgba(245,158,11,${0.3 + (c/mx)*0.7})`), borderRadius: 3 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } }, y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+  }
+
+  // 4. Top Products
+  const tpEl = document.getElementById('printTopProductsChart');
+  if (tpEl && d.topProducts && d.topProducts.length) {
+    const top = d.topProducts.slice(0, 8);
+    new Chart(tpEl, {
+      type: 'bar',
+      data: {
+        labels: top.map(p => p.name.length > 16 ? p.name.slice(0, 16) + '…' : p.name),
+        datasets: [{ data: top.map(p => p.total_revenue), backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => new Intl.NumberFormat('fr-FR').format(c.raw) + ' FCFA' } } }, scales: { x: { ticks: { callback: fmt } }, y: { grid: { display: false } } } }
+    });
+  }
+
+  // 5. Categories
+  const catEl = document.getElementById('printCategoryChart');
+  if (catEl && d.categories && d.categories.length) {
+    new Chart(catEl, {
+      type: 'polarArea',
+      data: {
+        labels: d.categories.map(c => c.name),
+        datasets: [{ data: d.categories.map(c => c.order_count), backgroundColor: ['rgba(109,40,217,0.7)','rgba(37,99,235,0.7)','rgba(16,185,129,0.7)','rgba(245,158,11,0.7)','rgba(236,72,153,0.7)'], borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 8 } } }, scales: { r: { grid: { color: 'rgba(0,0,0,0.05)' } } } }
+    });
+  }
+})();
+</script>
+</body>
+</html>

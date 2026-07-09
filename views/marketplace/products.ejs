@@ -6,6 +6,8 @@
   <title><%= title %></title>
   <link rel="icon" type="image/png" href="/images/logo.png">
   <link rel="stylesheet" href="/css/marketplace-products.css">
+
+  <style>.svg-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0;}</style>
 </head>
 <body>
 
@@ -193,7 +195,7 @@
                     <% } %>
                   </div>
                   <% if (product.city) { %>
-                    <p class="product-location">📍 <%= product.city %>, <%= product.country || '' %></p>
+                    <p class="product-location"><svg class="svg-icon svg-icon-fi-rr-marker" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> <%= product.city %>, <%= product.country || '' %></p>
                   <% } %>
                 </div>
               </a>
@@ -204,9 +206,16 @@
         </div>
 
         <!-- Pagination -->
-        <% if (data.pagination.totalPages > 1) { %>
+        <% if (data.pagination.totalPages > 1) { 
+             const cleanFilters = {};
+             for (const key in filters) {
+               if (key !== 'limit' && key !== 'offset' && filters[key] !== '' && filters[key] !== null && filters[key] !== undefined) {
+                 cleanFilters[key] = filters[key];
+               }
+             }
+        %>
           <div class="pagination-container">
-            <a href="?<%= new URLSearchParams({...filters, page: data.pagination.page - 1}).toString() %>" 
+            <a href="?<%= new URLSearchParams({...cleanFilters, page: data.pagination.page - 1}).toString() %>" 
                class="pagination-btn <%= data.pagination.page <= 1 ? 'disabled' : '' %>"
                id="prevBtn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -219,7 +228,7 @@
               Page <%= data.pagination.page %> / <%= data.pagination.totalPages %>
             </span>
             
-            <a href="?<%= new URLSearchParams({...filters, page: data.pagination.page + 1}).toString() %>" 
+            <a href="?<%= new URLSearchParams({...cleanFilters, page: data.pagination.page + 1}).toString() %>" 
                class="pagination-btn <%= data.pagination.page >= data.pagination.totalPages ? 'disabled' : '' %>"
                id="nextBtn">
               Suivant
@@ -233,74 +242,31 @@
     </div>
   </div>
 
-  <script>
-    // Petit script pour soumettre le formulaire lors du changement de filtre
-    document.addEventListener('DOMContentLoaded', () => {
-      const form = document.getElementById('filterForm');
-      const sortSelect = document.getElementById('sortSelect');
-      
-      const updateFilters = () => {
-        const formData = new FormData(form);
-        const params = new URLSearchParams(window.location.search);
-        
-        // Mettre à jour les paramètres de l'URL
-        for (const [key, value] of formData.entries()) {
-          if (value) params.set(key, value);
-          else params.delete(key);
-        }
-        
-        // Ajouter le tri
-        if (sortSelect.value) params.set('sort', sortSelect.value);
-        
-        // Reset page à 1
-        params.delete('page');
-        
-        window.location.href = `?${params.toString()}`;
-      };
+  <!-- Intégration des modales -->
+  <%- include('../partials/feedback-modal') %>
+  <%- include('../partials/report-modal') %>
+  <%- include('../partials/support-modal') %>
 
-      // Écouter les changements sur le formulaire
-      form.querySelectorAll('input, select').forEach(el => {
-        el.addEventListener('change', (e) => {
-          if (e.target.type !== 'text' && e.target.type !== 'number') {
-            updateFilters();
-          }
-        });
-      });
+  <!-- Bouton d'action flottant (Support / Feedback) -->
+  <div class="floating-actions" style="position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000;">
+    <button onclick="openSupportModal()" title="Contacter le support" style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary, #5C6C73); color: white; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.2s;">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+      </svg>
+    </button>
+    <button onclick="openFeedbackModal()" title="Donner un avis" style="width: 50px; height: 50px; border-radius: 50%; background: white; color: var(--primary, #5C6C73); border: 1px solid var(--border, #ddd); box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.2s;">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+      </svg>
+    </button>
+  </div>
+  
+  <!-- Ajouter un hover css simple sur les boutons -->
+  <style>
+    .floating-actions button:hover { transform: scale(1.1); }
+  </style>
 
-      // Écouter le bouton de recherche
-      document.getElementById('productSearchBtn').addEventListener('click', updateFilters);
-      document.getElementById('productSearchInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          updateFilters();
-        }
-      });
-
-      // Tri
-      sortSelect.addEventListener('change', updateFilters);
-
-      // Réinitialiser
-      document.getElementById('clearFilters').addEventListener('click', () => {
-        window.location.href = window.location.pathname;
-      });
-
-      // Toggle filtres mobile
-      const filterToggle = document.getElementById('filterToggle');
-      const filtersSidebar = document.querySelector('.filters-sidebar');
-      const closeFilters = document.getElementById('closeFilters');
-
-      if (filterToggle) {
-        filterToggle.addEventListener('click', () => {
-          filtersSidebar.classList.add('open');
-        });
-      }
-
-      if (closeFilters) {
-        closeFilters.addEventListener('click', () => {
-          filtersSidebar.classList.remove('open');
-        });
-      }
-    });
-  </script>
+  <script src="/js/modals.js"></script>
+  <script src="/js/marketplace-filters.js"></script>
 </body>
 </html>

@@ -11,12 +11,12 @@
 <!-- Page Header -->
 <div class="page-header">
   <div>
-    <h1 class="page-title">📋 Gestion Abonnement : <%= v.business_name %></h1>
+    <h1 class="page-title"><svg class="svg-icon svg-icon-fi-rr-clipboard" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Gestion Abonnement : <%= v.business_name %></h1>
     <p class="page-subtitle"><%= v.email %> • Statut : <span class="badge badge-<%= statusColors[v.subscription_status] %>"><%= v.subscription_status || 'Aucun' %></span></p>
   </div>
   <div class="page-header-actions">
     <a href="/admin/subscriptions" class="btn btn-secondary">← Retour</a>
-    <a href="/admin/vendors/<%= v.id %>" class="btn btn-outline">👁️ Voir le vendeur</a>
+    <a href="/admin/vendors/<%= v.id %>" class="btn btn-outline"><svg class="svg-icon svg-icon-fi-rr-eye" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>️ Voir le vendeur</a>
   </div>
 </div>
 
@@ -46,7 +46,7 @@
 <!-- Actions Rapides -->
 <div class="grid-auto-fit-200 action-cards">
   <div class="card action-card" onclick="AdminSubscriptions.openChangePlan('<%= v.id %>')">
-    <div style="font-size: 32px; margin-bottom: 12px;">🔄</div>
+    <div style="font-size: 32px; margin-bottom: 12px;"><svg class="svg-icon svg-icon-fi-rr-refresh" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></div>
     <h3 style="font-size: 16px; font-weight: 700;">Changer de plan</h3>
   </div>
 
@@ -56,14 +56,14 @@
   </div>
 
   <div class="card action-card" onclick="AdminSubscriptions.openCancel('<%= v.id %>')">
-    <div style="font-size: 32px; margin-bottom: 12px;">❌</div>
+    <div style="font-size: 32px; margin-bottom: 12px;"><svg class="svg-icon svg-icon-fi-rr-cross-circle" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></div>
     <h3 style="font-size: 16px; font-weight: 700;">Annuler</h3>
   </div>
 </div>
 
 <!-- History Timeline -->
 <div class="card">
-  <div class="card-header"><h3 class="card-title">🕐 Historique complet</h3></div>
+  <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-clock" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Historique complet</h3></div>
   <div class="table-container">
     <table class="table">
       <thead>
@@ -92,8 +92,8 @@
 <div class="modal-overlay" id="changePlanModal">
   <div class="modal">
     <div class="modal-header">
-      <h3 class="modal-title">🔄 Changer de plan</h3>
-      <button class="modal-close">✕</button>
+      <h3 class="modal-title"><svg class="svg-icon svg-icon-fi-rr-refresh" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Changer de plan</h3>
+      <button class="modal-close"><svg class="svg-icon svg-icon-fi-rr-cross-small" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <form id="changePlanForm">
       <div class="modal-body">
@@ -120,7 +120,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 class="modal-title">⏰ Prolonger l'abonnement</h3>
-      <button class="modal-close">✕</button>
+      <button class="modal-close"><svg class="svg-icon svg-icon-fi-rr-cross-small" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <form id="extendForm">
       <div class="modal-body">
@@ -141,8 +141,8 @@
 <div class="modal-overlay" id="cancelModal">
   <div class="modal">
     <div class="modal-header">
-      <h3 class="modal-title">❌ Annuler l'abonnement</h3>
-      <button class="modal-close">✕</button>
+      <h3 class="modal-title"><svg class="svg-icon svg-icon-fi-rr-cross-circle" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Annuler l'abonnement</h3>
+      <button class="modal-close"><svg class="svg-icon svg-icon-fi-rr-cross-small" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <form id="cancelForm">
       <div class="modal-body">
@@ -165,9 +165,9 @@
   .action-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--color-primary); }
 </style>
 
-<!-- Scripts -->
-<script>
-  window.__SSR_VENDOR__ = <%- JSON.stringify(v) %>;
+<!-- Injection SSR des données vendeur -->
+<script id="ssr-vendor-data" type="application/json">
+  <%- JSON.stringify(v) %>
 </script>
 <script src="/js/admin/subscriptions.js"></script>
 <script src="/js/admin/subscription-details.js"></script>

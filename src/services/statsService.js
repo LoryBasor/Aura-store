@@ -49,8 +49,8 @@ class StatsService {
         COUNT(*) as total_orders,
         SUM(CASE WHEN status = 'nouvelle' THEN 1 ELSE 0 END) as pending_orders,
         SUM(CASE WHEN status = 'livree' THEN 1 ELSE 0 END) as delivered_orders,
-        SUM(total_amount) as total_revenue,
-        AVG(total_amount) as average_order_value
+        SUM(CASE WHEN status IN ('livree', 'confirmee') THEN total_amount ELSE 0 END) as total_revenue,
+        AVG(CASE WHEN status IN ('livree', 'confirmee') THEN total_amount ELSE NULL END) as average_order_value
        FROM orders
        WHERE user_id = ? AND deleted_at IS NULL`,
       [userId]
@@ -70,7 +70,7 @@ class StatsService {
     const [monthOrders] = await pool.execute(
       `SELECT 
         COUNT(*) as orders_this_month,
-        SUM(total_amount) as revenue_this_month
+        SUM(CASE WHEN status IN ('livree', 'confirmee') THEN total_amount ELSE 0 END) as revenue_this_month
        FROM orders
        WHERE user_id = ? 
          AND deleted_at IS NULL
@@ -186,7 +186,7 @@ class StatsService {
       `SELECT 
         DATE(created_at) as date,
         COUNT(*) as order_count,
-        SUM(total_amount) as revenue
+        SUM(CASE WHEN status IN ('livree', 'confirmee') THEN total_amount ELSE 0 END) as revenue
        FROM orders
        WHERE user_id = ? 
          AND deleted_at IS NULL

@@ -1,0 +1,36 @@
+<!-- views/partials/feedback-modal.ejs -->
+<div id="feedbackModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+  <div class="modal-content" style="background: var(--bg-card, #fff); width: 100%; max-width: 500px; border-radius: var(--radius, 12px); padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative;">
+    <button type="button" class="close-modal-btn" onclick="closeFeedbackModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary, #666);">&times;</button>
+    
+    <h2 style="margin-top: 0; color: var(--text-primary, #333); font-size: 20px;">Laissez un avis</h2>
+    <p style="color: var(--text-secondary, #666); font-size: 14px; margin-bottom: 20px;">Votre avis nous aide à améliorer la plateforme Aura Store.</p>
+    
+    <form id="feedbackForm">
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label required" style="display: block; margin-bottom: 8px; font-weight: 500;">Votre note</label>
+        <div class="star-rating" style="display: flex; gap: 8px; font-size: 24px; cursor: pointer;">
+          <span data-value="1"><svg class="svg-icon svg-icon-fi-ss-star" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span><span data-value="2"><svg class="svg-icon svg-icon-fi-ss-star" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span><span data-value="3"><svg class="svg-icon svg-icon-fi-ss-star" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span><span data-value="4"><svg class="svg-icon svg-icon-fi-ss-star" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span><span data-value="5"><svg class="svg-icon svg-icon-fi-ss-star" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+        </div>
+        <input type="hidden" id="feedbackRating" name="rating" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label for="feedbackComment" class="form-label required" style="display: block; margin-bottom: 8px; font-weight: 500;">Votre commentaire</label>
+        <textarea id="feedbackComment" name="comment" class="form-input" rows="4" placeholder="Que pensez-vous de la plateforme ?" style="width: 100%; padding: 10px; border: 1px solid var(--border, #ddd); border-radius: 8px; resize: vertical;" required></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button type="button" class="btn btn-secondary" onclick="closeFeedbackModal()" style="padding: 10px 16px; border: 1px solid var(--border, #ddd); background: white; border-radius: 6px; cursor: pointer;">Annuler</button>
+        <button type="submit" class="btn btn-primary" id="feedbackSubmitBtn" style="padding: 10px 16px; background: var(--primary, #5C6C73); color: white; border: none; border-radius: 6px; cursor: pointer;">Soumettre l'avis</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .star-rating span { color: #ddd; transition: color 0.2s; }
+  .star-rating span:hover, .star-rating span.active { color: #f59e0b; }
+</style>
+
+<script src="/js/modals.js"></script>

@@ -1,0 +1,99 @@
+<!-- views/auth/verify-otp.ejs -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="/images/logo.png" type="image/png">
+  <title>Vérification Email | AURA</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .otp-inputs {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .otp-input {
+      width: 45px;
+      height: 55px;
+      font-size: 24px;
+      text-align: center;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+    .otp-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
+    }
+    .resend-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: underline;
+      padding: 0;
+    }
+    .resend-btn:disabled {
+      color: var(--text-secondary);
+      text-decoration: none;
+      cursor: not-allowed;
+    }
+  </style>
+
+  <style>.svg-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0;}</style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-box">
+      <!-- Logo -->
+      <div class="auth-logo">
+        <h1>AURA</h1>
+        <p class="auth-subtitle">Vérification de votre email</p>
+      </div>
+
+      <div class="text-center mb-6">
+        <p class="text-secondary" style="font-size: 14px; margin-bottom: 10px;">
+          Un code à 6 chiffres a été envoyé à 
+          <strong id="displayEmail">votre adresse email</strong>.
+        </p>
+      </div>
+
+      <!-- Formulaire de vérification -->
+      <form id="verifyForm" data-ajax="true">
+        <input type="hidden" id="email" name="email">
+        
+        <div class="form-group">
+          <label class="form-label required">Code de vérification</label>
+          <div class="otp-inputs" id="otpContainer">
+            <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+            <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+            <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+            <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+            <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+            <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+          </div>
+          <input type="hidden" id="fullCode" name="code">
+        </div>
+
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary w-full" id="submitBtn">
+            Vérifier
+          </button>
+        </div>
+      </form>
+
+      <div class="auth-link text-center" style="margin-top: 20px;">
+        <button type="button" id="resendBtn" class="resend-btn">Renvoyer le code</button>
+        <span id="countdown" style="display: none; font-size: 14px; color: var(--text-secondary);"></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/ui.js"></script>
+  <script src="/js/auth/verify-otp.js"></script>
+</body>
+</html>

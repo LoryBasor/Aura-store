@@ -18,6 +18,9 @@
   <% if (typeof additionalStyles !== 'undefined') { %>
     <%= additionalStyles %>
   <% } %>
+  <style>
+    .svg-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0;}
+  </style>
 </head>
 <body>
   <div class="app-container">
@@ -46,10 +49,10 @@
     </div>
   </div>
   
-  <!-- Scripts Globaux -->
+  <!-- Scripts Globaux : données utilisateur (SSR JSON) -->
   <% if (typeof user !== 'undefined' && user) { %>
-  <script>
-    window.__SSR_USER__ = <%- JSON.stringify({
+  <script id="ssr-user-data" type="application/json">
+    <%- JSON.stringify({
       id: user.id,
       email: user.email,
       business_name: user.business_name,
@@ -61,9 +64,10 @@
       has_export: user.has_export || false,
       has_customization: user.has_customization || false,
       has_integrations: user.has_integrations || false
-    }) %>;
+    }) %>
   </script>
   <% } %>
+
    <script src="/js/ui.js"></script>
   <script src="/js/app.js"></script>
   

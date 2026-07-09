@@ -6,6 +6,8 @@
   <title><%= title %></title>
   <link rel="icon" type="image/png" href="/images/logo.png">
   <link rel="stylesheet" href="/css/marketplace-home.css">
+
+  <style>.svg-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0;}</style>
 </head>
 <body>
   <% const { popularProducts, recommendedStores, trendingCategories, recentProducts } = data %>
@@ -87,7 +89,7 @@
                   <% } %>
                 </div>
                 <% if (product.city) { %>
-                  <p class="product-location">📍 <%= product.city %>, <%= product.country || '' %></p>
+                  <p class="product-location"><svg class="svg-icon svg-icon-fi-rr-marker" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> <%= product.city %>, <%= product.country || '' %></p>
                 <% } %>
               </div>
             </a>
@@ -115,7 +117,7 @@
       <% if (trendingCategories && trendingCategories.length > 0) { %>
         <% trendingCategories.slice(0, 8).forEach(category => { %>
           <a href="/marketplace/products?category=<%= category.slug %>" class="category-card">
-            <div class="category-icon">🏷️</div>
+            <div class="category-icon"><svg class="svg-icon svg-icon-fi-rr-label" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20.59 13.41 12 22l-9-9V4a2 2 0 0 1 2-2h8.59a2 2 0 0 1 1.41.59l7 7a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>️</div>
             <h3 class="category-name"><%= category.name %></h3>
             <p class="category-count"><%= category.product_count %> produits</p>
           </a>
@@ -148,7 +150,7 @@
                 <% if (store.logo_url) { %>
                   <img src="<%= store.logo_url %>" alt="<%= store.business_name %>" class="store-logo">
                 <% } else { %>
-                  <div class="store-logo-placeholder">🏪</div>
+                  <div class="store-logo-placeholder"><svg class="svg-icon svg-icon-fi-rr-shop" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 9l1-5h16l1 5"></path><path d="M3 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"></path><path d="M5 9v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"></path><path d="M10 21v-6h4v6"></path></svg></div>
                 <% } %>
                 <div class="store-info">
                   <h3 class="store-name">
@@ -160,7 +162,7 @@
                     <% } %>
                   </h3>
                   <% if (store.city) { %>
-                    <p class="store-location">📍 <%= store.city %>, <%= store.country || '' %></p>
+                    <p class="store-location"><svg class="svg-icon svg-icon-fi-rr-marker" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> <%= store.city %>, <%= store.country || '' %></p>
                   <% } %>
                 </div>
               </div>
@@ -225,7 +227,7 @@
                 <% } %>
               </div>
               <% if (product.city) { %>
-                <p class="product-location">📍 <%= product.city %>, <%= product.country || '' %></p>
+                <p class="product-location"><svg class="svg-icon svg-icon-fi-rr-marker" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> <%= product.city %>, <%= product.country || '' %></p>
               <% } %>
             </div>
           </a>
@@ -236,38 +238,6 @@
     </div>
   </section>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const searchInput = document.getElementById('searchInput');
-      const searchBtn = document.getElementById('searchBtn');
-
-      const handleSearch = () => {
-        const query = searchInput.value.trim();
-        if (query) {
-          window.location.href = `/marketplace/products?search=${encodeURIComponent(query)}`;
-        }
-      };
-
-      searchBtn.addEventListener('click', handleSearch);
-      searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSearch();
-      });
-
-      // Carousels (Simple scroll)
-      document.querySelectorAll('.carousel-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const carouselId = btn.getAttribute('data-carousel');
-          const track = document.querySelector(`.carousel-track[data-carousel="${carouselId}"]`);
-          const scrollAmount = track.clientWidth * 0.8;
-          
-          if (btn.classList.contains('carousel-prev')) {
-            track.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-          } else {
-            track.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-          }
-        });
-      });
-    });
-  </script>
+  <script src="/js/marketplace-home.js"></script>
 </body>
 </html>

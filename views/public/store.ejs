@@ -374,6 +374,8 @@
       }
     }
   </style>
+
+  <style>.svg-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0;}</style>
 </head>
 <body>
   <!-- Header Boutique -->
@@ -391,9 +393,9 @@
         <h1 class="store-name"><%= c.store_title || store.business_name %></h1>
         
         <div class="store-location">
-          📍 <%= [store.city, store.country].filter(Boolean).join(', ') %>
+          <svg class="svg-icon svg-icon-fi-rr-marker" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> <%= [store.city, store.country].filter(Boolean).join(', ') %>
           <% if (store.is_verified) { %>
-            <span title="Vendeur vérifié" style="color: #4CAF50; margin-left: 8px;">✔️ Vérifié</span>
+            <span title="Vendeur vérifié" style="color: #4CAF50; margin-left: 8px;"><svg class="svg-icon svg-icon-fi-rr-check" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg>️ Vérifié</span>
           <% } %>
         </div>
 
@@ -405,17 +407,16 @@
       <% if (isBusiness && integrations) { %>
       <div style="margin-top: 16px; display: flex; justify-content: center; gap: 12px;">
         <% if (integrations.instagram_enabled && integrations.instagram_url) { %>
-          <a href="<%= integrations.instagram_url.startsWith('http') ? integrations.instagram_url : 'https://instagram.com/' + integrations.instagram_url.replace('@','') %>" 
-             target="_blank" class="social-link" title="Instagram" style="color: white; text-decoration: none; font-size: 20px;">
-            📷
+          <a href="<%= integrations.instagram_url.startsWith('http') ? integrations.instagram_url : 'https://instagram.com/' + integrations.instagram_url.replace('@','') %>"  style="color: mediumorchid;"  
+             target="_blank" class="social-link" title="Instagram"><svg class="svg-icon svg-icon-fi-brands-instagram" viewBox="0 0 24 24" width=34 height=34 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
           </a>
         <% } %>
         <% if (integrations.facebook_enabled && integrations.facebook_url) { %>
           <a href="<%= integrations.facebook_url.startsWith('http') ? integrations.facebook_url : 'https://facebook.com/' + integrations.facebook_url %>" 
-             target="_blank" class="social-link" title="Facebook" style="color: white; text-decoration: none; font-size: 20px;">
-            👥
+             target="_blank" class="social-link" title="Facebook"><svg class="svg-icon svg-icon-fi-brands-facebook" viewBox="0 0 24 24" width=34 height=34 fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/></svg>
           </a>
         <% } %>
+      </div>
       </div>
       <% } %>
     </div>
@@ -437,7 +438,7 @@
         <input type="text" name="search" placeholder="Rechercher un produit..." value="<%= filters.search || '' %>"
                style="flex: 1; border: 2px solid #eee; padding: 12px 20px; border-radius: 12px; outline: none; font-family: var(--store-font);">
         <% if (filters.category) { %><input type="hidden" name="category" value="<%= filters.category %>"><% } %>
-        <button type="submit" class="store-btn">🔍</button>
+        <button type="submit" class="store-btn"><svg class="svg-icon svg-icon-fi-rr-search" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
       </form>
     </div>
     <% } %>
@@ -485,7 +486,7 @@
         <% }); %>
       <% } else { %>
         <div style="text-align: center; padding: 80px 24px; background: white; border-radius: 24px; grid-column: 1 / -1;">
-          <div style="font-size: 64px; margin-bottom: 24px;">🔍</div>
+          <div style="font-size: 64px; margin-bottom: 24px;"><svg class="svg-icon svg-icon-fi-rr-search" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
           <h2 style="color: var(--store-title);">Aucun produit trouvé</h2>
           <a href="/store/<%= store.store_slug %>" style="display: inline-block; margin-top: 24px; color: var(--store-primary); font-weight: 700;">Réinitialiser</a>
         </div>
@@ -508,13 +509,83 @@
   <footer class="footer">
     <% if (c.show_social_links) { %>
       <!-- Espace pour les icônes sociales (statique pour l'instant) -->
-      <div style="margin-bottom: 16px; font-size: 24px;">📱 🌐 💬</div>
+      <div style="margin-bottom: 16px; font-size: 24px;"><svg class="svg-icon svg-icon-fi-rr-smartphone" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg> <svg class="svg-icon svg-icon-fi-rr-world" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg> <svg class="svg-icon svg-icon-fi-rr-comment-alt" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 0 1-4.06 7.2A8.5 8.5 0 0 1 4 15.8L3 21l5.2-1a8.5 8.5 0 0 1 3.8.9 8.38 8.38 0 0 1 4-1 8.5 8.5 0 0 1 5-8.2z"></path></svg></div>
     <% } %>
     <div style="color: var(--store-desc); margin-bottom: 16px;">
-      <%= c.footer_text || `© ${new Date().getFullYear()} ${c.store_title || store.business_name}. Tous droits réservés.` %>
+      <%- c.footer_text || `<svg class="svg-icon svg-icon-fi-rr-copyright" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M14.83 9a4 4 0 1 0 0 6"></path></svg> ${new Date().getFullYear()} ${c.store_title || store.business_name}. Tous droits réservés.` %>
     </div>
     <div style="font-size: 12px; opacity: 0.6;">Propulsé par <a href="/" style="color: var(--store-primary); font-weight: 700; text-decoration: none;">AURA</a></div>
+    
+    <div style="margin-top: 16px;">
+      <button id="openStoreReportBtn" style="background: none; border: none; color: var(--store-desc); font-size: 12px; text-decoration: underline; cursor: pointer; opacity: 0.7; font-family: inherit;">
+        Signaler cette boutique
+      </button>
+    </div>
   </footer>
 
+  <!-- REPORT MODAL -->
+  <style>
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; animation: mkFadeIn 0.2s ease; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: white; border-radius: 20px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 30px 80px rgba(0,0,0,0.25); animation: mkSlideUp 0.3s ease; color: #1F2937; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 24px; border-bottom: 1px solid #f0f0f0; }
+    .modal-header h3 { font-size: 20px; font-weight: 800; margin: 0; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #9ca3af; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+    .modal-close:hover { background: #f3f4f6; color: #374151; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid #f0f0f0; display: flex; gap: 12px; justify-content: flex-end; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+    .form-input, .form-textarea { width: 100%; padding: 10px 14px; border: 2px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px; box-sizing: border-box; }
+    .form-input:focus, .form-textarea:focus { outline: none; border-color: var(--store-primary); }
+    .btn-confirm { padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    @keyframes mkFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes mkSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+
+  <div class="modal-overlay" id="storeReportModalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><svg class="svg-icon svg-icon-fi-rr-flag" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg> Signaler cette boutique</h3>
+        <button class="modal-close" id="closeStoreReportModal">&times;</button>
+      </div>
+      <form id="publicStoreReportForm">
+        <div class="modal-body">
+          <p style="font-size: 14px; color: #4B5563; margin-top: 0; margin-bottom: 20px;">
+            Pourquoi signalez-vous cette boutique ?
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Raison du signalement *</label>
+            <select id="storeReportReason" class="form-input" required>
+              <option value="" disabled selected>Sélectionnez une raison</option>
+              <option value="Arnaque">Arnaque suspectée</option>
+              <option value="Produits interdits">Produits interdits</option>
+              <option value="Faux vendeur">Faux vendeur</option>
+              <option value="Contenu inapproprié">Contenu inapproprié</option>
+              <option value="Spam">Spam</option>
+              <option value="Autre">Autre raison</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Plus de détails (optionnel)</label>
+            <textarea id="storeReportDescription" class="form-textarea" rows="4" placeholder="Précisez votre signalement..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="cancelStoreReport">Annuler</button>
+          <button type="submit" class="btn-confirm" id="submitStoreReport">Signaler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SSR Data -->
+  <script id="ssr-store-data" type="application/json">
+    <%- JSON.stringify({ vendorId: store.id }) %>
+  </script>
+  <script src="/js/public-store.js"></script>
 </body>
 </html>

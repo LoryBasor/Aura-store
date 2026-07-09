@@ -5,14 +5,25 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // ── Données injectées par le serveur (SSR JSON) ───────────────────────────
+  let categoriesData = [];
+  try {
+    const ssrEl = document.getElementById('ssr-categories-data');
+    if (ssrEl) {
+      categoriesData = JSON.parse(ssrEl.textContent || '[]');
+    }
+  } catch(e) { console.error('Erreur lecture catégories SSR:', e); }
+
+  const categoryModal = document.getElementById('categoryModal');
+
   const categoryForm = document.getElementById('categoryForm');
   const modalTitle   = document.getElementById('modalTitle');
   const categoriesList = document.getElementById('categoriesList');
 
   function getCategoryData(id) {
-    if (!window.__SSR_CATEGORIES__) return null;
-    return window.__SSR_CATEGORIES__.find(c => c.id == id);
+    return categoriesData.find(c => c.id == id) || null;
   }
+
 
   // Nouvelle catégorie
   AppUtils.onAll('[data-action="new-category"]', 'click', () => {

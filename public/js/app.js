@@ -167,3 +167,71 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.ModalManager = ModalManager;
+
+// ========================================
+// GRAPHIQUE TABLEAU DE BORD VENDEUR (PRO/BUSINESS)
+// Lit les données depuis le bloc JSON SSR injecté conditionnellement
+// ========================================
+document.addEventListener('DOMContentLoaded', () => {
+  const ssrChartEl = document.getElementById('ssr-chart-data');
+  const chartCanvas = document.getElementById('dashboardEvolutionChart');
+  if (!ssrChartEl || !chartCanvas) return;
+
+  try {
+    const rawData = JSON.parse(ssrChartEl.textContent || '[]');
+    if (!rawData || rawData.length === 0) return;
+
+    const labels = rawData.map(d => d.label || d.period);
+    const revenueData = rawData.map(d => d.revenue);
+
+    const ctx = chartCanvas.getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Chiffre d'affaires (FCFA)",
+          data: revenueData,
+          borderColor: '#8b5cf6',
+          backgroundColor: 'rgba(139, 92, 246, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#8b5cf6',
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) label += ': ';
+                if (context.parsed.y !== null) {
+                  label += new Intl.NumberFormat('fr-FR').format(context.parsed.y) + ' FCFA';
+                }
+                return label;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return new Intl.NumberFormat('fr-FR').format(value);
+              }
+            }
+          }
+        }
+      }
+    });
+  } catch (e) {
+    console.error('[app.js] Erreur initialisation graphique dashboard:', e);
+  }
+});
