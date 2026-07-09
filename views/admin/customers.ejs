@@ -1,6 +1,6 @@
 <!-- Page Header -->
 <div class="page-header">
-  <h1 class="page-title">👥 Mes Clients</h1>
+  <h1 class="page-title"><svg class="svg-icon svg-icon-fi-rr-users" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Mes Clients</h1>
   <p class="page-subtitle">Gérez votre base de clients</p>
 </div>
 
@@ -9,7 +9,7 @@
   <div class="stat-card">
     <div class="stat-header">
       <span class="stat-label">Total Clients</span>
-      <div class="stat-icon">👥</div>
+      <div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-users" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
     </div>
     <div class="stat-value" id="totalCustomers">0</div>
   </div>
@@ -17,7 +17,7 @@
   <div class="stat-card">
     <div class="stat-header">
       <span class="stat-label">Clients Actifs (30j)</span>
-      <div class="stat-icon">✅</div>
+      <div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-check-circle" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
     </div>
     <div class="stat-value" id="activeCustomers">0</div>
   </div>
@@ -70,59 +70,4 @@
   </div>
 </div>
 
-<script>
-  async function loadCustomers() {
-    try {
-      const response = await fetch('/api/dashboard', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('aura_token')}`
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (data.success && data.data && data.data.overview) {
-        // Mettre à jour les stats
-        document.getElementById('totalCustomers').textContent = data.data.overview.customers.total || 0;
-        document.getElementById('activeCustomers').textContent = data.data.overview.customers.active_30_days || 0;
-        document.getElementById('newCustomers').textContent = 0; // TODO: ajouter dans l'API
-      }
-
-      // Pour l'instant, afficher un message
-      renderEmptyCustomers();
-    } catch (error) {
-      console.error('Erreur chargement clients:', error);
-      renderEmptyCustomers();
-    }
-  }
-
-  function renderEmptyCustomers() {
-    const tbody = document.getElementById('customersTableBody');
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; padding: 64px;">
-          <div class="empty-state">
-            <div class="empty-state-icon">👥</div>
-            <h3 class="empty-state-title">Gestion des clients</h3>
-            <p class="empty-state-text">
-              Les clients qui passent commande apparaîtront automatiquement ici.<br>
-              Vous pourrez voir leur historique et les contacter facilement.
-            </p>
-          </div>
-        </td>
-      </tr>
-    `;
-  }
-
-  function searchCustomers() {
-    // TODO: Implémenter la recherche
-  }
-
-  function contactCustomer(phone) {
-    const cleanPhone = phone.replace(/[^\d+]/g, '');
-    window.open(`https://wa.me/${cleanPhone}`, '_blank');
-  }
-
-  // Charger les clients
-  loadCustomers();
-</script>
+<script src="/js/admin/customers.js"></script>

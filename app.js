@@ -19,6 +19,7 @@ require('dotenv').config();
 const { pool, testConnection, closePool } = require('./src/config/database');
 const { testConnection: testCloudinary } = require('./src/config/cloudinary');
 const { UPLOAD_DIR } = require('./src/config/upload');
+const { startSubscriptionCron, stopSubscriptionCron } = require('./src/cron/subscriptionCron');
 
 // Routes API
 const apiRoutes = require('./src/routes');
@@ -108,6 +109,10 @@ async function authenticateView(req, res, next) {
       console.error('Token invalide ou expiré');
       return res.redirect('/login');
     }
+
+    // Vérification et rétrogradation si abonnement expiré
+    const subscriptionRenewalService = require('./src/services/subscriptionRenewalService');
+    await subscriptionRenewalService.checkAndDowngradeUser(decoded.userId);
 
     // Vérifier l'utilisateur ET récupérer son plan en une seule requête
     const [users] = await pool.execute(
@@ -226,6 +231,19 @@ app.get('/register', (req, res) => {
     title: 'Inscription',
     layout: false
   });
+});
+
+// Pages OTP et mot de passe oublié
+app.get('/verify-otp', (req, res) => {
+  res.render('auth/verify-otp', { title: 'Vérification Email', layout: false });
+});
+
+app.get('/forgot-password', (req, res) => {
+  res.render('auth/forgot-password', { title: 'Mot de passe oublié', layout: false });
+});
+
+app.get('/reset-password', (req, res) => {
+  res.render('auth/reset-password', { title: 'Réinitialiser le mot de passe', layout: false });
 });
 
 // Page produit public (lien de partage)
@@ -514,39 +532,117 @@ app.get('/dashboard', authenticateView, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// ── Helper : parsing des filtres de période (statistiques avancées) ──
+function parseStatsFilter(query) {
+  const { start, end, period: filterPeriod = '30days' } = query;
+
+  const calcDays = (s, e) => {
+    const ms = new Date(e) - new Date(s);
+    return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)) + 1);
+  };
+
+  if (filterPeriod === 'custom' && start && end) {
+    return { period: 'day', days: calcDays(start, end), start, end, filterPeriod: 'custom' };
+  }
+
+  if (filterPeriod === 'year') {
+    const now = new Date();
+    const yearStart = `${now.getFullYear()}-01-01`;
+    const today = now.toISOString().split('T')[0];
+    return { period: 'month', days: calcDays(yearStart, today), start: yearStart, end: today, filterPeriod: 'year' };
+  }
+
+  const daysMap = { '7days': 7, '30days': 30, '90days': 90 };
+  const days = daysMap[filterPeriod] || 30;
+  const fp = daysMap[filterPeriod] ? filterPeriod : '30days';
+
+  return { period: 'day', days, start: null, end: null, filterPeriod: fp };
+}
+
+function getPeriodLabel(filterPeriod, start, end) {
+  const labels = {
+    '7days': '7 derniers jours',
+    '30days': '30 derniers jours',
+    '90days': '90 derniers jours',
+    'year': 'Cette année',
+    'custom': start && end ? `Du ${new Date(start).toLocaleDateString('fr-FR')} au ${new Date(end).toLocaleDateString('fr-FR')}` : 'Période personnalisée'
+  };
+  return labels[filterPeriod] || labels['30days'];
+}
+
 // ── Statistiques avancées (PRO et BUSINESS) ──
 app.get('/advanced-stats', authenticateView, async (req, res, next) => {
   try {
-    const evolution = await advancedStatsService.getOrdersEvolution(req.user.id, 'day', 30);
-    const byStatus = await advancedStatsService.getOrdersByStatus(req.user.id);
-    const topProducts = await advancedStatsService.getTopProducts(req.user.id, 10);
-    const conversion = await advancedStatsService.getConversionMetrics(req.user.id);
-    const customers = await advancedStatsService.getCustomerAnalysis(req.user.id);
-    const forecast = await advancedStatsService.getForecast(req.user.id);
-    const hourlyStats = await advancedStatsService.getOrdersByHour(req.user.id);
-    const storeVisibility = await advancedStatsService.getStoreVisibility(req.user.id);
-    const solicitedProducts = await advancedStatsService.getMostSolicitedProducts(req.user.id, 5);
-    const categoryPerformance = await advancedStatsService.getCategoryPerformance(req.user.id);
-    const topCustomersList = await advancedStatsService.getTopCustomers(req.user.id, 5);
-    const subHistory = await advancedStatsService.getSubscriptionHistory(req.user.id);
+    if (!req.user.has_advanced_stats) {
+      return res.redirect('/subscription?upgrade=advanced_stats');
+    }
+
+    const { period, days, start, end, filterPeriod } = parseStatsFilter(req.query);
+
+    const [evolution, byStatus, topProducts, conversion, customers, forecast,
+           hourlyStats, storeVisibility, solicitedProducts, categoryPerformance,
+           topCustomersList, subHistory] = await Promise.all([
+      advancedStatsService.getOrdersEvolution(req.user.id, period, days, start, end),
+      advancedStatsService.getOrdersByStatus(req.user.id, start, end, days),
+      advancedStatsService.getTopProducts(req.user.id, 10, start, end, days),
+      advancedStatsService.getConversionMetrics(req.user.id, start, end, days),
+      advancedStatsService.getCustomerAnalysis(req.user.id, start, end, days),
+      advancedStatsService.getForecast(req.user.id),
+      advancedStatsService.getOrdersByHour(req.user.id, start, end, days),
+      advancedStatsService.getStoreVisibility(req.user.id),
+      advancedStatsService.getMostSolicitedProducts(req.user.id, 5),
+      advancedStatsService.getCategoryPerformance(req.user.id, start, end, days),
+      advancedStatsService.getTopCustomers(req.user.id, 5, start, end, days),
+      advancedStatsService.getSubscriptionHistory(req.user.id)
+    ]);
 
     res.render('dashboard/advanced-stats', {
       title: 'Statistiques Avancées',
       pageTitle: 'Statistiques Avancées',
       currentPage: 'advanced-stats',
       user: req.user,
-      evolution,
-      byStatus,
-      topProducts,
-      conversion,
-      customers,
-      forecast,
-      hourlyStats,
-      storeVisibility,
-      solicitedProducts,
-      categoryPerformance,
-      topCustomersList,
-      subHistory
+      evolution, byStatus, topProducts, conversion, customers, forecast,
+      hourlyStats, storeVisibility, solicitedProducts, categoryPerformance,
+      topCustomersList, subHistory,
+      filterStart: start, filterEnd: end, filterPeriod,
+      periodLabel: getPeriodLabel(filterPeriod, start, end)
+    });
+  } catch (error) { next(error); }
+});
+
+// ── Page d'impression des statistiques (sans layout) ──
+app.get('/advanced-stats/print', authenticateView, async (req, res, next) => {
+  try {
+    if (!req.user.has_advanced_stats) {
+      return res.redirect('/subscription?upgrade=advanced_stats');
+    }
+
+    const { period, days, start, end, filterPeriod } = parseStatsFilter(req.query);
+
+    const [evolution, byStatus, topProducts, conversion, customers, forecast,
+           topCustomersList, categoryPerformance, solicitedProducts, hourlyStats, storeVisibility] = await Promise.all([
+      advancedStatsService.getOrdersEvolution(req.user.id, period, days, start, end),
+      advancedStatsService.getOrdersByStatus(req.user.id, start, end, days),
+      advancedStatsService.getTopProducts(req.user.id, 10, start, end, days),
+      advancedStatsService.getConversionMetrics(req.user.id, start, end, days),
+      advancedStatsService.getCustomerAnalysis(req.user.id, start, end, days),
+      advancedStatsService.getForecast(req.user.id),
+      advancedStatsService.getTopCustomers(req.user.id, 10, start, end, days),
+      advancedStatsService.getCategoryPerformance(req.user.id, start, end, days),
+      advancedStatsService.getMostSolicitedProducts(req.user.id, 10),
+      advancedStatsService.getOrdersByHour(req.user.id, start, end, days),
+      advancedStatsService.getStoreVisibility(req.user.id)
+    ]);
+
+    res.render('dashboard/advanced-stats-print', {
+      layout: false,
+      title: 'Rapport Statistiques — Aura Store',
+      user: req.user,
+      evolution, byStatus, topProducts, conversion, customers, forecast,
+      topCustomersList, categoryPerformance, solicitedProducts, hourlyStats, storeVisibility,
+      filterStart: start, filterEnd: end, filterPeriod,
+      periodLabel: getPeriodLabel(filterPeriod, start, end),
+      generatedAt: new Date().toLocaleString('fr-FR')
     });
   } catch (error) { next(error); }
 });
@@ -695,6 +791,60 @@ app.get('/profile', authenticateView, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// ── Messagerie Support ──
+app.get('/dashboard/messages', authenticateView, async (req, res, next) => {
+  try {
+    const { pool } = require('./src/config/database');
+    const ticketId = req.query.ticket;
+    
+    // Charger la liste des conversations du vendeur
+    const [conversations] = await pool.execute(
+      `SELECT * FROM conversations WHERE vendor_id = ? ORDER BY updated_at DESC`,
+      [req.user.id]
+    );
+
+    // Charger les messages si un ticket est sélectionné
+    let activeMessages = [];
+    let activeTicket = null;
+    if (ticketId) {
+      const conv = conversations.find(c => c.id == ticketId);
+      if (conv) {
+        activeTicket = conv;
+        const [messages] = await pool.execute(
+          `SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC`,
+          [ticketId]
+        );
+        // Récupérer les pièces jointes
+        for (let msg of messages) {
+          const [atts] = await pool.execute(`SELECT * FROM message_attachments WHERE message_id = ?`, [msg.id]);
+          msg.attachments = atts;
+        }
+        activeMessages = messages;
+        
+        // Marquer comme lu
+        await pool.execute(
+          `UPDATE messages SET is_read = TRUE, read_at = NOW() WHERE conversation_id = ? AND sender_role = 'admin' AND is_read = FALSE`,
+          [ticketId]
+        );
+        await pool.execute(
+          `UPDATE conversations SET vendor_last_read_at = NOW() WHERE id = ?`,
+          [ticketId]
+        );
+      }
+    }
+
+    res.render('dashboard/messages', {
+      title: 'Messagerie Support',
+      pageTitle: 'Messagerie',
+      currentPage: 'messages',
+      user: req.user,
+      conversations,
+      activeTicket,
+      activeMessages
+    });
+  } catch (error) { next(error); }
+});
+
 // ── Abonnement ──
 app.get('/subscription', authenticateView, async (req, res, next) => {
   try {
@@ -748,6 +898,13 @@ app.get('/subscription', authenticateView, async (req, res, next) => {
 // ── Dashboard admin ──
 app.get('/admin/dashboard', authenticateView, requireSuperAdminView, async (req, res, next) => {
   try {
+    const { pool } = require('./src/config/database');
+    
+    // Charger les notifications (max 5)
+    const [notifications] = await pool.execute(
+      `SELECT * FROM admin_notifications ORDER BY created_at DESC LIMIT 5`
+    );
+
     const [globalStats, topVendors, recentVendors, recentOrders, conversionRate, subDistrib, trends] = await Promise.all([
       adminDashboardService.getGlobalStats(),
       adminDashboardService.getTopVendors(10),
@@ -762,6 +919,7 @@ app.get('/admin/dashboard', authenticateView, requireSuperAdminView, async (req,
       pageTitle: 'Administration',
       currentPage: 'admin-dashboard',
       user: req.user,
+      notifications,
       globalStats,
       topVendors,
       recentVendors,
@@ -803,6 +961,111 @@ app.get('/admin/vendors/:id', authenticateView, requireSuperAdminView, async (re
       user: req.user,
       vendorId: req.params.id,
       vendor: details
+    });
+  } catch (error) { next(error); }
+});
+
+// ── Avis Utilisateurs ──
+app.get('/admin/feedback', authenticateView, requireSuperAdminView, async (req, res, next) => {
+  try {
+    const { pool } = require('./src/config/database');
+    const statusFilter = req.query.status || 'pending';
+    
+    let query = `SELECT f.*, u.business_name, u.email FROM user_feedback f LEFT JOIN users u ON f.user_id = u.id`;
+    let params = [];
+    if (statusFilter === 'pending') {
+      query += ` WHERE f.is_processed = FALSE`;
+    } else if (statusFilter === 'processed') {
+      query += ` WHERE f.is_processed = TRUE`;
+    }
+    query += ` ORDER BY f.created_at DESC LIMIT 50`;
+    
+    const [feedbacks] = await pool.execute(query, params);
+
+    res.render('admin/feedback', {
+      title: 'Avis Utilisateurs',
+      pageTitle: 'Avis Utilisateurs',
+      currentPage: 'admin-feedback',
+      user: req.user,
+      feedbacks,
+      currentStatus: statusFilter
+    });
+  } catch (error) { next(error); }
+});
+
+// ── Signalements ──
+app.get('/admin/reports', authenticateView, requireSuperAdminView, async (req, res, next) => {
+  try {
+    const { pool } = require('./src/config/database');
+    const typeFilter = req.query.type || 'product';
+    const statusFilter = req.query.status || 'pending';
+    
+    let reports = [];
+    if (typeFilter === 'product') {
+      let query = `SELECT r.*, p.name as target_name FROM product_reports r LEFT JOIN products p ON r.product_id = p.id`;
+      if (statusFilter !== 'all') query += ` WHERE r.status = '${statusFilter}'`;
+      query += ` ORDER BY r.created_at DESC LIMIT 50`;
+      const [resData] = await pool.execute(query);
+      reports = resData;
+    } else {
+      let query = `SELECT r.*, u.business_name as target_name FROM store_reports r LEFT JOIN users u ON r.store_id = u.id`;
+      if (statusFilter !== 'all') query += ` WHERE r.status = '${statusFilter}'`;
+      query += ` ORDER BY r.created_at DESC LIMIT 50`;
+      const [resData] = await pool.execute(query);
+      reports = resData;
+    }
+
+    res.render('admin/reports', {
+      title: 'Signalements',
+      pageTitle: 'Signalements',
+      currentPage: 'admin-reports',
+      user: req.user,
+      reports,
+      currentType: typeFilter,
+      currentStatus: statusFilter
+    });
+  } catch (error) { next(error); }
+});
+
+// ── Messagerie Support Admin ──
+app.get('/admin/messages', authenticateView, requireSuperAdminView, async (req, res, next) => {
+  try {
+    const { pool } = require('./src/config/database');
+    const ticketId = req.query.ticket;
+    
+    const [conversations] = await pool.execute(
+      `SELECT c.*, u.business_name as vendor_name, u.email as vendor_email 
+       FROM conversations c 
+       LEFT JOIN users u ON c.vendor_id = u.id 
+       ORDER BY c.updated_at DESC LIMIT 50`
+    );
+
+    let activeMessages = [];
+    let activeTicket = null;
+    if (ticketId) {
+      const conv = conversations.find(c => c.id == ticketId);
+      if (conv) {
+        activeTicket = conv;
+        const [messages] = await pool.execute(
+          `SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC`,
+          [ticketId]
+        );
+        for (let msg of messages) {
+          const [atts] = await pool.execute(`SELECT * FROM message_attachments WHERE message_id = ?`, [msg.id]);
+          msg.attachments = atts;
+        }
+        activeMessages = messages;
+      }
+    }
+
+    res.render('admin/messages', {
+      title: 'Messagerie Support',
+      pageTitle: 'Messagerie Support',
+      currentPage: 'admin-messages',
+      user: req.user,
+      conversations,
+      activeTicket,
+      activeMessages
     });
   } catch (error) { next(error); }
 });
@@ -954,6 +1217,10 @@ async function startServer() {
     if (!cloudinaryOk) {
       throw new Error('Connexion Cloudinary échouée');
     }
+
+    // Démarrer le cron job des abonnements
+    startSubscriptionCron();
+
     // Démarrer le serveur
     const server = app.listen(PORT, () => {
       console.log('');
@@ -961,7 +1228,7 @@ async function startServer() {
       console.log('✨ AURA - Serveur démarré !');
       console.log('=================================');
       console.log(`📱 Port: ${PORT}`);
-      console.log(`🌐 URL: http://localhost:${PORT}`); 
+      process.env.NODE_ENV === "dev" ? console.log(`🌐 http://localhost:${process.env.PORT}/`) : console.log(`🌐 ${process.env.APP_URL}/`);
       console.log(`🔧 Environnement: ${process.env.NODE_ENV || 'development'}`);
       console.log('=================================');
       console.log('');
@@ -994,6 +1261,8 @@ async function startServer() {
 async function gracefulShutdown(server) {
   console.log('\n⏳ Arrêt du serveur en cours...');
   
+  stopSubscriptionCron(); // Arrêter le cron
+
   server.close(async () => {
     console.log('✅ Serveur HTTP fermé');
     await closePool();

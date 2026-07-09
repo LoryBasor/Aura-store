@@ -14,6 +14,9 @@ const { requireActiveSubscription } = require('../middlewares/subscriptionCheck'
 const { attachUserPlan } = require('../middlewares/checkPlanAccess'); // ✨ NOUVEAU
 const { apiLimiter, publicLimiter } = require('../middlewares/rateLimiter');
 const categoryRoutes = require('./categoryRoutes');
+const feedbackRoutes = require('./feedbackRoutes');
+const reportRoutes = require('./reportRoutes');
+const messagingRoutes = require('./messagingRoutes');
 
 const router = express.Router();
 
@@ -57,6 +60,11 @@ router.use(
   '/features',
   planFeaturesRoutes
 );
+
+// Nouvelles fonctionnalités
+router.use('/feedback', feedbackRoutes);
+router.use('/reports', reportRoutes);
+router.use('/messages', messagingRoutes);
 
 // Routes du dashboard vendeur (protégées)
 router.get(

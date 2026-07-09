@@ -7,6 +7,8 @@
   <link rel="shortcut icon" href="/images/logo.png" type="image/png">
   <title>Connexion | AURA</title>
   <link rel="stylesheet" href="/css/style.css">
+
+  <style>.svg-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0;}</style>
 </head>
 <body>
   <div class="auth-container">
@@ -32,7 +34,10 @@
         </div>
 
         <div class="form-group">
-          <label for="password" class="form-label required">Mot de passe</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label for="password" class="form-label required" style="margin-bottom: 0;">Mot de passe</label>
+            <a href="/forgot-password" style="font-size: 13px; color: var(--primary, #5C6C73); text-decoration: underline;">Oublié ?</a>
+          </div>
           <input 
             type="password" 
             id="password" 
@@ -60,59 +65,6 @@
   <!-- Scripts -->
   <script src="/js/ui.js"></script>
   <script src="/js/app.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const form      = document.getElementById('loginForm');
-      const submitBtn = form.querySelector('button[type="submit"]');
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const email    = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-
-        if (!email || !password) {
-          UI.showNotification('Champs manquants', 'Veuillez remplir tous les champs.', 'error');
-          return;
-        }
-
-        submitBtn.classList.add('loading');
-        submitBtn.disabled = true;
-
-        try {
-          const resp = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-          });
-
-          const data = await resp.json();
-
-          if (resp.ok) {
-            UI.showNotification('Connexion réussie', 'Bienvenue ! Redirection en cours…', 'success');
-            setTimeout(() => { 
-              // Redirection intelligente selon le rôle
-              const user = data.data.user;
-              if (user.role === 'SUPER_ADMIN') {
-                window.location.href = '/admin/dashboard';
-              } else {
-                window.location.href = '/dashboard';
-              }
-            }, 800);
-          } else {
-            // Erreurs serveur spécifiques
-            const msg = data.message || data.error || 'Email ou mot de passe incorrect.';
-            UI.showNotification('Échec de connexion', msg, 'error');
-          }
-        } catch (err) {
-          UI.showNotification('Erreur réseau', 'Impossible de joindre le serveur. Réessayez.', 'error');
-        } finally {
-          UI.hideLoader();
-          submitBtn.classList.remove('loading');
-          submitBtn.disabled = false;
-        }
-      });
-    });
-  </script>
+  <script src="/js/auth/login.js"></script>
 </body>
 </html>

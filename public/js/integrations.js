@@ -4,8 +4,18 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  const integrations = window.__SSR_INTEGRATIONS__ || {};
-  
+  // ── Données injectées par le serveur (SSR JSON) ───────────────────────────
+  let integrations = {};
+  try {
+    const ssrEl = document.getElementById('ssr-integrations-data');
+    if (ssrEl) {
+      integrations = JSON.parse(ssrEl.textContent || '{}');
+    }
+  } catch(e) { console.error('Erreur lecture integrations SSR:', e); }
+
+  const defaultMessage = `Bonjour, je souhaite commander :
+{{product_name}} au prix de {{product_price}} {{currency}}.`;
+
   // Éléments
   const forms = {
     whatsapp: document.getElementById('whatsappForm'),

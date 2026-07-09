@@ -12,33 +12,78 @@
 <!-- Page Header -->
 <div class="page-header">
   <div>
-    <h1 class="page-title">📊 Administration AURA</h1>
+    <h1 class="page-title"><svg class="svg-icon svg-icon-fi-rr-chart-histogram" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Administration AURA</h1>
     <p class="page-subtitle">Vue globale de la plateforme</p>
   </div>
   <div class="page-header-actions">
-    <a href="/admin/dashboard" class="btn btn-secondary">🔄 Actualiser</a>
+    <a href="/admin/dashboard" class="btn btn-secondary"><svg class="svg-icon svg-icon-fi-rr-refresh" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualiser</a>
   </div>
 </div>
+
+</div>
+
+<!-- Centre de Notifications Administrateur -->
+<%
+  // Calculer le nombre de notifications non lues AVANT le rendu
+  let unreadCount = 0;
+  if (notifications) notifications.forEach(n => { if (!n.is_read) unreadCount++; });
+%>
+<div class="card" style="margin-bottom: 24px; border-left: 4px solid #f59e0b;">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px;">
+    <h3 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+      <svg class="svg-icon svg-icon-fi-rr-bell" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg> Centre de Notifications
+      <span id="unreadNotifCount" data-unread="<%= unreadCount %>" style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; display: none;"><%= unreadCount %></span>
+    </h3>
+    <button onclick="markAllNotifsRead()" class="btn btn-secondary btn-sm" style="font-size: 12px;">Tout marquer comme lu</button>
+  </div>
+  <div id="notificationsContainer" style="padding: 0; max-height: 300px; overflow-y: auto;">
+    <% let _notifIdx = 0; /* reset pour la boucle */ %>
+    <% if (!notifications || notifications.length === 0) { %>
+      <div style="padding: 20px; text-align: center; color: var(--color-secondary);">Aucune notification.</div>
+    <% } else { %>
+      <% notifications.forEach(notif => { 
+        const date = new Date(notif.created_at).toLocaleString('fr-FR');
+        let icon = '<svg class="svg-icon svg-icon-fi-rr-bell" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>', link = '#';
+        if(notif.type === 'report') { icon = '<svg class="svg-icon svg-icon-fi-rr-exclamation" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'; link = '/admin/reports'; }
+        if(notif.type === 'feedback') { icon = '<svg class="svg-icon svg-icon-fi-rr-star" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>'; link = '/admin/feedback'; }
+        if(notif.type === 'message') { icon = '<svg class="svg-icon svg-icon-fi-rr-comment-alt" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 0 1-4.06 7.2A8.5 8.5 0 0 1 4 15.8L3 21l5.2-1a8.5 8.5 0 0 1 3.8.9 8.38 8.38 0 0 1 4-1 8.5 8.5 0 0 1 5-8.2z"></path></svg>'; link = '/admin/messages'; }
+        if(notif.type === 'subscription_expired') { icon = '<svg class="svg-icon svg-icon-fi-rr-triangle-warning" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>️'; link = '/admin/vendors'; }
+      %>
+      <div style="padding: 16px; border-bottom: 1px solid var(--border, #eee); background: <%= notif.is_read ? 'white' : '#fffbeb' %>; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: background 0.2s;" onclick="readNotif(<%= notif.id %>, '<%= link %>')">
+        <div style="font-size: 20px;"><%- icon %></div>
+        <div style="flex: 1;">
+          <div style="font-weight: <%= notif.is_read ? 'normal' : 'bold' %>; color: var(--color-primary);"><%= notif.title %></div>
+          <div style="font-size: 13px; color: var(--color-secondary); margin-top: 4px;"><%= notif.message %></div>
+          <div style="font-size: 11px; color: var(--color-tertiary); margin-top: 6px;"><%= date %></div>
+        </div>
+        <% if (!notif.is_read) { %><div style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; margin-top: 6px;"></div><% } %>
+      </div>
+      <% }) %>
+    <% } %>
+  </div>
+</div>
+
+<script src="/js/admin-actions.js"></script>
 
 <!-- Global Stats Grid -->
 <div class="stats-grid" id="globalStats">
   <div class="stat-card">
-    <div class="stat-header"><span class="stat-label">Total Vendeurs</span><div class="stat-icon">👥</div></div>
+    <div class="stat-header"><span class="stat-label">Total Vendeurs</span><div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-users" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div></div>
     <div class="stat-value"><%= gs.total_vendors || 0 %></div>
     <div class="stat-change positive">+<%= gs.new_vendors_this_month || 0 %> ce mois</div>
   </div>
   <div class="stat-card">
-    <div class="stat-header"><span class="stat-label">Total Produits</span><div class="stat-icon">📦</div></div>
+    <div class="stat-header"><span class="stat-label">Total Produits</span><div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-box" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><line x1="10" y1="12" x2="14" y2="12"></line></svg></div></div>
     <div class="stat-value"><%= gs.total_products || 0 %></div>
     <div class="stat-change"><%= gs.active_products || 0 %> actifs</div>
   </div>
   <div class="stat-card">
-    <div class="stat-header"><span class="stat-label">Total Commandes</span><div class="stat-icon">🛒</div></div>
+    <div class="stat-header"><span class="stat-label">Total Commandes</span><div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-shopping-cart" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></div></div>
     <div class="stat-value"><%= gs.total_orders || 0 %></div>
     <div class="stat-change positive">+<%= gs.orders_this_month || 0 %> ce mois</div>
   </div>
   <div class="stat-card">
-    <div class="stat-header"><span class="stat-label">Chiffre d'Affaires</span><div class="stat-icon">💰</div></div>
+    <div class="stat-header"><span class="stat-label">Chiffre d'Affaires</span><div class="stat-icon"><svg class="svg-icon svg-icon-fi-rr-sack-dollar" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5 7 2h10l-2 3"></path><path d="M7 5c-3 3-4.5 6.5-4.5 9.5A7.5 7.5 0 0 0 10 22h4a7.5 7.5 0 0 0 7.5-7.5c0-3-1.5-6.5-4.5-9.5z"></path><path d="M12 9v7"></path><path d="M14 11a2 2 0 0 0-2-2h0a2 2 0 0 0 0 4h0a2 2 0 0 1 0 4h0a2 2 0 0 1-2-2"></path></svg></div></div>
     <div class="stat-value"><%= fmtCurrency(gs.total_revenue || 0) %></div>
     <div class="stat-change positive"><%= fmtCurrency(gs.revenue_this_month || 0) %> ce mois</div>
   </div>
@@ -46,7 +91,7 @@
 
 <!-- Evolution Chart -->
 <div class="card" style="margin-bottom: 24px;">
-  <div class="card-header"><h3 class="card-title">📈 Évolution de l'Activité (30 jours)</h3></div>
+  <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-stats-up" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Évolution de l'Activité (30 jours)</h3></div>
   <div class="chart-container">
     <canvas id="trendsChart" height="80"></canvas>
   </div>
@@ -56,7 +101,7 @@
 <div class="grid-2fr-1fr">
   <!-- Conversion -->
   <div class="card">
-    <div class="card-header"><h3 class="card-title">📈 Taux de Conversion</h3></div>
+    <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-stats-up" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Taux de Conversion</h3></div>
     <div id="conversionStats" style="padding:24px;">
       <% const cr = conversionRate || {}; %>
       <div class="grid-3col">
@@ -78,7 +123,7 @@
 
   <!-- Distribution Abonnements -->
   <div class="card">
-    <div class="card-header"><h3 class="card-title">📊 Répartition Abonnements</h3></div>
+    <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-chart-histogram" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Répartition Abonnements</h3></div>
     <div id="subscriptionDistribution" style="padding:24px;">
       <% if (dist.length === 0) { %>
         <p style="color:var(--color-secondary);text-align:center;">Aucune donnée</p>
@@ -99,7 +144,7 @@
   <!-- Top Vendors -->
   <div class="card">
     <div class="card-header">
-      <h3 class="card-title">🏆 Top Vendeurs</h3>
+      <h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-trophy" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v6a5 5 0 0 1-10 0z"></path><path d="M7 5H4a2 2 0 0 0 0 4h3M17 5h3a2 2 0 0 1 0 4h-3"></path></svg> Top Vendeurs</h3>
       <a href="/admin/vendors" class="card-action">Voir tout →</a>
     </div>
     <div id="topVendors">
@@ -131,7 +176,7 @@
 
   <!-- Recent Activity -->
   <div class="card">
-    <div class="card-header"><h3 class="card-title">🕐 Vendeurs récents</h3></div>
+    <div class="card-header"><h3 class="card-title"><svg class="svg-icon svg-icon-fi-rr-clock" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Vendeurs récents</h3></div>
     <div id="recentActivity">
       <% if (!recentVendors || recentVendors.length === 0) { %>
         <div style="padding:24px;text-align:center;color:var(--color-secondary);">Aucun vendeur récent</div>
@@ -155,70 +200,10 @@
   </div>
 </div>
 
-<!-- Inject data for optional JS interactions -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  window.__SSR_ADMIN_STATS__ = <%- JSON.stringify({ globalStats: gs, topVendors: topVendors || [], subDistrib: dist }) %>;
-  window.__SSR_ADMIN_TRENDS__ = <%- JSON.stringify(typeof trends !== 'undefined' ? trends : {}) %>;
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const ctx = document.getElementById('trendsChart')?.getContext('2d');
-    if (!ctx || !window.__SSR_ADMIN_TRENDS__.orders) return;
-
-    const data = window.__SSR_ADMIN_TRENDS__.orders;
-    const labels = data.map(d => new Date(d.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
-    
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Commandes',
-            data: data.map(d => d.count),
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.4,
-            yAxisID: 'y'
-          },
-          {
-            label: 'Revenu (FCFA)',
-            data: data.map(d => d.revenue),
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.4,
-            yAxisID: 'y1'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: { mode: 'index', intersect: false }
-        },
-        scales: {
-          y: {
-            type: 'linear',
-            display: true,
-            position: 'left',
-            title: { display: true, text: 'Nb. Commandes' },
-            grid: { drawOnChartArea: false }
-          },
-          y1: {
-            type: 'linear',
-            display: true,
-            position: 'right',
-            title: { display: true, text: 'Revenu (FCFA)' },
-            ticks: { callback: value => value.toLocaleString() }
-          }
-        }
-      }
-    });
-  });
+<!-- Injection SSR des données pour le graphique (pas de logique inline) -->
+<script id="ssr-admin-data" type="application/json">
+  <%- JSON.stringify(typeof trends !== 'undefined' ? trends : {}) %>
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/js/admin/dashboard.js"></script>

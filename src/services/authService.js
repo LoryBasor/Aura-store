@@ -5,6 +5,7 @@ const { generateToken } = require('../config/jwt');
 const { slugify } = require('../utils/helpers');
 const { AppError } = require('../middlewares/errorHandler');
 const subscriptionService = require('./admin/subscriptionService');
+const otpService = require('./otpService');
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 12;
 
@@ -51,40 +52,22 @@ class AuthService {
       slugSuffix = slugSuffix ? slugSuffix + 1 : 1;
     }
 
-    // Créer l'utilisateur
+    // Créer l'utilisateur (email_verified = FALSE jusqu'à confirmation OTP)
     const [result] = await pool.execute(
-      `INSERT INTO users (email, password_hash, business_name, phone, whatsapp_number, store_slug)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (email, password_hash, business_name, phone, whatsapp_number, store_slug, email_verified, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, FALSE, FALSE)`,
       [email, password_hash, business_name, phone || null, whatsapp_number || null, store_slug]
     );
 
     const userId = result.insertId;
 
-    // Assigner le plan Business (ID 3) par défaut pour 1 mois (30 jours)
-    try {
-      await subscriptionService.createSubscription(userId, 3, { 
-        notes: 'Plan Business offert à l\'inscription (1 mois)' 
-      });
-    } catch (subError) {
-      console.error('Erreur lors de la création de l\'abonnement par défaut:', subError);
-    }
-
-    // Récupérer l'utilisateur créé
-    const [users] = await pool.execute(
-      'SELECT id, email, business_name, store_slug, created_at FROM users WHERE id = ?',
-      [userId]
-    );
-
-    const user = users[0];
+    // Envoyer l'OTP de vérification email
+    await otpService.createAndSendOTP(email, 'email_verification');
 
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        business_name: user.business_name,
-        store_slug: user.store_slug,
-        created_at: user.created_at
-      }
+      requiresOTP: true,
+      email,
+      message: 'Un code de vérification a été envoyé à votre adresse email.'
     };
   }
 
@@ -97,7 +80,8 @@ class AuthService {
   async login(email, password) {
     // Récupérer l'utilisateur
     const [users] = await pool.execute(
-      'SELECT id, email, role ,password_hash, business_name, store_slug, is_active FROM users WHERE email = ? AND deleted_at IS NULL',
+      `SELECT id, email, role, password_hash, business_name, store_slug, is_active, email_verified
+       FROM users WHERE email = ? AND deleted_at IS NULL`,
       [email]
     );
 
@@ -109,10 +93,20 @@ class AuthService {
 
     // Vérifier le mot de passe
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-
     if (!isPasswordValid) {
       throw new AppError('Identifiants incorrects', 401);
     }
+
+    // Vérifier si l'email est confirmé (colonne email_verified peut ne pas exister sur anciens comptes)
+    if (!user.email_verified && !user.is_active) {
+      throw new AppError('EMAIL_NOT_VERIFIED', 403);
+    }
+
+    // Incrémenter le compteur de connexions
+    await pool.execute(
+      'UPDATE users SET login_count = COALESCE(login_count, 0) + 1, last_login_at = NOW() WHERE id = ?',
+      [user.id]
+    );
 
     // Générer le token JWT
     const token = generateToken({
@@ -130,6 +124,103 @@ class AuthService {
       },
       token
     };
+  }
+
+  /**
+   * Vérifie le code OTP et active le compte
+   * @param {string} email
+   * @param {string} code
+   */
+  async verifyEmailOTP(email, code) {
+    await otpService.verifyOTP(email, code, 'email_verification');
+
+    // Activer le compte
+    const [result] = await pool.execute(
+      'UPDATE users SET email_verified = TRUE, is_active = TRUE WHERE email = ?',
+      [email]
+    );
+
+    if (result.affectedRows === 0) {
+      throw new AppError('Utilisateur introuvable.', 404);
+    }
+
+    // Récupérer l'utilisateur activé pour créer son abonnement
+    const [users] = await pool.execute(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (users.length > 0) {
+      const userId = users[0].id;
+      // Assigner le plan Business (ID 3) par défaut pour 1 mois
+      try {
+        await subscriptionService.createSubscription(userId, 3, {
+          notes: 'Plan Business offert à l\'inscription (1 mois)'
+        });
+      } catch (subError) {
+        console.error('Erreur création abonnement après vérification OTP:', subError);
+      }
+    }
+
+    return { success: true, message: 'Compte activé avec succès. Vous pouvez maintenant vous connecter.' };
+  }
+
+  /**
+   * Renvoie un OTP de vérification email
+   */
+  async resendEmailOTP(email) {
+    const [users] = await pool.execute(
+      'SELECT id, email_verified FROM users WHERE email = ? AND deleted_at IS NULL',
+      [email]
+    );
+    if (users.length === 0) throw new AppError('Email introuvable.', 404);
+    if (users[0].email_verified) throw new AppError('Cet email est déjà vérifié.', 400);
+
+    await otpService.createAndSendOTP(email, 'email_verification');
+    return { success: true, message: 'Nouveau code envoyé.' };
+  }
+
+  /**
+   * Initie la réinitialisation de mot de passe
+   * @param {string} email
+   */
+  async forgotPassword(email) {
+    const [users] = await pool.execute(
+      'SELECT id FROM users WHERE email = ? AND deleted_at IS NULL AND is_active = TRUE',
+      [email]
+    );
+
+    // Réponse identique même si l'email n'existe pas (sécurité anti-enumération)
+    if (users.length > 0) {
+      await otpService.createAndSendOTP(email, 'password_reset');
+    }
+
+    return { success: true, message: 'Si cet email existe, un code de réinitialisation a été envoyé.' };
+  }
+
+  /**
+   * Vérifie l'OTP de reset et met à jour le mot de passe
+   * @param {string} email
+   * @param {string} code
+   * @param {string} newPassword
+   */
+  async resetPassword(email, code, newPassword) {
+    // Vérifier le code OTP
+    await otpService.verifyOTP(email, code, 'password_reset');
+
+    // Hasher le nouveau mot de passe
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    const [result] = await pool.execute(
+      'UPDATE users SET password_hash = ? WHERE email = ? AND is_active = TRUE',
+      [newHash, email]
+    );
+
+    if (result.affectedRows === 0) {
+      throw new AppError('Utilisateur introuvable ou inactif.', 404);
+    }
+
+    return { success: true, message: 'Mot de passe réinitialisé avec succès.' };
   }
 
   /**

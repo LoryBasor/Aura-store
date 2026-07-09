@@ -4,7 +4,15 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  const initData = window.__SSR_CUSTOMIZATION__ || {};
+  // ── Données injectées par le serveur (SSR JSON) ───────────────────────────
+  let initData = {};
+  try {
+    const ssrEl = document.getElementById('ssr-customization-data');
+    if (ssrEl) {
+      initData = JSON.parse(ssrEl.textContent || '{}');
+    }
+  } catch(e) { console.error('Erreur lecture personnalisation SSR:', e); }
+
 
   // Formulaires
   const headerForm = document.getElementById('headerForm');

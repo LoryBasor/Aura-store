@@ -4,9 +4,22 @@
  * ========================================
  */
 
+// Ouvrir la modale d'édition de prix (fonction globale appelée depuis les boutons EJS)
+function openEditPrice(id, name, price) {
+  document.getElementById('editPlanId').value = id;
+  document.getElementById('editPlanName').textContent = 'Plan : ' + name;
+  document.getElementById('newPlanPrice').value = price;
+  document.getElementById('editPriceModal').classList.add('active');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    const trends = window.__ACTIVITY_TRENDS__ || { vendors: [], orders: [] };
-    
+  // Lire les données SSR depuis le bloc JSON
+  let trends = { vendors: [], orders: [] };
+  try {
+    const ssrEl = document.getElementById('ssr-activity-data');
+    if (ssrEl) trends = JSON.parse(ssrEl.textContent || '{}');
+  } catch(e) { console.error('[activity.js] Erreur lecture SSR data:', e); }
+
     // Préparation des dates (labels)
     // On fusionne les dates des deux datasets pour avoir un axe X cohérent
     const allDates = [...new Set([
