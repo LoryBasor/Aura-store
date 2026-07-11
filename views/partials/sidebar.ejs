@@ -4,12 +4,12 @@
      ======================================== -->
 <aside class="sidebar">
   <!-- Logo -->
-  <a href="/" target="_blank" rel="noopener noreferrer" class="sidebar-header">
+  <a href="/" target="_blank" rel="noopener noreferrer" class="sidebar-header" style="transition: transform 0.3s ease;">
     <div class="logo" style="display: inline-block;">
-      <img src="/images/logo.png" alt="Logo AURA" style="width: 50px; height: 50px; border-radius: 12px;" />
+      <img src="/images/logo.png" alt="Logo AURA" style="width: 50px; height: 50px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
     </div>
-    <div class="sidebar-logo" style="display: inline-block; margin-left: 8px; font-size: 1.5rem; font-weight: bold; color: #4B5563;">
-      <h1>AURA</h1>
+    <div class="sidebar-logo" style="display: inline-block; margin-left: 8px; font-size: 1.5rem; font-weight: bold; color: var(--aura-accent);">
+      <h1 style="background: linear-gradient(135deg, var(--aura-accent), var(--aura-surface)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AURA</h1>
     </div>
   </a>
 
@@ -177,8 +177,8 @@
 
   <!-- Footer utilisateur -->
   <div class="sidebar-footer">
-    <div class="user-info">
-      <div class="user-avatar" style="<%= user && user.plan_slug === 'business' && user.logo_url ? 'background:white;padding:2px;' : '' %>">
+    <div class="user-info" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); transition: transform 0.3s ease; cursor: default;">
+      <div class="user-avatar" style="<%= user && user.plan_slug === 'business' && user.logo_url ? 'background:white;padding:2px;' : 'background: linear-gradient(135deg, var(--aura-tertiary), var(--aura-surface)); box-shadow: 0 0 15px rgba(224,252,252,0.1);' %>">
         <% if (user && user.plan_slug === 'business' && user.logo_url) { %>
           <img src="<%= user.logo_url %>" alt="Logo" style="width:100%;height:100%;border-radius:50%;object-fit:contain;">
         <% } else { %>
@@ -186,22 +186,22 @@
         <% } %>
       </div>
       <div class="user-details">
-        <div class="user-name">
+        <div class="user-name" style="color: var(--aura-white); font-weight: 700;">
           <%= user && user.business_name ? user.business_name : 'Utilisateur' %>
         </div>
-        <div class="user-role">
+        <div class="user-role" style="color: var(--aura-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">
           <%= user && user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Vendeur' %>
         </div>
         <% if (user && user.plan_name && user.role !== 'SUPER_ADMIN') { %>
-          <div class="plan-badge" style="display:inline-block;padding:2px 8px;background:<%= user.plan_slug === 'business' ? '#8B5CF6' : user.plan_slug === 'pro' ? '#3B82F6' : '#9CA3AF' %>;color:white;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase;margin-top:4px;">
+          <div class="plan-badge" style="display:inline-block;padding:3px 10px;background:<%= user.plan_slug === 'business' ? 'linear-gradient(135deg, #8B5CF6, #C084FC)' : user.plan_slug === 'pro' ? 'linear-gradient(135deg, #3B82F6, #60A5FA)' : 'linear-gradient(135deg, #6B7280, #9CA3AF)' %>;color:white;border-radius:999px;font-size:10px;font-weight:800;text-transform:uppercase;margin-top:6px;box-shadow:0 2px 8px rgba(0,0,0,0.2);letter-spacing:0.05em;">
             <%= user.plan_name %>
           </div>
         <% } %>
       </div>
     </div>
 
-    <button class="btn btn-secondary w-full btn-sm deco">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <button class="btn btn-secondary btn-ripple w-full btn-sm deco" style="background: rgba(255,255,255,0.05); color: var(--aura-accent); border: 1px solid rgba(255,255,255,0.1); justify-content: center; transition: all 0.3s ease;">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 6px;">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
       </svg>
@@ -209,3 +209,8 @@
     </button>
   </div>
 </aside>
+<style>
+  .sidebar-header:hover { transform: scale(1.02); }
+  .user-info:hover { transform: translateY(-2px); }
+  .deco:hover { background: var(--aura-error) !important; color: white !important; border-color: var(--aura-error) !important; }
+</style>
