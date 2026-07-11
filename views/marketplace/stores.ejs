@@ -8,8 +8,9 @@
     <%= title %>
   </title>
   <link rel="icon" type="image/png" href="/images/logo.png">
+  <link rel="stylesheet" href="/css/aura-design-system.css">
   <link rel="stylesheet" href="/css/marketplace-stores.css">
-
+  <meta name="description" content="Découvrez toutes les boutiques de vendeurs sur Aura Marketplace. Trouvez des vendeurs de confiance.">
   <style>.svg-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0;}</style>
 </head>
 
@@ -129,7 +130,7 @@
               <% if (stores && stores.length> 0) { %>
                 <% stores.forEach(store=> { %>
                   <a href="/store/<%= store.store_slug %>" class="store-card">
-                    <div class="store-header">
+                    <div class="store-header" style="<%- store.banner_url ? `background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url('${store.banner_url}'); background-size: cover; background-position: center;` : '' %>">
                       <% if (store.logo_url) { %>
                         <img src="<%= store.logo_url %>" alt="<%= store.business_name %>" class="store-logo">
                         <% } else { %>
@@ -229,24 +230,22 @@
       <%- include('../partials/support-modal') %>
 
       <!-- Bouton d'action flottant (Support / Feedback) -->
-      <div class="floating-actions" style="position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000;">
-        <button onclick="openSupportModal()" title="Contacter le support" style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary, #5C6C73); color: white; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.2s;">
-          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+      <div class="floating-actions">
+        <button onclick="openSupportModal()" title="Contacter le support" style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#253337,#5C6C73);color:white;border:none;box-shadow:0 4px 16px rgba(37,51,55,0.35);cursor:pointer;display:flex;justify-content:center;align-items:center;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
           </svg>
         </button>
-        <button onclick="openFeedbackModal()" title="Donner un avis" style="width: 50px; height: 50px; border-radius: 50%; background: white; color: var(--primary, #5C6C73); border: 1px solid var(--border, #ddd); box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.2s;">
-          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <button onclick="openFeedbackModal()" title="Donner un avis" style="width:50px;height:50px;border-radius:50%;background:white;color:#5C6C73;border:2px solid rgba(157,181,192,0.4);box-shadow:0 4px 12px rgba(37,51,55,0.12);cursor:pointer;display:flex;justify-content:center;align-items:center;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
           </svg>
         </button>
       </div>
-      
-      <style>
-        .floating-actions button:hover { transform: scale(1.1); }
-      </style>
+      <style>.floating-actions button:hover{transform:scale(1.12) translateY(-2px);}</style>
 
       <script src="/js/modals.js"></script>
       <script src="/js/marketplace-stores.js"></script>
+      <script src="/js/aura-animations.js"></script>
 </body>
 </html>
