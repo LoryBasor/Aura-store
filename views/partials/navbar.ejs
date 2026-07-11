@@ -18,6 +18,20 @@
 
     <!-- Navigation Links -->
     <div class="navbar-menu" id="navbarMenu">
+      
+      <!-- Search bar (Desktop) -->
+      <div class="navbar-search hide-mobile">
+        <form action="/marketplace/products" method="GET" class="navbar-search-form">
+          <input type="text" name="search" placeholder="Rechercher..." class="navbar-search-input">
+          <button type="submit" class="navbar-search-btn" aria-label="Rechercher">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </button>
+        </form>
+      </div>
+
       <ul class="navbar-nav">
         <li class="nav-item">
           <a href="/marketplace" class="nav-link <%= currentPage === 'home' ? 'active' : '' %>">
@@ -80,6 +94,9 @@
               <%= user.business_name ? user.business_name.charAt(0).toUpperCase() : 'U' %>
             </div>
             <span class="user-name"><%= user.business_name || 'Mon compte' %></span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="user-dropdown-icon">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
           </a>
         </div>
       <% } else { %>
@@ -94,12 +111,21 @@
 <style>
 /* Navbar Marketplace Styles */
 .marketplace-navbar {
-  background: linear-gradient(135deg, #253337 0%, #5C6C73 100%);
-  box-shadow: 0 2px 8px rgba(37, 51, 55, 0.15);
+  background: #253337;
   position: sticky;
   top: 0;
   z-index: 1000;
   width: 100%;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.3s ease, backdrop-filter 0.3s ease, box-shadow 0.3s ease;
+}
+
+.marketplace-navbar.navbar-scrolled {
+  background: rgba(37, 51, 55, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border-bottom-color: rgba(255,255,255,0.1);
 }
 
 .navbar-container {
@@ -198,6 +224,60 @@
   padding: 0;
 }
 
+/* Navbar Search */
+.navbar-search {
+  margin-right: 1.5rem;
+}
+
+.navbar-search-form {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 4px 6px 4px 16px;
+  transition: all 0.2s ease;
+}
+
+.navbar-search-form:focus-within {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 2px rgba(224, 252, 252, 0.2);
+}
+
+.navbar-search-input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  width: 180px;
+  outline: none;
+}
+
+.navbar-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.navbar-search-btn {
+  background: #E0FCFC;
+  color: #253337;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.navbar-search-btn:hover {
+  transform: scale(1.05);
+  background: #fff;
+}
+
 .nav-item {
   position: relative;
 }
@@ -274,15 +354,19 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem;
+  padding-right: 0.75rem;
   color: #E0FCFC;
   text-decoration: none;
-  border-radius: 8px;
-  transition: background 0.2s ease;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: all 0.2s ease;
 }
 
 .user-link:hover {
-  background: rgba(224, 252, 252, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255,255,255,0.2);
 }
 
 .user-avatar {
