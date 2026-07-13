@@ -23,7 +23,7 @@ router.post(
   authenticate,
   apiLimiter,
   checkPlanLimit('products'),
-  upload.single('image'),
+  upload.fields([{ name: 'images', maxCount: 7 }, { name: 'video', maxCount: 1 }]),
   validateRequest(productSchema),
   productController.createProduct
 );
@@ -51,7 +51,7 @@ router.put(
   authenticate,
   apiLimiter,
   ensureOwnership('products', 'id'),
-  upload.single('image'),
+  upload.fields([{ name: 'images', maxCount: 7 }, { name: 'video', maxCount: 1 }]),
   validateRequest(productSchema),
   productController.updateProduct
 );

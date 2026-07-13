@@ -9,6 +9,14 @@
   const currentCategories = categories || [];
   const currentPagination = pagination || { page:1, limit:20, total:0 };
   const totalPages = Math.ceil(currentPagination.total / currentPagination.limit);
+  
+  let maxImages = 1;
+  let maxVideos = 0;
+  if(user.plan_slug === 'pro') maxImages = 4;
+  else if(user.plan_slug === 'business') {
+    maxImages = 7;
+    maxVideos = 1;
+  }
 %>
 
 <!-- Page Header -->
@@ -140,7 +148,7 @@
       <h3 class="modal-title" id="modalTitle">Nouveau produit</h3>
       <button class="modal-close"><svg class="svg-icon svg-icon-fi-rr-cross-small" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
-    <form id="productForm" enctype="multipart/form-data">
+    <form id="productForm" enctype="multipart/form-data" data-max-images="<%= maxImages %>" data-max-videos="<%= maxVideos %>">
       <div class="modal-body">
         <input type="hidden" id="productId" name="productId">
 
@@ -193,11 +201,22 @@
         </div>
 
         <div class="form-group">
-          <label for="image" class="form-label">Image du produit</label>
-          <input type="file" id="image" name="image" class="form-input" accept="image/jpeg,image/png,image/gif,image/webp">
-          <p class="form-help">Format acceptés: JPG, PNG, GIF, WEBP (max 5MB)</p>
-          <div id="imagePreview" style="margin-top:12px;"></div>
+          <label for="images" class="form-label">Images du produit (Max: <%= maxImages %>)</label>
+          <input type="file" id="images" name="images" class="form-input" accept="image/jpeg,image/png,image/gif,image/webp" multiple>
+          <p class="form-help">Formats acceptés: JPG, PNG, GIF, WEBP (max 3Mo/image). La première image sera la couverture.</p>
+          <div id="imagesPreview" style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;"></div>
         </div>
+        
+        <% if (maxVideos > 0) { %>
+        <div class="form-group">
+          <label for="video" class="form-label">Vidéo du produit (Optionnel, Max: 1)</label>
+          <input type="file" id="video" name="video" class="form-input" accept="video/mp4,video/webm,video/quicktime">
+          <p class="form-help">Formats acceptés: MP4, WEBM, MOV (max 15Mo, 45s). <button type="button" id="deleteExistingVideoBtn" class="btn btn-sm btn-danger" style="display:none;margin-top:5px;">Supprimer la vidéo existante</button></p>
+          <div id="videoPreview" style="margin-top:12px;"></div>
+        </div>
+        <% } %>
+        <div id="retainedMediaContainer"></div>
+        <input type="hidden" id="deleteVideoFlag" name="deleteVideo" value="false">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary btn-lg annuler">Annuler</button>

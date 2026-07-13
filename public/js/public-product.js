@@ -21,62 +21,88 @@
     console.error('Erreur lecture données produit SSR:', e);
   }
 
-  // ── Modal ──────────────────────────────────────────────────────────────────
+  // Petit helper pour ne jamais laisser une erreur JS interrompre les autres
+  // listeners de la page (chaque bloc est isolé).
+  function safe(fn) {
+    return function (...args) {
+      try {
+        return fn.apply(this, args);
+      } catch (err) {
+        console.error('Erreur dans public-product.js:', err);
+      }
+    };
+  }
+
+  // ── Modal Commande ───────────────────────────────────────────────────────
   const overlay = document.getElementById('orderModalOverlay');
 
-  document.getElementById('openOrderBtn')?.addEventListener('click', () => {
+  document.getElementById('openOrderBtn')?.addEventListener('click', safe(() => {
+    if (!overlay) return;
     overlay.classList.add('open');
 
-    // Pré-remplir avec les infos sauvegardées
-    const savedInfo = localStorage.getItem('aura_customer_info');
-    if (savedInfo) {
-      try {
+    // Pré-remplir avec les infos sauvegardées (peut échouer en navigation
+    // privée / localStorage désactivé : ça ne doit jamais bloquer l'ouverture
+    // de la modale).
+    try {
+      const savedInfo = localStorage.getItem('aura_customer_info');
+      if (savedInfo) {
         const info = JSON.parse(savedInfo);
-        if (info.name)    document.getElementById('clientName').value    = info.name;
-        if (info.phone)   document.getElementById('clientPhone').value   = info.phone;
-        if (info.address) document.getElementById('clientAddress').value = info.address;
+        const nameEl    = document.getElementById('clientName');
+        const phoneEl   = document.getElementById('clientPhone');
+        const addressEl = document.getElementById('clientAddress');
         const saveCheckbox = document.getElementById('saveInfo');
+        if (info.name && nameEl)       nameEl.value    = info.name;
+        if (info.phone && phoneEl)     phoneEl.value   = info.phone;
+        if (info.address && addressEl) addressEl.value = info.address;
         if (saveCheckbox) saveCheckbox.checked = true;
-      } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Impossible de lire les infos sauvegardées:', e);
     }
-  });
+  }));
 
-  document.getElementById('closeModal')?.addEventListener('click', () => overlay.classList.remove('open'));
-  document.getElementById('cancelOrder')?.addEventListener('click', () => overlay.classList.remove('open'));
-  overlay?.addEventListener('click', (e) => {
+  document.getElementById('closeModal')?.addEventListener('click', safe(() => overlay?.classList.remove('open')));
+  document.getElementById('cancelOrder')?.addEventListener('click', safe(() => overlay?.classList.remove('open')));
+  overlay?.addEventListener('click', safe((e) => {
     if (e.target === overlay) overlay.classList.remove('open');
-  });
+  }));
 
-  // ── Soumission du formulaire ───────────────────────────────────────────────
-  document.getElementById('publicOrderForm')?.addEventListener('submit', async (e) => {
+  // ── Soumission du formulaire de commande ─────────────────────────────────
+  document.getElementById('publicOrderForm')?.addEventListener('submit', safe(async (e) => {
     e.preventDefault();
     const btn = document.getElementById('submitOrder');
 
-    const customer_name    = document.getElementById('clientName').value;
-    const customer_phone   = document.getElementById('clientPhone').value;
-    const customer_address = document.getElementById('clientAddress').value;
+    const customer_name    = document.getElementById('clientName')?.value || '';
+    const customer_phone   = document.getElementById('clientPhone')?.value || '';
+    const customer_address = document.getElementById('clientAddress')?.value || '';
 
-    // Sauvegarder dans le localStorage si la case est cochée
-    const saveInfo = document.getElementById('saveInfo');
-    if (saveInfo?.checked) {
-      localStorage.setItem('aura_customer_info', JSON.stringify({
-        name: customer_name,
-        phone: customer_phone,
-        address: customer_address
-      }));
-    } else {
-      localStorage.removeItem('aura_customer_info');
+    // Sauvegarder dans le localStorage si la case est cochée (best-effort)
+    try {
+      const saveInfo = document.getElementById('saveInfo');
+      if (saveInfo?.checked) {
+        localStorage.setItem('aura_customer_info', JSON.stringify({
+          name: customer_name,
+          phone: customer_phone,
+          address: customer_address
+        }));
+      } else {
+        localStorage.removeItem('aura_customer_info');
+      }
+    } catch (e) {
+      console.warn('localStorage indisponible, infos non sauvegardées:', e);
     }
 
-    btn.disabled     = true;
-    btn.textContent  = 'Envoi...';
+    if (btn) {
+      btn.disabled    = true;
+      btn.textContent = 'Envoi...';
+    }
 
     const payload = {
       customer_name,
       customer_phone,
-      quantity:         parseInt(document.getElementById('clientQuantity').value),
+      quantity:         parseInt(document.getElementById('clientQuantity')?.value, 10) || 1,
       customer_address,
-      notes:            document.getElementById('clientNotes').value,
+      notes:            document.getElementById('clientNotes')?.value || '',
       product_id:       productData.id
     };
 
@@ -89,55 +115,60 @@
       const data = await resp.json();
 
       if (resp.ok) {
-        overlay.classList.remove('open');
-        const order = data.data.order;
-        if (order.whatsapp_url) {
+        overlay?.classList.remove('open');
+        const order = data?.data?.order;
+        if (order?.whatsapp_url) {
           window.location.href = order.whatsapp_url;
         } else {
           alert('✅ Commande envoyée ! Le vendeur vous contactera bientôt.');
         }
       } else {
-        alert('Erreur : ' + (data.message || 'Veuillez réessayer.'));
+        alert('Erreur : ' + (data?.message || 'Veuillez réessayer.'));
       }
     } catch (err) {
       alert('Erreur réseau.');
     } finally {
-      btn.disabled    = false;
-      btn.textContent = '✅ Confirmer la commande';
+      if (btn) {
+        btn.disabled    = false;
+        btn.textContent = '✅ Confirmer la commande';
+      }
     }
-  });
+  }));
 
-  // ── Modale de Signalement (Report) ─────────────────────────────────────────
+  // ── Modale de Signalement (Report) ───────────────────────────────────────
   const reportOverlay = document.getElementById('reportModalOverlay');
-  document.getElementById('openReportModalBtn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    reportOverlay.classList.add('open');
-  });
 
-  const closeReportModal = () => {
-    reportOverlay.classList.remove('open');
+  document.getElementById('openReportModalBtn')?.addEventListener('click', safe((e) => {
+    e.preventDefault();
+    reportOverlay?.classList.add('open');
+  }));
+
+  const closeReportModal = safe(() => {
+    reportOverlay?.classList.remove('open');
     document.getElementById('publicReportForm')?.reset();
-  };
+  });
 
   document.getElementById('closeReportModal')?.addEventListener('click', closeReportModal);
   document.getElementById('cancelReport')?.addEventListener('click', closeReportModal);
-  reportOverlay?.addEventListener('click', (e) => {
+  reportOverlay?.addEventListener('click', safe((e) => {
     if (e.target === reportOverlay) closeReportModal();
-  });
+  }));
 
-  document.getElementById('publicReportForm')?.addEventListener('submit', async (e) => {
+  document.getElementById('publicReportForm')?.addEventListener('submit', safe(async (e) => {
     e.preventDefault();
     const btn = document.getElementById('submitReport');
-    const reason = document.getElementById('reportReason').value;
-    const description = document.getElementById('reportDescription').value;
+    const reason = document.getElementById('reportReason')?.value || '';
+    const description = document.getElementById('reportDescription')?.value || '';
 
     if (!reason) {
       alert('Veuillez sélectionner une raison.');
       return;
     }
 
-    btn.disabled = true;
-    btn.textContent = 'Envoi...';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Envoi...';
+    }
 
     try {
       const resp = await fetch(`/api/reports/product/${productData.id}`, {
@@ -145,20 +176,22 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason, description })
       });
-      
+
       if (resp.ok) {
         alert('Signalement envoyé. Merci de votre aide pour sécuriser Aura Marketplace.');
         closeReportModal();
       } else {
         const data = await resp.json();
-        alert(data.message || 'Erreur lors du signalement.');
+        alert(data?.message || 'Erreur lors du signalement.');
       }
     } catch (err) {
       alert('Erreur réseau.');
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Signaler';
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Signaler';
+      }
     }
-  });
+  }));
 
 })();

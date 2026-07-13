@@ -206,39 +206,11 @@
           <% } %>
         </div>
 
-        <!-- Pagination -->
-        <% if (data.pagination.totalPages > 1) { 
-             const cleanFilters = {};
-             for (const key in filters) {
-               if (key !== 'limit' && key !== 'offset' && filters[key] !== '' && filters[key] !== null && filters[key] !== undefined) {
-                 cleanFilters[key] = filters[key];
-               }
-             }
-        %>
-          <div class="pagination-container">
-            <a href="?<%= new URLSearchParams({...cleanFilters, page: data.pagination.page - 1}).toString() %>" 
-               class="pagination-btn <%= data.pagination.page <= 1 ? 'disabled' : '' %>"
-               id="prevBtn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-              Précédent
-            </a>
-            
-            <span id="pagination" class="pagination-info">
-              Page <%= data.pagination.page %> / <%= data.pagination.totalPages %>
-            </span>
-            
-            <a href="?<%= new URLSearchParams({...cleanFilters, page: data.pagination.page + 1}).toString() %>" 
-               class="pagination-btn <%= data.pagination.page >= data.pagination.totalPages ? 'disabled' : '' %>"
-               id="nextBtn">
-              Suivant
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </a>
-          </div>
-        <% } %>
+        <!-- Infinite Scroll Sentinel -->
+        <div id="scrollLoading" style="display: none; text-align: center; padding: 20px;">
+          <div class="spinner" style="width: 30px; height: 30px; margin: 0 auto; border: 3px solid var(--color-surface); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        </div>
+        <div id="scrollSentinel" style="height: 20px; width: 100%;"></div>
       </main>
     </div>
   </div>

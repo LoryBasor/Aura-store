@@ -50,11 +50,25 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
+      mediaSrc: ["'self'", "https://res.cloudinary.com"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
       scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com",
+        "https://cdn.jsdelivr.net"
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com",
+        "data:"
+      ],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"]
+      connectSrc: [
+        "'self'",
+        "https://cdn.jsdelivr.net"
+      ]
     }
   }
 }));

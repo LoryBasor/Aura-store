@@ -81,7 +81,7 @@ async function deleteImage(publicId) {
       return null;
     }
 
-    const result = await cloudinary.uploader.destroy(publicId);
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
     
     if (result.result === 'ok') {
       console.log(`✅ Image supprimée de Cloudinary: ${publicId}`);
@@ -91,8 +91,65 @@ async function deleteImage(publicId) {
     
     return result;
   } catch (error) {
-    console.error('Erreur suppression Cloudinary:', error);
+    console.error('Erreur suppression Cloudinary (image):', error);
     throw new Error('Échec de la suppression de l\'image');
+  }
+}
+
+/**
+ * Upload une vidéo vers Cloudinary
+ * @param {Buffer} fileBuffer - Buffer du fichier
+ * @param {string} folder - Dossier Cloudinary (ex: 'products')
+ * @param {string} userId - ID utilisateur pour organisation
+ * @returns {Promise<object>} Résultat upload
+ */
+async function uploadVideo(fileBuffer, folder = 'products', userId = null) {
+  try {
+    const options = {
+      folder: userId ? `${folder}/${userId}` : folder,
+      resource_type: 'video',
+      transformation: [
+        { width: 1280, height: 720, crop: 'limit' }, // Max 720p
+        { quality: 'auto', fetch_format: 'auto' } // Optimisation auto
+      ]
+    };
+
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        options,
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve({
+              url: result.secure_url,
+              public_id: result.public_id,
+              format: result.format
+            });
+          }
+        }
+      );
+
+      uploadStream.end(fileBuffer);
+    });
+  } catch (error) {
+    console.error('Erreur upload vidéo Cloudinary:', error);
+    throw new Error('Échec de l\'upload de la vidéo');
+  }
+}
+
+/**
+ * Supprime une vidéo de Cloudinary
+ * @param {string} publicId - Public ID de la vidéo
+ */
+async function deleteVideo(publicId) {
+  try {
+    if (!publicId) return null;
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+    return result;
+  } catch (error) {
+    console.error('Erreur suppression vidéo Cloudinary:', error);
+    throw new Error('Échec de la suppression de la vidéo');
   }
 }
 
@@ -115,5 +172,7 @@ module.exports = {
   cloudinary,
   uploadImage,
   deleteImage,
+  uploadVideo,
+  deleteVideo,
   testConnection
 };
