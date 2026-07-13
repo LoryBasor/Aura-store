@@ -536,6 +536,8 @@ body {
 }
 
 .store-logo, .store-logo-placeholder {
+  position: relative;
+  top: 30px;
   width: 52px;
   height: 52px;
   border-radius: var(--radius-sm);

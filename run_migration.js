@@ -5,7 +5,7 @@ const { pool } = require('./src/config/database');
 async function runMigration() {
   try {
     console.log('Lecture du fichier SQL...');
-    const sqlFile = path.join(__dirname, 'migrations', '009_otp_and_features.sql');
+    const sqlFile = path.join(__dirname, 'migrations', '010_advanced_media_system.sql');
     let sqlContent = fs.readFileSync(sqlFile, 'utf8');
 
     // Remove comments

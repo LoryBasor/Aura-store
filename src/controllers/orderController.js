@@ -19,7 +19,7 @@ class OrderController {
     try {
       const order = await orderService.createOrder(req.body);
       
-      return createdResponse(
+      return createdResponse( 
         res, 
         { order }, 
         'Commande créée avec succès. Le vendeur vous contactera bientôt !'
