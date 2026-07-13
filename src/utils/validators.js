@@ -89,7 +89,17 @@ const productSchema = Joi.object({
     .allow('', null)
     .default(0),
   is_available: Joi.boolean()
-    .default(true)
+    .default(true),
+  // Champs multi-médias (ignorés par la validation Joi, gérés par le contrôleur)
+  retainedMediaIds: Joi.alternatives()
+    .try(Joi.array().items(Joi.string()), Joi.string())
+    .optional()
+    .allow('', null),
+  deleteVideo: Joi.alternatives()
+    .try(Joi.boolean(), Joi.string())
+    .optional()
+    .allow('', null),
+  productId: Joi.any().optional()
 });
 
 // Validation pagination

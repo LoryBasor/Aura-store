@@ -1,4 +1,7 @@
-// src/services/productService.js
+const fs = require('fs');
+const path = require('path');
+
+const fileContent = `// src/services/productService.js
 const { pool } = require('../config/database');
 const { slugify, generateToken, buildProductShareLink } = require('../utils/helpers');
 const { deleteImage, deleteVideo } = require('../config/cloudinary');
@@ -19,7 +22,7 @@ class ProductService {
     let slugSuffix = null;
 
     while (true) {
-      const finalSlug = slugSuffix ? `${slug}-${slugSuffix}` : slug;
+      const finalSlug = slugSuffix ? \`\${slug}-\${slugSuffix}\` : slug;
       const [slugCheck] = await pool.execute(
         'SELECT id FROM products WHERE user_id = ? AND slug = ?',
         [userId, finalSlug]
@@ -35,9 +38,9 @@ class ProductService {
     const coverImage = mediaData.images && mediaData.images.length > 0 ? mediaData.images[0] : null;
 
     const [result] = await pool.execute(
-      `INSERT INTO products 
+      \`INSERT INTO products 
        (user_id, category_id, name, slug, description, price, currency, image_url, image_public_id, stock_quantity, is_available, admin_disabled)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\`,
       [
         userId,
         category_id || null,
@@ -58,7 +61,7 @@ class ProductService {
 
     if (mediaData.video) {
         await pool.execute(
-            `INSERT INTO product_media (product_id, media_type, url, public_id, position, is_cover) VALUES (?, 'video', ?, ?, 0, FALSE)`,
+            \`INSERT INTO product_media (product_id, media_type, url, public_id, position, is_cover) VALUES (?, 'video', ?, ?, 0, FALSE)\`,
             [productId, mediaData.video.url, mediaData.video.public_id]
         );
     }
@@ -68,7 +71,7 @@ class ProductService {
             const img = mediaData.images[i];
             const isCover = (i === 0);
             await pool.execute(
-                `INSERT INTO product_media (product_id, media_type, url, public_id, position, is_cover) VALUES (?, 'image', ?, ?, ?, ?)`,
+                \`INSERT INTO product_media (product_id, media_type, url, public_id, position, is_cover) VALUES (?, 'image', ?, ?, ?, ?)\`,
                 [productId, img.url, img.public_id, i + 1, isCover]
             );
         }
@@ -85,7 +88,7 @@ class ProductService {
 
   async getProductById(productId, userId) {
     const [products] = await pool.execute(
-      `SELECT p.*, 
+      \`SELECT p.*, 
               pl.token as share_token,
               c.id as category_id,
               c.name as category_name,
@@ -93,7 +96,7 @@ class ProductService {
        FROM products p
        LEFT JOIN product_links pl ON p.id = pl.product_id
        LEFT JOIN categories c ON p.category_id = c.id
-       WHERE p.id = ? AND p.user_id = ? AND p.deleted_at IS NULL`,
+       WHERE p.id = ? AND p.user_id = ? AND p.deleted_at IS NULL\`,
       [productId, userId]
     );
 
@@ -105,7 +108,7 @@ class ProductService {
     product.share_link = product.share_token ? buildProductShareLink(product.share_token) : null;
 
     const [media] = await pool.execute(
-      `SELECT * FROM product_media WHERE product_id = ? ORDER BY media_type DESC, position ASC`,
+      \`SELECT * FROM product_media WHERE product_id = ? ORDER BY media_type DESC, position ASC\`,
       [productId]
     );
     product.media = media;
@@ -120,7 +123,7 @@ class ProductService {
         search = search.substring(7);
     }
     
-    let query = `
+    let query = \`
       SELECT p.*, 
              pl.token as share_token, 
              pl.click_count,
@@ -130,8 +133,8 @@ class ProductService {
       FROM products p
       LEFT JOIN product_links pl ON p.id = pl.product_id
       LEFT JOIN categories c ON p.category_id = c.id
-      WHERE p.user_id = ? AND p.deleted_at IS NULL AND p.name LIKE '%${search === 'undefined' ? '' : search}%'
-    `;
+      WHERE p.user_id = ? AND p.deleted_at IS NULL AND p.name LIKE '%\${search === 'undefined' ? '' : search}%'
+    \`;
     const params = [userId];
 
     if (is_available === 'true' || is_available === 'false') {
@@ -145,7 +148,7 @@ class ProductService {
       params.push(category_id);
     }
 
-    query += ` ORDER BY p.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+    query += \` ORDER BY p.created_at DESC LIMIT \${limit} OFFSET \${offset}\`;
 
     const [products] = await pool.execute(query, params);
 
@@ -155,11 +158,11 @@ class ProductService {
       // mais en général l'image de couverture dans p.image_url suffit.
     }
 
-    let countQuery = `
+    let countQuery = \`
       SELECT COUNT(*) as total 
       FROM products 
       WHERE user_id = ? AND deleted_at IS NULL
-    `;
+    \`;
     let countParams = [userId];
     
     if (is_available === true || is_available === false) {
@@ -253,7 +256,7 @@ class ProductService {
       // 2. Ajouter la nouvelle vidéo
       if (newVideo) {
          await pool.execute(
-            `INSERT INTO product_media (product_id, media_type, url, public_id, position, is_cover) VALUES (?, 'video', ?, ?, 0, FALSE)`,
+            \`INSERT INTO product_media (product_id, media_type, url, public_id, position, is_cover) VALUES (?, 'video', ?, ?, 0, FALSE)\`,
             [productId, newVideo.url, newVideo.public_id]
          );
       }
@@ -262,14 +265,14 @@ class ProductService {
       for (let i = 0; i < newImages.length; i++) {
          const img = newImages[i];
          await pool.execute(
-             `INSERT INTO product_media (product_id, media_type, url, public_id, position, is_cover) VALUES (?, 'image', ?, ?, 99, FALSE)`,
+             \`INSERT INTO product_media (product_id, media_type, url, public_id, position, is_cover) VALUES (?, 'image', ?, ?, 99, FALSE)\`,
              [productId, img.url, img.public_id]
          );
       }
 
       // 4. Mettre à jour les positions et l'image de couverture
       const [finalImages] = await pool.execute(
-         `SELECT id, public_id, url FROM product_media WHERE product_id = ? AND media_type = 'image' ORDER BY position ASC, id ASC`,
+         \`SELECT id, public_id, url FROM product_media WHERE product_id = ? AND media_type = 'image' ORDER BY position ASC, id ASC\`,
          [productId]
       );
 
@@ -277,7 +280,7 @@ class ProductService {
       for (let i = 0; i < finalImages.length; i++) {
          const isCover = (i === 0);
          await pool.execute(
-            `UPDATE product_media SET position = ?, is_cover = ? WHERE id = ?`,
+            \`UPDATE product_media SET position = ?, is_cover = ? WHERE id = ?\`,
             [i + 1, isCover, finalImages[i].id]
          );
          
@@ -296,7 +299,7 @@ class ProductService {
     if (fields.length > 0) {
       values.push(productId, userId);
       await pool.execute(
-        `UPDATE products SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`,
+        \`UPDATE products SET \${fields.join(', ')} WHERE id = ? AND user_id = ?\`,
         values
       );
     }
@@ -323,7 +326,7 @@ class ProductService {
 
   async getProductByShareToken(token) {
     const [products] = await pool.execute(
-      `SELECT p.*, 
+      \`SELECT p.*, 
               u.business_name, 
               u.whatsapp_number,
               u.id as vendor_id, 
@@ -337,7 +340,7 @@ class ProductService {
        JOIN users u ON p.user_id = u.id
        JOIN product_links pl ON p.id = pl.product_id
        LEFT JOIN categories c ON p.category_id = c.id
-       WHERE pl.token = ? AND p.is_available = 1 AND p.admin_disabled = 0 AND p.deleted_at IS NULL AND u.is_active = 1`,
+       WHERE pl.token = ? AND p.is_available = 1 AND p.admin_disabled = 0 AND p.deleted_at IS NULL AND u.is_active = 1\`,
       [token]
     );
 
@@ -348,8 +351,8 @@ class ProductService {
     const product = products[0];
     
     const [isPlanBusiness] = await pool.execute(
-      `SELECT user_id, plan_name FROM v_user_plan_access 
-       WHERE user_id = ? AND (subscription_status = 'active' OR subscription_status = 'trial')`, 
+      \`SELECT user_id, plan_name FROM v_user_plan_access 
+       WHERE user_id = ? AND (subscription_status = 'active' OR subscription_status = 'trial')\`, 
       [product.vendor_id]
     );
     
@@ -361,7 +364,7 @@ class ProductService {
     let customMessage = null;
     if (planName === 'Business'){
       const [custom_message] = await pool.execute(
-        `SELECT custom_order_message FROM social_integrations WHERE user_id = ?`, 
+        \`SELECT custom_order_message FROM social_integrations WHERE user_id = ?\`, 
         [product.vendor_id]
       );
       if(custom_message.length > 0) customMessage = custom_message[0];
@@ -369,7 +372,7 @@ class ProductService {
 
     // Récupérer les médias et filtrer selon le plan
     const [media] = await pool.execute(
-      `SELECT * FROM product_media WHERE product_id = ? ORDER BY media_type DESC, position ASC`,
+      \`SELECT * FROM product_media WHERE product_id = ? ORDER BY media_type DESC, position ASC\`,
       [product.product_id]
     );
 
@@ -390,11 +393,11 @@ class ProductService {
     product.media = allowedMedia;
 
     await pool.execute(
-      `UPDATE product_links SET click_count = click_count + 1, last_clicked_at = NOW() WHERE token = ?`,
+      \`UPDATE product_links SET click_count = click_count + 1, last_clicked_at = NOW() WHERE token = ?\`,
       [token]
     );
     await pool.execute(
-      `UPDATE products SET view_count = view_count + 1 WHERE id = ?`,
+      \`UPDATE products SET view_count = view_count + 1 WHERE id = ?\`,
       [product.product_id]
     );
 
@@ -403,8 +406,8 @@ class ProductService {
 
   async validateCategoryOwnership(userId, categoryId) {
     const [categories] = await pool.execute(
-      `SELECT id FROM categories 
-       WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+      \`SELECT id FROM categories 
+       WHERE id = ? AND user_id = ? AND deleted_at IS NULL\`,
       [categoryId, userId]
     );
 
@@ -415,7 +418,7 @@ class ProductService {
 
   async getProductStatsByCategory(userId) {
     const [stats] = await pool.execute(
-      `SELECT 
+      \`SELECT 
          c.id,
          c.name,
          c.slug,
@@ -427,7 +430,7 @@ class ProductService {
        LEFT JOIN products p ON c.id = p.category_id AND p.deleted_at IS NULL
        WHERE c.user_id = ? AND c.deleted_at IS NULL
        GROUP BY c.id
-       ORDER BY c.display_order ASC, c.name ASC`,
+       ORDER BY c.display_order ASC, c.name ASC\`,
       [userId]
     );
 
@@ -436,3 +439,7 @@ class ProductService {
 }
 
 module.exports = new ProductService();
+`;
+
+fs.writeFileSync(path.join(__dirname, '../src/services/productService.js'), fileContent);
+console.log('productService.js updated');

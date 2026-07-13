@@ -7,7 +7,7 @@ const multer = require('multer');
  * Plus aucun stockage local
  */
 
-const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB maximum global (on filtrera les images à 3MB dans le contrôleur)
 
 /**
  * Stockage en mémoire (buffer)
@@ -24,13 +24,16 @@ const fileFilter = (req, file, cb) => {
     'image/jpg',
     'image/png',
     'image/gif',
-    'image/webp'
+    'image/webp',
+    'video/mp4',
+    'video/webm',
+    'video/quicktime'
   ];
   
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Format de fichier non autorisé. Acceptés : JPEG, PNG, GIF, WEBP'), false);
+    cb(new Error('Format de fichier non autorisé. Acceptés : JPEG, PNG, GIF, WEBP, MP4, WEBM, MOV'), false);
   }
 };
 
@@ -41,7 +44,7 @@ const upload = multer({
   storage: storage,
   limits: {
     fileSize: MAX_FILE_SIZE,
-    files: 1 // Une seule image par requête
+    files: 8 // Jusqu'à 8 fichiers (7 images + 1 vidéo)
   },
   fileFilter: fileFilter
 });
