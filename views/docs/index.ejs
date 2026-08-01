@@ -1,0 +1,1541 @@
+<%
+// Formatter functions
+function fmtCurrency(n) {
+  return (parseFloat(n)||0).toLocaleString('fr-FR') + ' FCFA';
+}
+%>
+<style>
+  :root {
+    --docs-bg: #f8fafc;
+    --docs-text: #1e293b;
+    --docs-text-muted: #64748b;
+    --docs-border: #e2e8f0;
+    --docs-primary: #253337;
+    --docs-surface: #ffffff;
+    --docs-accent: #C2E0E3;
+    --docs-accent-dark: #253337;
+    --docs-highlight: #e0f2fe;
+    --docs-code-bg: #1e293b;
+    --docs-sidebar-width: 280px;
+    --docs-toc-width: 220px;
+    --docs-header-height: 64px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.05);
+  }
+
+  body.docs-body {
+    background-color: var(--docs-bg);
+    color: var(--docs-text);
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* Docs Layout */
+  .docs-container {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* Sidebar styling */
+  .docs-sidebar {
+    width: var(--docs-sidebar-width);
+    background: var(--docs-surface);
+    border-right: 1px solid var(--docs-border);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    transition: transform 0.3s ease;
+  }
+
+  .docs-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    text-decoration: none;
+    color: var(--docs-primary);
+  }
+
+  .docs-brand img {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .docs-brand span {
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .docs-search-container {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .docs-search-input {
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    border: 1px solid var(--docs-border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    background: #f1f5f9;
+    color: var(--docs-text);
+    outline: none;
+    transition: all 0.2s ease;
+  }
+
+  .docs-search-input:focus {
+    border-color: var(--docs-primary);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 51, 55, 0.1);
+  }
+
+  .docs-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--docs-text-muted);
+    pointer-events: none;
+  }
+
+  .docs-nav {
+    flex: 1;
+    overflow-y: auto;
+    margin-right: -10px;
+    padding-right: 10px;
+  }
+
+  .docs-nav-group {
+    margin-bottom: 20px;
+  }
+
+  .docs-nav-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--docs-text-muted);
+    margin-bottom: 8px;
+    padding-left: 10px;
+  }
+
+  .docs-nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    color: var(--docs-text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    margin-bottom: 2px;
+    transition: all 0.2s ease;
+  }
+
+  .docs-nav-item:hover {
+    background: #f1f5f9;
+    color: var(--docs-primary);
+  }
+
+  .docs-nav-item.active {
+    background: var(--docs-accent);
+    color: var(--docs-primary);
+    font-weight: 600;
+  }
+
+  .docs-nav-badge {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 99px;
+    text-transform: uppercase;
+  }
+
+  .docs-nav-badge.pro {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .docs-nav-badge.business {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  /* Main Content Layout */
+  .docs-main {
+    flex: 1;
+    margin-left: var(--docs-sidebar-width);
+    padding: 40px clamp(20px, 5vw, 60px);
+    max-width: 1200px;
+    width: calc(100% - var(--docs-sidebar-width));
+  }
+
+  .docs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--docs-border);
+    padding-bottom: 20px;
+    margin-bottom: 40px;
+  }
+
+  .docs-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--docs-text-muted);
+  }
+
+  .docs-breadcrumbs a {
+    color: var(--docs-text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .docs-breadcrumbs a:hover {
+    color: var(--docs-primary);
+  }
+
+  .docs-user-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    background: var(--docs-surface);
+    border: 1px solid var(--docs-border);
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .docs-user-badge .avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--docs-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+  }
+
+  /* Content section styling */
+  .docs-section {
+    display: none;
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  .docs-section.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .docs-section h1 {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--docs-primary);
+    margin-top: 0;
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+  }
+
+  .docs-section h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--docs-primary);
+    margin-top: 32px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--docs-border);
+    padding-bottom: 8px;
+  }
+
+  .docs-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--docs-primary);
+    margin-top: 24px;
+    margin-bottom: 12px;
+  }
+
+  .docs-section p {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--docs-text);
+    margin-bottom: 20px;
+  }
+
+  .docs-section ul, .docs-section ol {
+    margin-bottom: 20px;
+    padding-left: 20px;
+  }
+
+  .docs-section li {
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 8px;
+  }
+
+  /* Alert Callouts */
+  .docs-callout {
+    padding: 16px 20px;
+    border-radius: var(--radius-md);
+    margin: 24px 0;
+    display: flex;
+    gap: 16px;
+    border-left: 4px solid transparent;
+  }
+
+  .docs-callout.tip {
+    background: #f0fdf4;
+    border-left-color: #22c55e;
+    color: #14532d;
+  }
+
+  .docs-callout.warning {
+    background: #fffbeb;
+    border-left-color: #f59e0b;
+    color: #78350f;
+  }
+
+  .docs-callout.danger {
+    background: #fef2f2;
+    border-left-color: #ef4444;
+    color: #7f1d1d;
+  }
+
+  .docs-callout.info {
+    background: #f0f9ff;
+    border-left-color: #0284c7;
+    color: #0c4a6e;
+  }
+
+  .docs-callout-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .docs-callout-content {
+    flex: 1;
+  }
+
+  .docs-callout-content strong {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  /* Grid layout for features */
+  .docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin: 24px 0;
+  }
+
+  .docs-card {
+    background: var(--docs-surface);
+    border: 1px solid var(--docs-border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .docs-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--docs-primary);
+  }
+
+  .docs-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--docs-accent);
+    color: var(--docs-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+
+  .docs-card-title {
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .docs-card-text {
+    font-size: 14px;
+    color: var(--docs-text-muted);
+    line-height: 1.5;
+  }
+
+  /* Plan availability labels */
+  .plan-availability {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  .plan-availability.free {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .plan-availability.pro {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .plan-availability.business {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  /* Step Timeline */
+  .docs-timeline {
+    position: relative;
+    padding-left: 32px;
+    margin: 32px 0;
+  }
+
+  .docs-timeline::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 5px;
+    bottom: 5px;
+    width: 2px;
+    background: var(--docs-border);
+  }
+
+  .docs-step {
+    position: relative;
+    margin-bottom: 28px;
+  }
+
+  .docs-step-number {
+    position: absolute;
+    left: -32px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--docs-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    border: 4px solid var(--docs-bg);
+  }
+
+  .docs-step-title {
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+
+  .docs-step-content {
+    font-size: 14px;
+    color: var(--docs-text-muted);
+  }
+
+  /* Code block */
+  .docs-code-container {
+    position: relative;
+    margin: 20px 0;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .docs-code-header {
+    background: #0f172a;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .docs-code-title {
+    font-size: 12px;
+    font-family: monospace;
+    color: #94a3b8;
+  }
+
+  .docs-code-copy {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s ease;
+  }
+
+  .docs-code-copy:hover {
+    color: white;
+  }
+
+  .docs-code-block {
+    background: var(--docs-code-bg);
+    color: #f8f8f2;
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    margin: 0;
+  }
+
+  /* Accordion styles */
+  .docs-accordion {
+    border: 1px solid var(--docs-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    background: var(--docs-surface);
+    overflow: hidden;
+  }
+
+  .docs-accordion-header {
+    padding: 16px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s ease;
+  }
+
+  .docs-accordion-header:hover {
+    background: #f8fafc;
+  }
+
+  .docs-accordion-content {
+    display: none;
+    padding: 16px 20px;
+    border-top: 1px solid var(--docs-border);
+    background: #fafafb;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--docs-text-muted);
+  }
+
+  .docs-accordion.active .docs-accordion-content {
+    display: block;
+  }
+
+  .docs-accordion-icon {
+    transition: transform 0.2s ease;
+  }
+
+  .docs-accordion.active .docs-accordion-icon {
+    transform: rotate(180deg);
+  }
+
+  /* Dynamic comparison table */
+  .docs-table-wrapper {
+    overflow-x: auto;
+    margin: 32px 0;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--docs-border);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .docs-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--docs-surface);
+  }
+
+  .docs-table th {
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--docs-border);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--docs-primary);
+  }
+
+  .docs-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--docs-border);
+    font-size: 14px;
+    color: var(--docs-text);
+  }
+
+  .docs-table tr:hover td {
+    background: #fafafa;
+  }
+
+  /* Navigation Footer */
+  .docs-footer-nav {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--docs-border);
+    padding-top: 30px;
+    margin-top: 50px;
+  }
+
+  .docs-footer-btn {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: var(--docs-text);
+    padding: 12px 20px;
+    border: 1px solid var(--docs-border);
+    border-radius: var(--radius-md);
+    background: var(--docs-surface);
+    transition: all 0.2s ease;
+    width: 48%;
+  }
+
+  .docs-footer-btn:hover {
+    border-color: var(--docs-primary);
+    background: #f8fafc;
+  }
+
+  .docs-footer-btn.prev {
+    align-items: flex-start;
+  }
+
+  .docs-footer-btn.next {
+    align-items: flex-end;
+  }
+
+  .docs-footer-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--docs-text-muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .docs-footer-title {
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  /* Back to top button */
+  .docs-back-to-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--docs-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    cursor: pointer;
+    border: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 99;
+  }
+
+  .docs-back-to-top.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .docs-back-to-top:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+  }
+
+  /* Mode Responsive */
+  .docs-mobile-header {
+    display: none;
+    height: var(--docs-header-height);
+    background: var(--docs-surface);
+    border-bottom: 1px solid var(--docs-border);
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    position: sticky;
+    top: 0;
+    z-index: 101;
+  }
+
+  .docs-menu-toggle {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--docs-primary);
+  }
+
+  @media (max-width: 992px) {
+    .docs-sidebar {
+      transform: translateX(-100%);
+    }
+
+    .docs-sidebar.open {
+      transform: translateX(0);
+    }
+
+    .docs-main {
+      margin-left: 0;
+      width: 100%;
+      padding-top: 20px;
+    }
+
+    .docs-mobile-header {
+      display: flex;
+    }
+  }
+
+  /* Search results page style */
+  .search-results-section {
+    display: none;
+  }
+
+  .search-results-section.active {
+    display: block;
+  }
+
+  .search-result-item {
+    padding: 16px;
+    border: 1px solid var(--docs-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+    background: var(--docs-surface);
+    transition: border-color 0.2s ease;
+  }
+
+  .search-result-item:hover {
+    border-color: var(--docs-primary);
+  }
+
+  .search-result-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--docs-primary);
+    cursor: pointer;
+  }
+
+  .search-result-snippet {
+    font-size: 14px;
+    color: var(--docs-text-muted);
+    line-height: 1.5;
+  }
+
+  .search-result-breadcrumb {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--docs-text-muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+</style>
+
+<div class="docs-mobile-header">
+  <a href="/marketplace" class="docs-brand" style="margin-bottom: 0;">
+    <img src="/images/logo.png" alt="Logo AURA">
+    <span>AURA</span>
+  </a>
+  <button class="docs-menu-toggle" id="menuToggle">☰</button>
+</div>
+
+<div class="docs-container">
+  <!-- Sidebar -->
+  <aside class="docs-sidebar" id="sidebar">
+    <a href="/marketplace" class="docs-brand">
+      <img src="/images/logo.png" alt="Logo AURA">
+      <span>AURA DOCS</span>
+    </a>
+
+    <div class="docs-search-container">
+      <span class="docs-search-icon">🔍</span>
+      <input type="text" class="docs-search-input" id="searchInput" placeholder="Recherche instantanée...">
+    </div>
+
+    <nav class="docs-nav">
+      <!-- Section 1 -->
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">Présentation</div>
+        <a href="#welcome" class="docs-nav-item active" data-section="welcome">
+          <span>Introduction</span>
+          <span class="docs-nav-badge free" style="background:#e2e8f0;color:#334155;">Tous</span>
+        </a>
+      </div>
+
+      <!-- Section 2 -->
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">Premiers pas</div>
+        <a href="#quickstart" class="docs-nav-item" data-section="quickstart">
+          <span>Guide de démarrage</span>
+        </a>
+      </div>
+
+      <!-- Section 3 -->
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">Fonctionnalités Vendeur</div>
+        <a href="#dashboard" class="docs-nav-item" data-section="dashboard">
+          <span>Tableau de bord</span>
+        </a>
+        <a href="#products" class="docs-nav-item" data-section="products">
+          <span>Gestion des Produits</span>
+        </a>
+        <a href="#orders" class="docs-nav-item" data-section="orders">
+          <span>Gestion des Commandes</span>
+        </a>
+        <a href="#customization" class="docs-nav-item" data-section="customization">
+          <span>Personnalisation</span>
+          <span class="docs-nav-badge business">Business</span>
+        </a>
+        <a href="#whatsapp" class="docs-nav-item" data-section="whatsapp">
+          <span>WhatsApp Automation</span>
+          <span class="docs-nav-badge business">Business</span>
+        </a>
+        <a href="#ai" class="docs-nav-item" data-section="ai">
+          <span>Assistant IA</span>
+          <span class="docs-nav-badge business">Business</span>
+        </a>
+        <a href="#stats" class="docs-nav-item" data-section="stats">
+          <span>Statistiques</span>
+          <span class="docs-nav-badge pro">Pro</span>
+        </a>
+        <a href="#profile" class="docs-nav-item" data-section="profile">
+          <span>Mon Profil & Paramètres</span>
+        </a>
+        <a href="#notifications" class="docs-nav-item" data-section="notifications">
+          <span>Notifications</span>
+        </a>
+      </div>
+
+      <!-- Section 4 -->
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">Abonnements & Tarifs</div>
+        <a href="#plans" class="docs-nav-item" data-section="plans">
+          <span>Comparatif des Plans</span>
+        </a>
+      </div>
+
+      <!-- Section 5 -->
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">Ressources</div>
+        <a href="#faq" class="docs-nav-item" data-section="faq">
+          <span>FAQ</span>
+        </a>
+        <a href="#glossary" class="docs-nav-item" data-section="glossary">
+          <span>Glossaire</span>
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="docs-main">
+    <div class="docs-header">
+      <div class="docs-breadcrumbs" id="breadcrumbs">
+        <a href="/marketplace">Aura</a>
+        <span>/</span>
+        <a href="#welcome" id="currentBreadcrumb">Introduction</a>
+      </div>
+
+      <% if (user) { %>
+        <div class="docs-user-badge">
+          <div class="avatar"><%= user.business_name ? user.business_name.charAt(0).toUpperCase() : 'U' %></div>
+          <span><%= user.business_name %></span>
+          <span style="font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 800; background: <%= user.plan_slug === 'business' ? '#ecfdf5' : user.plan_slug === 'pro' ? '#eff6ff' : '#f1f5f9' %>; color: <%= user.plan_slug === 'business' ? '#047857' : user.plan_slug === 'pro' ? '#1d4ed8' : '#475569' %>">
+            <%= user.plan_name %>
+          </span>
+        </div>
+      <% } else { %>
+        <a href="/login" class="docs-user-badge" style="text-decoration: none; color: var(--docs-primary);">
+          <span>Connexion Vendeur ➔</span>
+        </a>
+      <% } %>
+    </div>
+
+    <!-- Search Results Section -->
+    <section id="searchResultsSection" class="search-results-section">
+      <h1>Résultats de recherche</h1>
+      <p id="searchSummary" style="color: var(--docs-text-muted);"></p>
+      <div id="searchResultsList" style="margin-top: 30px;"></div>
+    </section>
+
+    <!-- CONTENT SECTIONS -->
+
+    <!-- 1. Introduction -->
+    <section id="welcomeSection" class="docs-section active">
+      <h1>Introduction</h1>
+      <div class="plan-availability free">✅ Disponible sur tous les plans</div>
+      <p>Bienvenue dans la documentation officielle d'<strong>Aura Store</strong>. Aura est la première plateforme e-commerce africaine optimisée pour le commerce conversationnel. Elle permet aux vendeurs de créer en moins de 2 minutes une vitrine en ligne, de gérer intelligemment leurs produits, et d'automatiser le traitement de leurs commandes via WhatsApp.</p>
+      
+      <h2>Pourquoi Aura ?</h2>
+      <p>Aura a été conçu pour résoudre les frictions majeures du commerce en ligne traditionnel en Afrique subsaharienne :</p>
+      <div class="docs-grid">
+        <div class="docs-card">
+          <div class="docs-card-icon">⚡</div>
+          <div class="docs-card-title">Commande 1-Click</div>
+          <div class="docs-card-text">Pas de création de compte obligatoire pour le client. Le processus de commande est ultra-rapide.</div>
+        </div>
+        <div class="docs-card">
+          <div class="docs-card-icon">💬</div>
+          <div class="docs-card-title">Routage WhatsApp</div>
+          <div class="docs-card-text">Les commandes finalisées sur la boutique redirigent instantanément le client vers le WhatsApp du vendeur avec un message pré-rempli.</div>
+        </div>
+        <div class="docs-card">
+          <div class="docs-card-icon">🤖</div>
+          <div class="docs-card-title">Intelligence Artificielle 24/7</div>
+          <div class="docs-card-text">Un assistant virtuel répond à vos clients, consulte vos stocks MySQL en direct, et traite les demandes de statut de commande.</div>
+        </div>
+      </div>
+
+      <div class="docs-callout tip">
+        <span class="docs-callout-icon">💡</span>
+        <div class="docs-callout-content">
+          <strong>Nouveau sur Aura ?</strong>
+          Chaque nouveau vendeur bénéficie automatiquement d'une période d'essai gratuite de 14 jours sur le plan Business ou Pro pour découvrir l'intégralité des outils.
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Guide de démarrage -->
+    <section id="quickstartSection" class="docs-section">
+      <h1>Guide de démarrage</h1>
+      <div class="plan-availability free">✅ Disponible sur tous les plans</div>
+      <p>Configurez votre boutique et commencez à vendre en moins de 5 minutes grâce à ces étapes simples.</p>
+
+      <h2>Les étapes clés</h2>
+      <div class="docs-timeline">
+        <div class="docs-step">
+          <span class="docs-step-number">1</span>
+          <div class="docs-step-title">Création de votre compte</div>
+          <div class="docs-step-content">Inscrivez-vous sur <a href="/register">aura-store.com/register</a> avec votre adresse email. Validez instantanément votre compte avec le code de vérification unique (OTP) reçu par email.</div>
+        </div>
+        <div class="docs-step">
+          <span class="docs-step-number">2</span>
+          <div class="docs-step-title">Configuration de votre boutique</div>
+          <div class="docs-step-content">Renseignez votre nom commercial, votre numéro de téléphone (utilisé par défaut pour la redirection des commandes) ainsi que votre ville et votre pays d'activité.</div>
+        </div>
+        <div class="docs-step">
+          <span class="docs-step-number">3</span>
+          <div class="docs-step-title">Création de votre premier produit</div>
+          <div class="docs-step-content">Ajoutez une image, une description attrayante, fixez votre prix de vente et indiquez vos stocks disponibles.</div>
+        </div>
+        <div class="docs-step">
+          <span class="docs-step-number">4</span>
+          <div class="docs-step-title">Partagez votre boutique</div>
+          <div class="docs-step-content">Récupérez le lien unique de votre boutique ou de vos produits individuels et ajoutez-les dans votre bio Instagram, TikTok ou dans vos statuts WhatsApp.</div>
+        </div>
+      </div>
+
+      <h2>Partager avec vos clients</h2>
+      <p>Votre boutique publique est accessible via l'URL : <code>/store/[votre-slug-boutique]</code>.</p>
+      <p>Chaque produit possède son propre token de partage unique : <code>/p/[token-produit]</code>. Lorsque le client clique sur ce lien, il arrive sur une page optimisée affichant le produit en Swiper de haute qualité.</p>
+    </section>
+
+    <!-- 3. Tableau de bord -->
+    <section id="dashboardSection" class="docs-section">
+      <h1>Tableau de bord</h1>
+      <div class="plan-availability free">✅ Disponible sur tous les plans</div>
+      <p>Le Tableau de bord est l'écran principal où vous pilotez votre commerce quotidien. Il vous offre une vision immédiate sur la santé de votre activité.</p>
+
+      <h2>Comprendre vos indicateurs</h2>
+      <ul>
+        <li><strong>Chiffre d'Affaires</strong> : Le montant total cumulé de vos ventes payées ou validées sur la période choisie (7, 30 ou 90 jours).</li>
+        <li><strong>Commandes</strong> : Le volume total de commandes reçues via la marketplace ou ajoutées manuellement.</li>
+        <li><strong>Taux de Conversion</strong> : Le ratio de visiteurs qui finalisent une commande sur votre vitrine (nécessite le plan Pro/Business).</li>
+        <li><strong>Produits Populaires</strong> : Liste de vos articles les plus visualisés et commandés.</li>
+      </ul>
+
+      <div class="docs-callout warning">
+        <span class="docs-callout-icon">⚠️</span>
+        <div class="docs-callout-content">
+          <strong>Données de ventes</strong>
+          Les statistiques du tableau de bord principal sont basées sur les commandes créées au cours du mois ou de la période sélectionnée. Les remboursements ou annulations sont déduits du chiffre d'affaires global en temps réel.
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Gestion des Produits -->
+    <section id="productsSection" class="docs-section">
+      <h1>Gestion des Produits</h1>
+      <div class="plan-availability free">✅ Limites selon le plan (Free: 5 max, Pro/Business: illimité)</div>
+      <p>Notre éditeur de produits vous permet de configurer des articles attractifs avec des médias riches.</p>
+
+      <h2>Ajout de Médias Riches</h2>
+      <p>Aura supporte le téléchargement de plusieurs photos et de vidéos pour booster l'engagement :</p>
+      <ul>
+        <li><strong>Images de haute qualité</strong> : Téléchargez jusqu'à 7 images par produit. Elles seront hébergées de manière sécurisée et optimisées via Cloudinary.</li>
+        <li><strong>Support Vidéo</strong> : Ajoutez une courte vidéo de démonstration du produit (format mp4, max 10 Mo) pour montrer votre produit sous tous ses angles.</li>
+      </ul>
+
+      <h2>Variantes & Options (Bientôt)</h2>
+      <p>Pour le moment, vous pouvez classer vos produits par **Catégories**. Créez des catégories distinctes (ex: <i>Chaussures, Accessoires</i>) pour que vos clients puissent filtrer votre vitrine en un instant.</p>
+
+      <div class="docs-callout info">
+        <span class="docs-callout-icon">💡</span>
+        <div class="docs-callout-content">
+          <strong>Rupture de Stock</strong>
+          Dès qu'un stock produit atteint 0, il s'affiche automatiquement avec le badge "Rupture de stock" sur votre marketplace et les clients ne peuvent plus passer commande de cet article pour éviter les déconvenues.
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Gestion des Commandes -->
+    <section id="ordersSection" class="docs-section">
+      <h1>Gestion des Commandes</h1>
+      <div class="plan-availability free">✅ Disponible sur tous les plans (Limites : Free 20/semaine)</div>
+      <p>Suivez vos ventes du panier d'achat jusqu'à la livraison finale grâce à un pipeline de traitement fluide.</p>
+
+      <h2>Cycle de vie d'une commande</h2>
+      <p>Chaque commande passe par différents statuts que vous pouvez mettre à jour manuellement ou automatiquement :</p>
+      <ul>
+        <li><strong>Nouvelle (Pending)</strong> : La commande vient d'être validée par le client.</li>
+        <li><strong>En préparation (Processing)</strong> : Vous emballez ou rassemblez les produits.</li>
+        <li><strong>Livrée (Completed)</strong> : Le colis a été remis au client et le paiement a été reçu.</li>
+        <li><strong>Annulée (Cancelled)</strong> : La commande a été annulée par vous ou le client.</li>
+      </ul>
+
+      <h2>Commandes Manuelles</h2>
+      <p>Si un client vous contacte directement en boutique physique ou par appel sans passer par le lien, vous pouvez enregistrer sa commande manuellement via le bouton "Créer une commande" du tableau de bord pour garder des statistiques et un historique de stock 100% à jour.</p>
+    </section>
+
+    <!-- 6. Personnalisation Boutique -->
+    <section id="customizationSection" class="docs-section">
+      <h1>Personnalisation de la Boutique</h1>
+      <div class="plan-availability business">🔒 Disponible uniquement avec le plan Business</div>
+      <p>Renforcez votre image de marque en adaptant la vitrine publique d'Aura à votre propre identité visuelle.</p>
+
+      <h2>Éléments Personnalisables</h2>
+      <p>Depuis le menu <strong>Personnalisation</strong>, modifiez :</p>
+      <ul>
+        <li><strong>Le Logo</strong> : Remplacez l'avatar par défaut par votre propre logo de marque.</li>
+        <li><strong>La Bannière</strong> : Ajoutez une superbe image de couverture en haut de votre boutique publique.</li>
+        <li><strong>La Palette de Couleurs</strong> : Configurez la couleur principale, la couleur secondaire et la couleur de fond pour correspondre à votre charte graphique.</li>
+        <li><strong>La Police d'Écriture</strong> : Sélectionnez une typographie moderne parmi celles proposées.</li>
+      </ul>
+
+      <div class="docs-callout info">
+        <span class="docs-callout-icon">⭐</span>
+        <div class="docs-callout-content">
+          <strong>Réseaux Sociaux</strong>
+          En plan Business, vous pouvez activer l'affichage de vos liens Instagram et Facebook directement sur la vitrine client.
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. WhatsApp Automation -->
+    <section id="whatsappSection" class="docs-section">
+      <h1>WhatsApp Automation</h1>
+      <div class="plan-availability business">🔒 Disponible uniquement avec le plan Business</div>
+      <p>Le module WhatsApp Automation d'Aura vous permet de connecter votre propre compte WhatsApp en un clic pour automatiser complètement vos relations clients.</p>
+
+      <h2>Connexion par QR Code</h2>
+      <p>Rendez-vous dans <strong>Automation ➔ WhatsApp</strong>. Un QR code unique s'affiche. Ouvrez WhatsApp sur votre téléphone ➔ Appareils connectés ➔ Connecter un appareil, et scannez le QR code. Aura prend alors le contrôle sécurisé de la session.</p>
+
+      <h2>Fonctionnalités Disponibles</h2>
+      <ul>
+        <li><strong>Réponses Automatiques</strong> : Définissez des mots-clés (ex: "prix", "livraison") et des réponses associées pour répondre instantanément à toute heure.</li>
+        <li><strong>Moteur de Recherche Produit MySQL</strong> : Si un client demande un produit (ex: "iPhone 13 disponible ?"), le système nettoie le texte et interroge directement votre stock MySQL Aura en millisecondes pour renvoyer le prix, le statut de disponibilité et le lien de commande sans appeler l'IA.</li>
+        <li><strong>Relance Automatique</strong> : Notification instantanée sur WhatsApp en cas de commande non finalisée ou après validation.</li>
+      </ul>
+
+      <div class="docs-callout warning">
+        <span class="docs-callout-icon">⚠️</span>
+        <div class="docs-callout-content">
+          <strong>Économie de RAM (Smart Wake-Up)</strong>
+          Pour préserver les performances de la plateforme, si l'option IA 24/7 n'est pas activée, votre session WhatsApp s'éteint automatiquement après 30 minutes d'inactivité. Elle se réveille instantanément en arrière-plan à la moindre commande.
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Assistant IA -->
+    <section id="aiSection" class="docs-section">
+      <h1>Assistant IA</h1>
+      <div class="plan-availability business">🔒 Disponible uniquement avec le plan Business</div>
+      <p>L'Assistant IA d'Aura s'appuie sur le modèle de langage avancé de Groq pour offrir un agent conversationnel ultra-intelligent 24h/24 et 7j/7.</p>
+
+      <h2>Comment fonctionne l'IA ?</h2>
+      <p>Lorsqu'un client envoie un message sur votre WhatsApp connecté, Aura applique le workflow suivant :</p>
+      <div class="docs-timeline">
+        <div class="docs-step">
+          <span class="docs-step-number">1</span>
+          <div class="docs-step-title">Filtre Réponses Automatiques</div>
+          <div class="docs-step-content">Vérification si le message correspond exactement à un mot-clé configuré par le vendeur pour une réponse directe.</div>
+        </div>
+        <div class="docs-step">
+          <span class="docs-step-number">2</span>
+          <div class="docs-step-title">Interception MySQL Produit</div>
+          <div class="docs-step-content">Le système analyse si la phrase mentionne l'un de vos produits en stock et répond avec les données précises de la base MySQL.</div>
+        </div>
+        <div class="docs-step">
+          <span class="docs-step-number">3</span>
+          <div class="docs-step-title">Appel Groq AI</div>
+          <div class="docs-step-content">Si aucune correspondance n'est trouvée, l'IA Groq génère une réponse polie en fonction de l'historique et du profil de votre boutique.</div>
+        </div>
+      </div>
+
+      <h2>Demandes Spéciales supportées : "Où est ma commande ?"</h2>
+      <p>Si le client demande le statut de sa commande en mentionnant "Où est ma commande" ou en indiquant son nom/numéro, l'IA interroge la table <code>orders</code> MySQL en arrière-plan et formule une réponse en temps réel : <i>"Votre commande est actuellement en cours de préparation."</i></p>
+      
+      <h2>Rapport quotidien automatique</h2>
+      <p>Chaque soir à l'heure configurée (par exemple <code>20:00</code>), l'IA analyse vos performances quotidiennes et vous envoie un résumé directement sur votre numéro WhatsApp :</p>
+      <div class="docs-code-container">
+        <div class="docs-code-header">
+          <span class="docs-code-title">Exemple de Rapport Quotidien</span>
+        </div>
+        <pre class="docs-code-block">📊 Résumé du jour - Aura Store
+
+• 14 nouvelles commandes reçues
+• 2 commandes annulées
+• 6 questions clients traitées automatiquement
+• Produit le plus consulté : iPhone 13
+• Produit en rupture : AirPods Pro</pre>
+      </div>
+    </section>
+
+    <!-- 9. Statistiques -->
+    <section id="statsSection" class="docs-section">
+      <h1>Statistiques & Analyses</h1>
+      <div class="plan-availability pro">🔒 Disponible à partir du plan Pro</div>
+      <p>Prenez des décisions éclairées grâce à un module d'analyses complet et à l'exportation de rapports PDF.</p>
+
+      <h2>Indicateurs Avancés</h2>
+      <ul>
+        <li><strong>Évolution temporelle</strong> : Visualisez vos ventes jour par jour ou mois par mois sous forme de graphiques.</li>
+        <li><strong>Analyse de la rentabilité</strong> : Panier moyen et marge brute par produit.</li>
+        <li><strong>Analyse horaire</strong> : Identifiez les heures de la journée où vos clients commandent le plus pour planifier vos campagnes de communication.</li>
+      </ul>
+
+      <h2>Exportation de données</h2>
+      <p>En plan Pro et Business, exportez en un clic vos données de ventes ou vos listes de produits sous formats JSON ou Excel.</p>
+    </section>
+
+    <!-- 10. Profil & Paramètres -->
+    <section id="profileSection" class="docs-section">
+      <h1>Mon Profil & Paramètres</h1>
+      <div class="plan-availability free">✅ Disponible sur tous les plans</div>
+      <p>Gérez vos informations de compte et modifiez vos identifiants d'accès.</p>
+      <h2>Paramètres Disponibles</h2>
+      <ul>
+        <li><strong>Informations vendeur</strong> : Modifier le nom de votre boutique, votre adresse de contact et votre numéro de téléphone de secours.</li>
+        <li><strong>Sécurité</strong> : Modifiez votre mot de passe à tout moment depuis cet écran.</li>
+        <li><strong>Vérification OTP</strong> : En cas de changement d'email, un nouveau code de sécurité vous sera demandé.</li>
+      </ul>
+    </section>
+
+    <!-- 11. Notifications -->
+    <section id="notificationsSection" class="docs-section">
+      <h1>Système de Notifications</h1>
+      <div class="plan-availability free">✅ Canaux disponibles selon votre plan</div>
+      <p>Aura utilise trois canaux majeurs pour vous tenir informé à chaque étape importante de votre activité.</p>
+      
+      <h2>Canaux de communication</h2>
+      <div class="docs-grid">
+        <div class="docs-card">
+          <div class="docs-card-icon">📧</div>
+          <div class="docs-card-title">Emails</div>
+          <div class="docs-card-text">Reçus automatiquement à la création de votre compte, pour la vérification OTP ou pour réinitialiser votre mot de passe.</div>
+        </div>
+        <div class="docs-card">
+          <div class="docs-card-icon">🔔</div>
+          <div class="docs-card-title">Push Notifications</div>
+          <div class="docs-card-text">Alertes instantanées dans votre navigateur dès qu'un client valide une nouvelle commande sur votre boutique Aura.</div>
+        </div>
+        <div class="docs-card">
+          <div class="docs-card-icon">💬</div>
+          <div class="docs-card-title">WhatsApp</div>
+          <div class="docs-card-text">Alertes interactives de commande et rapports du soir (réservé au plan Business).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12. Comparatif des Plans -->
+    <section id="plansSection" class="docs-section">
+      <h1>Plans & Tarifs</h1>
+      <p>Choisissez le plan le mieux adapté à la croissance de votre commerce.</p>
+
+      <div class="docs-table-wrapper">
+        <table class="docs-table">
+          <thead>
+            <tr>
+              <th>Fonctionnalité</th>
+              <% plans.forEach(plan => { %>
+                <th><%= plan.name %></th>
+              <% }); %>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Prix Mensuel</strong></td>
+              <% plans.forEach(plan => { %>
+                <td><strong><%= plan.price > 0 ? fmtCurrency(plan.price) : 'Gratuit' %></strong></td>
+              <% }); %>
+            </tr>
+            <tr>
+              <td><strong>Limite de Produits</strong></td>
+              <% plans.forEach(plan => { %>
+                <td><%= plan.max_products < 0 ? 'Illimité' : plan.max_products %></td>
+              <% }); %>
+            </tr>
+            <tr>
+              <td><strong>Limite de Commandes</strong></td>
+              <% plans.forEach(plan => { %>
+                <td><%= plan.max_orders_per_month < 0 ? 'Illimité' : plan.max_orders_per_month + ' / mois' %></td>
+              <% }); %>
+            </tr>
+            <tr>
+              <td><strong>Statistiques Avancées</strong></td>
+              <% plans.forEach(plan => { %>
+                <td><%= plan.has_analytics ? '✅ Oui' : '❌ Non' %></td>
+              <% }); %>
+            </tr>
+            <tr>
+              <td><strong>Personnalisation Premium</strong></td>
+              <% plans.forEach(plan => { %>
+                <td><%= plan.has_custom_branding ? '✅ Oui' : '❌ Non' %></td>
+              <% }); %>
+            </tr>
+            <tr>
+              <td><strong>Intégration WhatsApp</strong></td>
+              <% plans.forEach(plan => { %>
+                <td><%= plan.has_whatsapp_integration ? '✅ Oui' : '❌ Non' %></td>
+              <% }); %>
+            </tr>
+            <tr>
+              <td><strong>Support Prioritaire</strong></td>
+              <% plans.forEach(plan => { %>
+                <td><%= plan.has_priority_support ? '✅ Oui' : '❌ Non' %></td>
+              <% }); %>
+            </tr>
+            <tr>
+              <td><strong>Accès API & Dev</strong></td>
+              <% plans.forEach(plan => { %>
+                <td><%= plan.has_api_access ? '✅ Oui' : '❌ Non' %></td>
+              <% }); %>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 13. FAQ -->
+    <section id="faqSection" class="docs-section">
+      <h1>Foire Aux Questions (FAQ)</h1>
+      <p>Trouvez des réponses rapides aux questions les plus fréquentes sur l'utilisation d'Aura.</p>
+
+      <div class="docs-accordion">
+        <div class="docs-accordion-header">
+          <span>Puis-je utiliser Aura sans compte WhatsApp ?</span>
+          <span class="docs-accordion-icon">▼</span>
+        </div>
+        <div class="docs-accordion-content">
+          Oui. Si vous n'avez pas connecté d'appareil WhatsApp dans les paramètres d'automation, Aura redirigera simplement le client vers le numéro de téléphone renseigné sur votre profil principal de vendeur lors de la validation du panier.
+        </div>
+      </div>
+
+      <div class="docs-accordion">
+        <div class="docs-accordion-header">
+          <span>Que se passe-t-il si je dépasse la limite de produits de mon plan gratuit ?</span>
+          <span class="docs-accordion-icon">▼</span>
+        </div>
+        <div class="docs-accordion-content">
+          Le plan gratuit est limité à 5 produits maximum dans votre catalogue. Si vous tentez de créer un 6e produit, l'application affichera un message vous invitant à mettre à niveau votre compte vers le plan Pro ou Business. Vos produits existants restent éditables.
+        </div>
+      </div>
+
+      <div class="docs-accordion">
+        <div class="docs-accordion-header">
+          <span>Qu'est-ce que l'auto-extinction de session WhatsApp ?</span>
+          <span class="docs-accordion-icon">▼</span>
+        </div>
+        <div class="docs-accordion-content">
+          Pour les vendeurs n'ayant pas activé l'Assistant IA 24/7, la session WhatsApp s'arrête automatiquement en cas d'inactivité de plus de 30 minutes afin de libérer de la mémoire RAM sur nos serveurs. Elle redémarrera automatiquement au premier événement de commande.
+        </div>
+      </div>
+    </section>
+
+    <!-- 14. Glossaire -->
+    <section id="glossarySection" class="docs-section">
+      <h1>Glossaire</h1>
+      <p>Définition des termes techniques et commerciaux utilisés dans la plateforme Aura.</p>
+
+      <ul>
+        <li><strong>OTP (One-Time Password)</strong> : Code d'authentification unique à 6 chiffres envoyé par email pour valider une inscription ou une réinitialisation de mot de passe.</li>
+        <li><strong>Vitrine Client (Marketplace)</strong> : La page publique accessible par les acheteurs pour consulter vos articles et passer commande.</li>
+        <li><strong>Tenant Isolation</strong> : Mesure de sécurité garantissant que chaque vendeur ne peut accéder, modifier ou supprimer que ses propres produits et commandes en base de données.</li>
+        <li><strong>Redirection Conversationnelle</strong> : Technique de vente redirigeant automatiquement les clients vers une discussion instantanée pré-remplie après validation de panier.</li>
+      </ul>
+    </section>
+
+    <!-- Footer Navigation -->
+    <div class="docs-footer-nav">
+      <a href="#" class="docs-footer-btn prev" id="prevBtn">
+        <span class="docs-footer-label">Précédent</span>
+        <span class="docs-footer-title" id="prevTitle">Introduction</span>
+      </a>
+      <a href="#" class="docs-footer-btn next" id="nextBtn">
+        <span class="docs-footer-label">Suivant</span>
+        <span class="docs-footer-title" id="nextTitle">Guide de démarrage</span>
+      </a>
+    </div>
+  </main>
+</div>
+
+<!-- Back to top -->
+<button class="docs-back-to-top" id="backToTop">▲</button>
+
+<script>
+  // Dynamic Page Content Navigation
+  const sections = [
+    { id: 'welcome', title: 'Introduction' },
+    { id: 'quickstart', title: 'Guide de démarrage' },
+    { id: 'dashboard', title: 'Tableau de bord' },
+    { id: 'products', title: 'Gestion des Produits' },
+    { id: 'orders', title: 'Gestion des Commandes' },
+    { id: 'customization', title: 'Personnalisation' },
+    { id: 'whatsapp', title: 'WhatsApp Automation' },
+    { id: 'ai', title: 'Assistant IA' },
+    { id: 'stats', title: 'Statistiques' },
+    { id: 'profile', title: 'Mon Profil & Paramètres' },
+    { id: 'notifications', title: 'Notifications' },
+    { id: 'plans', title: 'Comparatif des Plans' },
+    { id: 'faq', title: 'FAQ' },
+    { id: 'glossary', title: 'Glossaire' }
+  ];
+
+  let currentSectionIndex = 0;
+
+  // Search Index Data
+  const searchIndex = [
+    { section: 'welcome', title: 'Introduction', content: 'Aura Store e-commerce conversationnel commande 1-click vitrine en ligne afrique subsaharienne' },
+    { section: 'quickstart', title: 'Guide de démarrage', content: 'création compte inscription otp téléphone boutique produit partage bio instagram tiktok' },
+    { section: 'dashboard', title: 'Tableau de bord', content: 'chiffre d\'affaires commandes conversion produits populaires statistiques ventes' },
+    { section: 'products', title: 'Gestion des Produits', content: 'éditeur produits images vidéos cloudinary variantes categories stock rupture' },
+    { section: 'orders', title: 'Gestion des Commandes', content: 'cycle de vie nouvelle preparation livree annulée manuelle' },
+    { section: 'customization', title: 'Personnalisation', content: 'branding logo bannière couleurs palette police écriture réseaux sociaux instagram facebook' },
+    { section: 'whatsapp', title: 'WhatsApp Automation', content: 'qr code appareils connectés réponses automatiques mots-clés mysql ram smart wake-up' },
+    { section: 'ai', title: 'Assistant IA', content: 'groq intelligence artificielle statut commande où est ma commande rapport quotidien' },
+    { section: 'stats', title: 'Statistiques', content: 'analyses graphiques pdf excel json exportation rentabilité horaire' },
+    { section: 'profile', title: 'Mon Profil & Paramètres', content: 'profil paramètres sécurité mot de passe email otp' },
+    { section: 'notifications', title: 'Notifications', content: 'canaux email push notifications whatsapp alertes' },
+    { section: 'plans', title: 'Comparatif des Plans', content: 'plans tarifs gratuit pro business prix mensuel limites produits' },
+    { section: 'faq', title: 'FAQ', content: 'questions frequentes whatsapp sans compte depassement limite auto-extinction' },
+    { section: 'glossary', title: 'Glossaire', content: 'otp vitrine client tenant isolation redirection' }
+  ];
+
+  function showSection(sectionId) {
+    // Hide search results
+    document.getElementById('searchResultsSection').classList.remove('active');
+
+    // Find section index
+    const index = sections.findIndex(s => s.id === sectionId);
+    if (index === -1) return;
+
+    currentSectionIndex = index;
+
+    // Toggle active classes in nav
+    document.querySelectorAll('.docs-nav-item').forEach(item => {
+      item.classList.remove('active');
+      if (item.getAttribute('data-section') === sectionId) {
+        item.classList.add('active');
+      }
+    });
+
+    // Toggle active section
+    document.querySelectorAll('.docs-section').forEach(sec => {
+      sec.classList.remove('active');
+    });
+    document.getElementById(sectionId + 'Section').classList.add('active');
+
+    // Update breadcrumbs
+    document.getElementById('currentBreadcrumb').innerText = sections[index].title;
+    document.getElementById('currentBreadcrumb').href = '#' + sectionId;
+
+    // Update Footer Navigation buttons
+    updateFooterNav();
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function updateFooterNav() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    if (currentSectionIndex > 0) {
+      prevBtn.style.display = 'flex';
+      document.getElementById('prevTitle').innerText = sections[currentSectionIndex - 1].title;
+      prevBtn.href = '#' + sections[currentSectionIndex - 1].id;
+    } else {
+      prevBtn.style.display = 'none';
+    }
+
+    if (currentSectionIndex < sections.length - 1) {
+      nextBtn.style.display = 'flex';
+      document.getElementById('nextTitle').innerText = sections[currentSectionIndex + 1].title;
+      nextBtn.href = '#' + sections[currentSectionIndex + 1].id;
+    } else {
+      nextBtn.style.display = 'none';
+    }
+  }
+
+  // Handle sidebar navigation clicks
+  document.querySelectorAll('.docs-nav-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const sectionId = item.getAttribute('data-section');
+      showSection(sectionId);
+      location.hash = sectionId;
+
+      // Close mobile menu if open
+      document.getElementById('sidebar').classList.remove('open');
+    });
+  });
+
+  // Handle footer navigation clicks
+  document.getElementById('prevBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (currentSectionIndex > 0) {
+      const prevSectionId = sections[currentSectionIndex - 1].id;
+      showSection(prevSectionId);
+      location.hash = prevSectionId;
+    }
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (currentSectionIndex < sections.length - 1) {
+      const nextSectionId = sections[currentSectionIndex + 1].id;
+      showSection(nextSectionId);
+      location.hash = nextSectionId;
+    }
+  });
+
+  // Search logic
+  const searchInput = document.getElementById('searchInput');
+  const searchResultsSection = document.getElementById('searchResultsSection');
+  const searchResultsList = document.getElementById('searchResultsList');
+  const searchSummary = document.getElementById('searchSummary');
+
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    if (query.length < 2) {
+      // Return to current section if search cleared
+      if (query.length === 0) {
+        showSection(sections[currentSectionIndex].id);
+      }
+      return;
+    }
+
+    // Hide all normal sections
+    document.querySelectorAll('.docs-section').forEach(sec => {
+      sec.classList.remove('active');
+    });
+
+    // Show search results section
+    searchResultsSection.classList.add('active');
+    document.getElementById('currentBreadcrumb').innerText = 'Résultats de recherche';
+
+    // Filter index
+    const results = searchIndex.filter(item => {
+      return item.title.toLowerCase().includes(query) || item.content.toLowerCase().includes(query);
+    });
+
+    // Render results
+    searchResultsList.innerHTML = '';
+    searchSummary.innerText = `${results.length} résultat(s) trouvé(s) pour "${e.target.value}"`;
+
+    if (results.length === 0) {
+      searchResultsList.innerHTML = '<p>Aucun résultat ne correspond à votre recherche. Essayez avec d\'autres mots-clés.</p>';
+      return;
+    }
+
+    results.forEach(res => {
+      const div = document.createElement('div');
+      div.className = 'search-result-item';
+      div.innerHTML = `
+        <div class="search-result-breadcrumb">Documentation / ${res.title}</div>
+        <div class="search-result-title" onclick="goToSection('${res.section}')">${res.title}</div>
+        <div class="search-result-snippet">Contenu lié à la recherche. Cliquez pour lire le chapitre complet.</div>
+      `;
+      searchResultsList.appendChild(div);
+    });
+  });
+
+  window.goToSection = function(sectionId) {
+    searchInput.value = '';
+    showSection(sectionId);
+    location.hash = sectionId;
+  };
+
+  // Mobile menu toggle
+  document.getElementById('menuToggle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+  });
+
+  // Back to top scroll handler
+  const backToTop = document.getElementById('backToTop');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 300) {
+      backToTop.classList.add('show');
+    } else {
+      backToTop.classList.remove('show');
+    }
+  });
+
+  backToTop.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Accordion Logic
+  document.querySelectorAll('.docs-accordion-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const accordion = header.parentElement;
+      accordion.classList.toggle('active');
+    });
+  });
+
+  // Parse location hash on load
+  window.addEventListener('load', () => {
+    const hash = location.hash.replace('#', '');
+    if (hash) {
+      showSection(hash);
+    } else {
+      showSection('welcome');
+    }
+  });
+</script>

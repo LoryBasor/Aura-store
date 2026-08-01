@@ -1,0 +1,13 @@
+{
+  "watch": ["app.js", "src/", "views/", "public/"],
+  "ext": "js,ejs,json",
+  "ignore": [
+    "sessions/",
+    "sessions/whatsapp/**",
+    "node_modules/",
+    "public/",
+    "*.log",
+    "scratch*.js"
+  ],
+  "delay": "500"
+}

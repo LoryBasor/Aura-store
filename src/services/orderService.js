@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { generateOrderNumber, calculateOffset, buildWhatsAppOrderUrl } = require('../utils/helpers');
 const { AppError } = require('../middlewares/errorHandler');
 const { ORDER_STATUS } = require('../config/constants');
+const { addNotificationJob } = require('../queues/NotificationQueue'); // ✨ NOUVEAU WhatsApp Automation
 
 /**
  * Service de gestion des commandes
@@ -133,8 +134,10 @@ class OrderService {
     );
 
     let whatsappUrl = null;
+    let vendorWhatsAppNumber = null;
     if (integrations.length > 0) {
       const config = integrations[0];
+      vendorWhatsAppNumber = config.whatsapp_number;
       if (config.whatsapp_enabled && config.whatsapp_number) {
         const isBusiness = planAccess.length > 0;
         const template = isBusiness ? config.custom_order_message : null;
@@ -149,6 +152,16 @@ class OrderService {
     }
 
     const order = await this.getOrderById(result.insertId, product.user_id);
+    
+    // ✨ NOUVEAU: Déclencher la notification WhatsApp via BullMQ
+    if (vendorWhatsAppNumber) {
+        addNotificationJob('new_order', {
+            order: order,
+            vendorWhatsApp: vendorWhatsAppNumber,
+            storeSlug: 'store' // on n'a pas le slug exact ici, mais pas indispensable pour le message
+        }).catch(err => console.error('Erreur ajout job notification:', err));
+    }
+
     return { ...order, whatsapp_url: whatsappUrl };
   }
 

@@ -1,0 +1,568 @@
+<div class="content-header glass-panel" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; padding: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+      <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--aura-white); margin-bottom: 4px;">WhatsApp Automation</h2>
+      <p style="color: var(--aura-text); font-size: 0.95rem;">Gérez vos connexions, réponses automatiques et campagnes marketing.</p>
+    </div>
+    
+    <div style="width: 100%;">
+        <div id="connectionStatusBadge" class="badge" style="background: <%= isConnected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' %>; color: <%= isConnected ? '#10B981' : '#EF4444' %>; padding: 8px 16px; border-radius: 9999px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; width: auto;">
+            <div class="status-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: <%= isConnected ? '#10B981' : '#EF4444' %>;"></div>
+            <span id="connectionStatusText"><%= isConnected ? 'Connecté (' + connectedNumber + ')' : 'Déconnecté' %></span>
+        </div>
+    </div>
+  </div>
+  
+  <div class="stats-grid" style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 30px;">
+    <!-- Connexion Card -->
+    <div class="stat-card glass-panel" style="padding: 24px;">
+      <h3 style="font-size: 1.1rem; color: var(--aura-white); font-weight: 600; margin-bottom: 16px;">Connexion Appareil</h3>
+      
+      <div id="disconnectedState" style="display: <%= isConnected ? 'none' : 'block' %>;">
+        <!-- Onglets de méthode -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 10px; flex-wrap: wrap;">
+          <button id="tabQR" onclick="switchTab('qr')" style="flex: 1; min-width: 100px; padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; background: var(--aura-accent); color: white; transition: all 0.2s;">
+            📷 QR Code
+          </button>
+          <button id="tabPhone" onclick="switchTab('phone')" style="flex: 1; min-width: 100px; padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; background: transparent; color: var(--aura-text); transition: all 0.2s;">
+            📱 Code téléphone
+          </button>
+        </div>
+
+        <!-- Panel QR Code -->
+        <div id="panelQR">
+          <div id="qrCodeContainer" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1); margin-bottom: 12px; padding: 16px;">
+            <button id="btnGenerateQR" class="btn btn-primary" onclick="generateQR()" style="width: 100%; max-width: 280px;">Générer le QR Code</button>
+            <div id="qrImageWrapper" style="display: none; padding: 16px; background: white; border-radius: 12px; margin-top: 16px; width: 100%; max-width: 240px; display: none; margin: 16px auto 0;"></div>
+          </div>
+          <p style="color: var(--aura-tertiary); font-size: 0.8rem; text-align: center;">Scannez le QR code avec WhatsApp > Appareils connectés</p>
+        </div>
+
+        <!-- Panel Code Téléphone -->
+        <div id="panelPhone" style="display: none;">
+          <p style="color: var(--aura-text); font-size: 0.85rem; margin-bottom: 12px;">Entrez votre numéro WhatsApp avec l'indicatif pays (ex: 237612345678) :</p>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+            <input type="tel" id="phoneNumberInput" placeholder="237612345678" class="form-control" style="width: 100%; padding: 10px 14px; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.15); color: white; font-size: 0.9rem; box-sizing: border-box;">
+            <button id="btnGenerateCode" class="btn btn-primary" onclick="generatePairingCode()" style="width: 100%; max-width: 200px;">Obtenir le code</button>
+          </div>
+          
+          <div id="pairingCodeDisplay" style="display: none; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="color: var(--aura-tertiary); font-size: 0.8rem; margin-bottom: 8px;">Saisissez ce code dans WhatsApp > Appareils connectés > Lier un appareil :</p>
+            <div id="pairingCodeValue" style="font-size: 1.8rem; font-weight: 800; letter-spacing: 6px; color: var(--aura-white); font-family: monospace; word-break: break-all;"></div>
+            <p style="color: var(--aura-tertiary); font-size: 0.75rem; margin-top: 8px;">⏱ Ce code expire dans 60 secondes</p>
+          </div>
+          <p style="color: var(--aura-tertiary); font-size: 0.8rem; text-align: center; margin-top: 8px;">WhatsApp > ⋮ > Appareils connectés > Lier un appareil > Saisir le code</p>
+        </div>
+      </div>
+
+      <div id="connectedState" style="display: <%= isConnected ? 'block' : 'none' %>;">
+          <p style="color: var(--aura-text); margin-bottom: 16px;">Votre boutique est connectée à WhatsApp et prête à envoyer des notifications.</p>
+
+          <!-- Toggle IA -->
+          <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <div style="color: var(--aura-white); font-weight: 600; font-size: 0.9rem;">🤖 Assistant IA</div>
+                <div style="color: var(--aura-tertiary); font-size: 0.78rem; margin-top: 2px;" id="aiStatusLabel"><%= aiEnabled ? 'Actif — répond automatiquement aux clients' : 'Inactif' %></div>
+              </div>
+              <label style="position: relative; display: inline-block; width: 48px; height: 26px; cursor: pointer; flex-shrink: 0;">
+                <input type="checkbox" id="aiToggle" <%= aiEnabled ? 'checked' : '' %> onchange="toggleAI(this)" style="opacity:0; width:0; height:0;">
+                <span id="aiToggleSlider" style="position:absolute; top:0; left:0; right:0; bottom:0; background:<%= aiEnabled ? 'var(--aura-accent)' : 'rgba(255,255,255,0.15)' %>; border-radius:26px; transition:0.3s;">
+                  <span style="position:absolute; top:3px; <%= aiEnabled ? 'left:25px' : 'left:3px' %>; width:20px; height:20px; background:white; border-radius:50%; transition:0.3s; display:block;" id="aiToggleDot"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Configuration Heure Résumé -->
+          <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div>
+              <div style="color: var(--aura-white); font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                <svg width="18" height="18" fill="none" stroke="var(--aura-accent)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Résumé Quotidien
+              </div>
+              <div style="color: var(--aura-tertiary); font-size: 0.8rem; margin-top: 4px;">Choisissez l'heure d'envoi du rapport d'activité sur WhatsApp.</div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                <input type="time" id="summaryTimeInput" class="form-control" value="<%= summaryTime || '20:00' %>" style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: white; border-radius: 8px; padding: 8px 12px; font-size: 0.95rem; outline: none; cursor: pointer;">
+                <button class="btn btn-primary btn-sm" onclick="saveSummaryTime()" style="padding: 8px 16px; font-weight: 500; white-space: nowrap;">Sauvegarder</button>
+            </div>
+          </div>
+
+          <button class="btn btn-danger w-full" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); width: 100%; padding: 10px;" onclick="disconnectWhatsApp()">Déconnecter</button>
+      </div>
+    </div>
+
+    <!-- Statistiques IA -->
+    <% if (typeof aiAnalytics !== 'undefined') { %>
+    <div class="stat-card glass-panel" style="padding: 24px;">
+        <h3 style="font-size: 1.1rem; color: var(--aura-white); font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--aura-accent);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            Performances de l'Assistant IA
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <!-- KPI 1 -->
+            <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="color: var(--aura-tertiary); font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 1.1rem;">💬</span> Conversations
+                </div>
+                <div style="font-size: 1.7rem; font-weight: 700; color: var(--aura-white);"><%= aiAnalytics.conversations %></div>
+            </div>
+            <!-- KPI 2 -->
+            <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.15);">
+                <div style="color: rgba(255,255,255,0.7); font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 1.1rem;">⏱</span> Temps gagné
+                </div>
+                <div style="font-size: 1.7rem; font-weight: 700; color: #10B981;"><%= aiAnalytics.timeSaved %></div>
+            </div>
+            <!-- KPI 3 -->
+            <div style="background: rgba(245, 158, 11, 0.05); padding: 20px; border-radius: 16px; border: 1px solid rgba(245, 158, 11, 0.15);">
+                <div style="color: rgba(255,255,255,0.7); font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 1.1rem;">😊</span> Satisfaction
+                </div>
+                <div style="font-size: 1.7rem; font-weight: 700; color: #F59E0B;"><%= aiAnalytics.satisfaction %>%</div>
+            </div>
+            <!-- KPI 4 -->
+            <div style="background: rgba(239, 68, 68, 0.05); padding: 20px; border-radius: 16px; border: 1px solid rgba(239, 68, 68, 0.15);">
+                <div style="color: rgba(255,255,255,0.7); font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 1.1rem;">🛑</span> Échecs IA
+                </div>
+                <div style="font-size: 1.7rem; font-weight: 700; color: #EF4444;"><%= aiAnalytics.unansweredCount %></div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+            <!-- Questions fréquentes -->
+            <div style="background: rgba(99, 102, 241, 0.05); padding: 20px; border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.15);">
+                <h4 style="color: var(--aura-white); font-size: 0.95rem; margin-bottom: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.2rem;">❓</span> Sujets les plus abordés
+                </h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <% if(aiAnalytics.frequentQuestions.length > 0) { %>
+                        <% aiAnalytics.frequentQuestions.forEach(q => { %>
+                            <span style="background: rgba(99,102,241,0.15); color: #818CF8; padding: 6px 14px; border-radius: 100px; font-size: 0.85rem; font-weight: 500; border: 1px solid rgba(99,102,241,0.2);"><%= q %></span>
+                        <% }) %>
+                    <% } else { %>
+                        <span style="color: var(--aura-tertiary); font-size: 0.85rem; font-style: italic;">Aucune donnée suffisante.</span>
+                    <% } %>
+                </div>
+            </div>
+            
+            <!-- Produits demandés -->
+            <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.15);">
+                <h4 style="color: var(--aura-white); font-size: 0.95rem; margin-bottom: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.2rem;">🔥</span> Produits tendances
+                </h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <% if(aiAnalytics.requestedProducts.length > 0) { %>
+                        <% aiAnalytics.requestedProducts.forEach(p => { %>
+                            <span style="background: rgba(16,185,129,0.15); color: #10B981; padding: 6px 14px; border-radius: 100px; font-size: 0.85rem; font-weight: 500; border: 1px solid rgba(16,185,129,0.2);"><%= p %></span>
+                        <% }) %>
+                    <% } else { %>
+                        <span style="color: var(--aura-tertiary); font-size: 0.85rem; font-style: italic;">Aucune donnée suffisante.</span>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+    <% } %>
+  
+    <!-- Réponses Automatiques -->
+    <div class="stat-card glass-panel" style="padding: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
+                <h3 style="font-size: 1.1rem; color: var(--aura-white); font-weight: 600; margin: 0;">Réponses Automatiques</h3>
+                <button class="btn btn-primary btn-sm" onclick="showAddReplyModal()" style="white-space: nowrap;">+ Ajouter</button>
+            </div>
+        </div>
+        
+        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table class="table" style="width: 100%; text-align: left; min-width: 300px;">
+                <thead>
+                    <tr>
+                        <th style="padding-bottom: 12px; color: var(--aura-tertiary); font-weight: 500;">Mot-clé</th>
+                        <th style="padding-bottom: 12px; color: var(--aura-tertiary); font-weight: 500;">Réponse</th>
+                        <th style="padding-bottom: 12px; color: var(--aura-tertiary); font-weight: 500;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="autoRepliesTable">
+                    <% if (autoReplies && autoReplies.length > 0) { %>
+                        <% autoReplies.forEach(reply => { %>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <td style="padding: 12px 8px 12px 0; font-weight: 600; color: var(--aura-white);"><span style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; display: inline-block; word-break: break-word;"><%= reply.keyword %></span></td>
+                                <td style="padding: 12px 8px 12px 0; color: var(--aura-text); max-width: 200px; word-break: break-word;"><%= reply.response %></td>
+                                <td style="padding: 12px 0;">
+                                    <button class="btn btn-sm" style="color: #EF4444;" onclick="deleteReply('<%= reply.id %>')">Supprimer</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--aura-tertiary);">Aucune réponse automatique configurée.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+  </div>
+  
+  <!-- Aura Smart Commands Intro -->
+  <div class="glass-panel" style="padding: 24px; border-left: 4px solid var(--aura-accent); background: linear-gradient(to right, rgba(99, 102, 241, 0.1), transparent);">
+      <h3 style="color: var(--aura-white); font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--aura-accent);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        Aura Smart Commands actives
+      </h3>
+      <p style="color: var(--aura-text); margin-bottom: 16px;">Gérez vos commandes directement depuis votre téléphone en réagissant aux notifications WhatsApp que vous recevez d'Aura.</p>
+      
+      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          <div style="background: rgba(0,0,0,0.2); padding: 8px 16px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.2rem;">👍</span> <span style="color: var(--aura-text); font-size: 0.9rem;">Confirmer</span>
+          </div>
+          <div style="background: rgba(0,0,0,0.2); padding: 8px 16px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.2rem;">🚚</span> <span style="color: var(--aura-text); font-size: 0.9rem;">Expédier</span>
+          </div>
+          <div style="background: rgba(0,0,0,0.2); padding: 8px 16px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.2rem;">✅</span> <span style="color: var(--aura-text); font-size: 0.9rem;">Livrée</span>
+          </div>
+          <div style="background: rgba(0,0,0,0.2); padding: 8px 16px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.2rem;">❌</span> <span style="color: var(--aura-text); font-size: 0.9rem;">Annuler</span>
+          </div>
+      </div>
+  </div>
+  
+  <!-- Add Reply Modal -->
+  <div id="addReplyModal" style="display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div class="glass-panel" style="width: 100%; max-width: 460px; padding: 28px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: var(--aura-surface, #1a1a2e); box-shadow: 0 24px 60px rgba(0,0,0,0.5); animation: slideInModal 0.2s ease; margin: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="color: white; font-weight: 700; font-size: 1.1rem; margin: 0;">Ajouter une réponse automatique</h3>
+        <button onclick="closeAddReplyModal()" style="background: rgba(255,255,255,0.05); border: none; color: var(--aura-text); cursor: pointer; width: 32px; height: 32px; border-radius: 8px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">✕</button>
+      </div>
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label style="color: var(--aura-text); display: block; margin-bottom: 8px; font-size: 0.875rem;">Mot-clé déclencheur <span style="color: var(--aura-tertiary); font-size: 0.8rem;">(ex: bonjour, prix, livraison)</span></label>
+        <input type="text" id="newKeyword" class="form-control" placeholder="bonjour" style="width: 100%; padding: 10px 14px; border-radius: 8px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.9rem; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label style="color: var(--aura-text); display: block; margin-bottom: 8px; font-size: 0.875rem;">Message de réponse automatique</label>
+        <textarea id="newResponse" class="form-control" rows="4" placeholder="Bonjour ! Merci de nous contacter. Comment puis-je vous aider ?" style="width: 100%; padding: 10px 14px; border-radius: 8px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); color: white; resize: vertical; font-size: 0.9rem; box-sizing: border-box; min-height: 100px;"></textarea>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn btn-primary" onclick="submitNewReply()" style="width: 100%; padding: 12px;">Enregistrer</button>
+        <button class="btn btn-secondary" onclick="closeAddReplyModal()" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--aura-text); border-radius: 8px; cursor: pointer;">Annuler</button>
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes slideInModal {
+      from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+      to   { opacity: 1; transform: scale(1)   translateY(0);      }
+    }
+    
+    @media (min-width: 768px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .stats-grid .stat-card:first-child {
+        grid-column: 1 / 2;
+      }
+      
+      .stats-grid .stat-card:last-child {
+        grid-column: 1 / -1;
+      }
+      
+      .content-header {
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+      }
+      
+      .content-header > div:first-child {
+        width: auto !important;
+      }
+      
+      .content-header > div:last-child {
+        width: auto !important;
+      }
+      
+      #panelPhone .btn-primary {
+        width: auto !important;
+        max-width: none !important;
+      }
+      
+      #panelPhone > div:first-of-type {
+        flex-direction: row !important;
+      }
+      
+      .stat-card:last-child .btn-primary {
+        width: auto !important;
+      }
+      
+      #connectedState .btn-danger {
+        width: auto !important;
+      }
+      
+      #addReplyModal > div > div:last-child {
+        flex-direction: row !important;
+      }
+      
+      #addReplyModal > div > div:last-child .btn {
+        flex: 1;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .content-header h2 {
+        font-size: 1.2rem !important;
+      }
+      
+      .stat-card {
+        padding: 16px !important;
+      }
+      
+      .stat-card .btn-primary {
+        font-size: 0.8rem !important;
+        padding: 8px 12px !important;
+      }
+      
+      #pairingCodeValue {
+        font-size: 1.4rem !important;
+        letter-spacing: 4px !important;
+      }
+      
+      #addReplyModal > div {
+        padding: 20px !important;
+        margin: 8px !important;
+      }
+    }
+  </style>
+  
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="/js/ui.js"></script>
+  
+  <script>
+  async function generateQR() {
+      const btn = document.getElementById('btnGenerateQR');
+      const originalText = btn.innerText;
+      btn.innerText = 'Génération en cours...';
+      btn.disabled = true;
+      
+      try {
+          const response = await fetch('/api/whatsapp/generate-qr');
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          const data = await response.json();
+          
+          if (data.success && data.data && data.data.qr) {
+              const qrWrapper = document.getElementById('qrImageWrapper');
+              qrWrapper.innerHTML = '';
+              qrWrapper.style.display = 'block';
+              btn.style.display = 'none';
+              
+              new QRCode(qrWrapper, {
+                  text: data.data.qr,
+                  width: 220,
+                  height: 220,
+                  colorDark : "#000000",
+                  colorLight : "#ffffff",
+                  correctLevel : QRCode.CorrectLevel.H
+              });
+  
+              UI.showNotification('QR Code prêt', 'Scannez le QR code avec WhatsApp pour connecter votre boutique.', 'info');
+              startStatusPolling();
+          } else if (data.success && data.data && data.data.status === 'connected') {
+              window.location.reload();
+          } else {
+              console.error('QR generation failed:', data);
+              UI.showNotification('Erreur', 'Le QR Code n\'a pas pu être généré. Veuillez réessayer.', 'error');
+              btn.innerText = originalText;
+              btn.disabled = false;
+          }
+      } catch (e) {
+          console.error(e);
+          UI.showNotification('Erreur de connexion', 'Impossible de contacter le serveur. Réessayez.', 'error');
+          btn.innerText = originalText;
+          btn.disabled = false;
+      }
+  }
+  
+  async function toggleAI(checkbox) {
+    try {
+      const response = await fetch('/api/whatsapp/toggle-ai', { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        const enabled = data.data.ai_enabled;
+        document.getElementById('aiStatusLabel').textContent = enabled
+          ? 'Actif \u2014 r\u00e9pond automatiquement aux clients'
+          : 'Inactif';
+        document.getElementById('aiToggleSlider').style.background = enabled
+          ? 'var(--aura-accent)' : 'rgba(255,255,255,0.15)';
+        document.getElementById('aiToggleDot').style.left = enabled ? '25px' : '3px';
+        UI.showNotification('Assistant IA', data.data.message, 'success');
+      } else {
+        checkbox.checked = !checkbox.checked;
+        UI.showNotification('Erreur', "Impossible de changer le statut de l'IA.", 'error');
+      }
+    } catch (e) {
+      checkbox.checked = !checkbox.checked;
+      UI.showNotification('Erreur r\u00e9seau', 'Impossible de contacter le serveur.', 'error');
+    }
+  }
+
+  async function saveSummaryTime() {
+    const timeValue = document.getElementById('summaryTimeInput').value;
+    if (!timeValue) return;
+
+    try {
+      const response = await fetch('/api/whatsapp/summary-time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ time: timeValue })
+      });
+      const data = await response.json();
+      if (data.success) {
+        UI.showNotification('Succès', 'Heure du résumé quotidien mise à jour.', 'success');
+      } else {
+        UI.showNotification('Erreur', 'Impossible de sauvegarder l\'heure.', 'error');
+      }
+    } catch (e) {
+      UI.showNotification('Erreur réseau', 'Impossible de contacter le serveur.', 'error');
+    }
+  }
+
+
+  function switchTab(tab) {
+      const isQR = tab === 'qr';
+      document.getElementById('panelQR').style.display = isQR ? 'block' : 'none';
+      document.getElementById('panelPhone').style.display = isQR ? 'none' : 'block';
+      document.getElementById('tabQR').style.background = isQR ? 'var(--aura-accent)' : 'transparent';
+      document.getElementById('tabQR').style.color = isQR ? 'white' : 'var(--aura-text)';
+      document.getElementById('tabPhone').style.background = isQR ? 'transparent' : 'var(--aura-accent)';
+      document.getElementById('tabPhone').style.color = isQR ? 'var(--aura-text)' : 'white';
+  }
+
+  async function generatePairingCode() {
+      const phone = document.getElementById('phoneNumberInput').value.trim();
+      if (!phone) {
+          UI.showNotification('Champ requis', 'Veuillez entrer votre numéro de téléphone WhatsApp.', 'error');
+          return;
+      }
+      const btn = document.getElementById('btnGenerateCode');
+      const originalText = btn.innerText;
+      btn.innerText = 'Génération...';
+      btn.disabled = true;
+      document.getElementById('pairingCodeDisplay').style.display = 'none';
+      try {
+          const response = await fetch('/api/whatsapp/generate-pairing-code', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone })
+          });
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          const data = await response.json();
+          if (data.success && data.data && data.data.pairingCode) {
+              document.getElementById('pairingCodeValue').innerText = data.data.pairingCode;
+              document.getElementById('pairingCodeDisplay').style.display = 'block';
+              UI.showNotification('Code généré !', 'Saisissez ce code dans WhatsApp pour connecter votre boutique.', 'success');
+              startStatusPolling();
+          } else {
+              UI.showNotification('Erreur', 'Le code n\'a pas pu être généré. Réessayez.', 'error');
+          }
+      } catch (e) {
+          console.error(e);
+          UI.showNotification('Erreur', 'Impossible de contacter le serveur. Réessayez.', 'error');
+      } finally {
+          btn.innerText = originalText;
+          btn.disabled = false;
+      }
+  }
+
+  let pollInterval;
+  function startStatusPolling() {
+      clearInterval(pollInterval);
+      pollInterval = setInterval(async () => {
+          try {
+              const response = await fetch('/api/whatsapp/status');
+              const data = await response.json();
+              if (data.success && data.data && data.data.status === 'connected') {
+                  clearInterval(pollInterval);
+                  UI.showNotification('Connecté !', 'WhatsApp est maintenant connecté à votre boutique.', 'success');
+                  setTimeout(() => window.location.reload(), 2000);
+              }
+          } catch (e) { /* silent fail */ }
+      }, 5000);
+  }
+  
+  async function disconnectWhatsApp() {
+      const confirmed = await UI.confirm('Déconnecter WhatsApp', 'Êtes-vous sûr de vouloir déconnecter WhatsApp ? Vous ne recevrez plus de notifications automatiques.');
+      if (!confirmed) return;
+      try {
+          const res = await fetch('/api/whatsapp/disconnect', { method: 'POST' });
+          if (res.ok) {
+              UI.showNotification('Déconnecté', 'Session WhatsApp déconnectée avec succès.', 'success');
+              setTimeout(() => window.location.reload(), 1500);
+          } else {
+              UI.showNotification('Erreur', 'La déconnexion a échoué. Réessayez.', 'error');
+          }
+      } catch(e) {
+          UI.showNotification('Erreur', 'Impossible de contacter le serveur.', 'error');
+      }
+  }
+  
+  function showAddReplyModal() {
+      const modal = document.getElementById('addReplyModal');
+      modal.style.display = 'flex';
+      document.getElementById('newKeyword').value = '';
+      document.getElementById('newResponse').value = '';
+  }
+
+  function closeAddReplyModal() {
+      document.getElementById('addReplyModal').style.display = 'none';
+  }
+
+  // Fermer en cliquant sur l'overlay
+  document.getElementById('addReplyModal').addEventListener('click', function(e) {
+      if (e.target === this) closeAddReplyModal();
+  });
+  
+  async function submitNewReply() {
+      const keyword = document.getElementById('newKeyword').value.trim();
+      const responseText = document.getElementById('newResponse').value.trim();
+      
+      if (!keyword || !responseText) {
+          UI.showNotification('Champs requis', 'Veuillez remplir le mot-clé et la réponse.', 'error');
+          return;
+      }
+      
+      try {
+          const res = await fetch('/api/whatsapp/auto-replies', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ keyword, response: responseText })
+          });
+          
+          if (res.ok) {
+              closeAddReplyModal();
+              UI.showNotification('Succès', 'Réponse automatique ajoutée.', 'success');
+              setTimeout(() => window.location.reload(), 1200);
+          } else {
+              UI.showNotification('Erreur', 'Impossible d\'ajouter la réponse automatique.', 'error');
+          }
+      } catch(e) {
+          console.error(e);
+          UI.showNotification('Erreur', 'Erreur réseau. Réessayez.', 'error');
+      }
+  }
+  
+  async function deleteReply(id) {
+      const confirmed = await UI.confirm('Supprimer la réponse', 'Cette réponse automatique sera définitivement supprimée.');
+      if (!confirmed) return;
+      try {
+          const res = await fetch('/api/whatsapp/auto-replies/' + id, { method: 'DELETE' });
+          if (res.ok) {
+              UI.showNotification('Supprimé', 'Réponse automatique supprimée.', 'success');
+              setTimeout(() => window.location.reload(), 1200);
+          }
+      } catch(e) {
+          console.error(e);
+          UI.showNotification('Erreur', 'Impossible de supprimer. Réessayez.', 'error');
+      }
+  }
+  </script>

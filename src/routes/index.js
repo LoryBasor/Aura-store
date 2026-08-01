@@ -17,6 +17,7 @@ const categoryRoutes = require('./categoryRoutes');
 const feedbackRoutes = require('./feedbackRoutes');
 const reportRoutes = require('./reportRoutes');
 const messagingRoutes = require('./messagingRoutes');
+const whatsappRoutes = require('./whatsappRoutes'); // ✨ NOUVEAU WhatsApp Automation
 
 const router = express.Router();
 
@@ -65,6 +66,7 @@ router.use(
 router.use('/feedback', feedbackRoutes);
 router.use('/reports', reportRoutes);
 router.use('/messages', messagingRoutes);
+router.use('/whatsapp', whatsappRoutes); // ✨ NOUVEAU WhatsApp Automation
 
 // Routes du dashboard vendeur (protégées)
 router.get(

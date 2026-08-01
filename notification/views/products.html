@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produits - Web Push Demo</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <script>
+        window.VAPID_PUBLIC_KEY = '{{VAPID_PUBLIC_KEY}}';
+    </script>
+</head>
+<body>
+    <!-- ==================== HEADER ==================== -->
+    <header class="header">
+        <h1>📦 Produits</h1>
+        <p>Publiez un produit pour envoyer une notification push</p>
+    </header>
+
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <div class="container">
+        <!-- ==================== NAVIGATION ==================== -->
+        <div class="products-header">
+            <a href="/" class="btn btn-primary">← Retour</a>
+            <span style="color: var(--text-secondary);">
+                Cliquez sur "Publier" pour notifier tous les abonnés
+            </span>
+        </div>
+
+        <!-- ==================== GRILLE DES PRODUITS ==================== -->
+        <div id="productsGrid" class="products-grid">
+            <div class="empty-state">
+                <h3>🔄 Chargement des produits...</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL ==================== -->
+    <div id="productModal" class="modal">
+        <div class="modal-content glass">
+            <button id="closeModal" class="modal-close">✕</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- ==================== SCRIPTS ==================== -->
+    <script src="/js/app.js"></script>
+</body>
+</html>

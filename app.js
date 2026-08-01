@@ -20,9 +20,11 @@ const { pool, testConnection, closePool } = require('./src/config/database');
 const { testConnection: testCloudinary } = require('./src/config/cloudinary');
 const { UPLOAD_DIR } = require('./src/config/upload');
 const { startSubscriptionCron, stopSubscriptionCron } = require('./src/cron/subscriptionCron');
+const { startWhatsAppSummaryCron, stopWhatsAppSummaryCron } = require('./src/cron/whatsappSummaryCron');
 
 // Routes API
 const apiRoutes = require('./src/routes');
+const docsRoutes = require('./src/routes/docsRoutes');
 
 // Gestion des erreurs
 const { errorHandler, notFoundHandler } = require('./src/middlewares/errorHandler');
@@ -217,6 +219,7 @@ function requireSuperAdminView(req, res, next) {
  * ========================================
  */
 app.use('/api', apiRoutes);
+app.use('/docs', docsRoutes);
 
 /**
  * ========================================
@@ -760,6 +763,145 @@ app.get('/orders', authenticateView, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// ── WhatsApp Automation (Business uniquement) ──
+app.get('/dashboard/whatsapp', authenticateView, async (req, res, next) => {
+  try {
+    const { pool } = require('./src/config/database');
+
+    // Vérifier que l'utilisateur a le plan Business avec WhatsApp
+    const { USER_ROLES, SUBSCRIPTION_STATUS } = require('./src/config/constants');
+    if (req.user.role !== USER_ROLES.SUPER_ADMIN) {
+      const [plans] = await pool.execute(
+        `SELECT sp.has_whatsapp_integration FROM subscriptions s
+         JOIN subscription_plans sp ON s.plan_id = sp.id
+         WHERE s.user_id = ? AND s.status IN (?, ?)
+         ORDER BY s.id DESC LIMIT 1`,
+        [req.user.id, SUBSCRIPTION_STATUS.TRIAL, SUBSCRIPTION_STATUS.ACTIVE]
+      );
+
+      if (plans.length === 0 || !plans[0].has_whatsapp_integration) {
+        return res.render('errors/upgrade-required', {
+          title: 'Fonctionnalité Business',
+          pageTitle: 'Fonctionnalité réservée au plan Business',
+          user: req.user,
+          feature: 'Automatisation WhatsApp',
+          currentPage: 'whatsapp'
+        });
+      }
+    }
+
+    const [autoReplies] = await pool.execute('SELECT * FROM wa_auto_replies WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
+    
+    // Check connection status
+    const WhatsAppSessionManager = require('./src/services/whatsapp/WhatsAppSessionManager');
+    const sessionManager = WhatsAppSessionManager.getInstance();
+    const dbStatus = await sessionManager.getSessionStatus(req.user.id);
+    const isConnected = sessionManager.isSessionConnected(req.user.id) || (dbStatus && dbStatus.status === 'connected');
+
+    // --- AI Analytics ---
+    const [aiConvRows] = await pool.execute(
+      "SELECT COUNT(DISTINCT remote_jid) as total_convs FROM wa_messages WHERE user_id = ? AND message_type = 'ai_response'",
+      [req.user.id]
+    );
+    const aiConversations = aiConvRows[0].total_convs;
+
+    const [aiMsgRows] = await pool.execute(
+      "SELECT COUNT(*) as total_msgs FROM wa_messages WHERE user_id = ? AND message_type = 'ai_response'",
+      [req.user.id]
+    );
+    const totalAiMessages = aiMsgRows[0].total_msgs;
+    const timeSavedMins = totalAiMessages * 2;
+    const timeSavedStr = timeSavedMins > 60 ? `${Math.floor(timeSavedMins / 60)}h ${timeSavedMins % 60}m` : `${timeSavedMins} min`;
+
+    let satisfactionRate = 100;
+    if (aiConversations > 0) {
+      const [interventions] = await pool.execute(`
+        SELECT COUNT(DISTINCT m1.remote_jid) as interventions
+        FROM wa_messages m1
+        JOIN wa_messages m2 ON m1.remote_jid = m2.remote_jid AND m1.user_id = m2.user_id
+        WHERE m1.user_id = ? 
+        AND m1.message_type = 'text' AND m1.direction = 'outbound'
+        AND m2.message_type = 'ai_response'
+        AND m1.created_at > m2.created_at
+      `, [req.user.id]);
+      
+      const interventionCount = interventions[0].interventions;
+      satisfactionRate = Math.max(0, 100 - Math.round((interventionCount / aiConversations) * 100));
+    }
+
+    const [inboundMsgs] = await pool.execute(
+      "SELECT content FROM wa_messages WHERE user_id = ? AND direction = 'inbound' ORDER BY created_at DESC LIMIT 100",
+      [req.user.id]
+    );
+    
+    const wordsCount = {};
+    inboundMsgs.forEach(row => {
+      if(row.content) {
+        const words = row.content.toLowerCase().replace(/[^\w\sàâäéèêëîïôöùûüç]/g, ' ').split(/\s+/);
+        words.forEach(w => {
+           if(w.length > 4 && !['bonjour', 'salut', 'merci', 'quand', 'comment', 'votre', 'cette'].includes(w)) {
+              wordsCount[w] = (wordsCount[w] || 0) + 1;
+           }
+        });
+      }
+    });
+    const frequentQuestions = Object.entries(wordsCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(entry => entry[0]);
+
+    const [unansweredRows] = await pool.execute(
+      "SELECT COUNT(*) as unanswered FROM wa_messages WHERE user_id = ? AND message_type = 'ai_response' AND (content LIKE '%je ne sais pas%' OR content LIKE '%désolé%')",
+      [req.user.id]
+    );
+
+    const [products] = await pool.execute(
+      `SELECT name FROM products WHERE user_id = ? AND deleted_at IS NULL`, [req.user.id]
+    );
+    const productCounts = {};
+    inboundMsgs.forEach(msg => {
+      const text = (msg.content || '').toLowerCase();
+      products.forEach(p => {
+        if (text.includes(p.name.toLowerCase())) {
+          productCounts[p.name] = (productCounts[p.name] || 0) + 1;
+        }
+      });
+    });
+    const requestedProducts = Object.entries(productCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(entry => entry[0]);
+      
+    if (requestedProducts.length === 0 && products.length > 0) {
+      requestedProducts.push(...products.slice(0, 2).map(p => p.name));
+    }
+
+    const aiAnalytics = {
+      conversations: aiConversations,
+      timeSaved: timeSavedStr,
+      satisfaction: satisfactionRate,
+      frequentQuestions: frequentQuestions.length > 0 ? frequentQuestions : ['prix', 'livraison', 'disponible'],
+      requestedProducts: requestedProducts,
+      unansweredCount: unansweredRows[0].unanswered
+    };
+    // --- Fin AI Analytics ---
+
+    res.render('dashboard/whatsapp-automation', {
+      title: 'WhatsApp Automation',
+      pageTitle: 'WhatsApp Automation',
+      currentPage: 'whatsapp',
+      user: req.user,
+      autoReplies,
+      isConnected,
+      connectedNumber: dbStatus?.connected_number,
+      aiEnabled: dbStatus ? !!dbStatus.ai_enabled : true,
+      summaryTime: dbStatus?.summary_time || '20:00',
+      aiAnalytics
+    });
+  } catch (error) { next(error); }
+});
+
+
 // ── Clients ──
 app.get('/customers', authenticateView, async (req, res, next) => {
   try {
@@ -1234,6 +1376,18 @@ async function startServer() {
 
     // Démarrer le cron job des abonnements
     startSubscriptionCron();
+    
+    // Démarrer le cron job du résumé quotidien WhatsApp
+    startWhatsAppSummaryCron();
+    
+    // Initialiser les sessions WhatsApp actives
+    try {
+      const WhatsAppSessionManager = require('./src/services/whatsapp/WhatsAppSessionManager');
+      const sessionManager = WhatsAppSessionManager.getInstance();
+      await sessionManager.restoreAllSessions();
+    } catch (err) {
+      console.error('Erreur initialisation WhatsApp:', err);
+    }
 
     // Démarrer le serveur
     const server = app.listen(PORT, () => {
@@ -1262,6 +1416,10 @@ async function startServer() {
     // Arrêt gracieux
     process.on('SIGTERM', () => gracefulShutdown(server));
     process.on('SIGINT', () => gracefulShutdown(server));
+    process.on('SIGUSR2', async () => {
+      await gracefulShutdown(server);
+      process.kill(process.pid, 'SIGUSR2');
+    });
 
   } catch (error) {
     console.error('❌ Erreur au démarrage:', error);
@@ -1276,6 +1434,14 @@ async function gracefulShutdown(server) {
   console.log('\n⏳ Arrêt du serveur en cours...');
   
   stopSubscriptionCron(); // Arrêter le cron
+  stopWhatsAppSummaryCron(); // Arrêter le cron WhatsApp
+
+  try {
+    const WhatsAppSessionManager = require('./src/services/whatsapp/WhatsAppSessionManager');
+    await WhatsAppSessionManager.getInstance().shutdownAllSessions();
+  } catch (e) {
+    console.error('Erreur lors de la fermeture des sessions WhatsApp:', e.message);
+  }
 
   server.close(async () => {
     console.log('✅ Serveur HTTP fermé');
