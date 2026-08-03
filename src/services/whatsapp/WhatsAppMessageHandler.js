@@ -14,6 +14,7 @@ class WhatsAppMessageHandler {
       if (message.fromMe) return;
 
       const from = message.from;
+      const contact = await message.getContact();
 
       // Ignorer les messages de groupes WhatsApp
       if (from.endsWith('@g.us')) return;
@@ -100,10 +101,10 @@ class WhatsAppMessageHandler {
       const aiEnabled = sessionRows.length === 0 || !!sessionRows[0].ai_enabled;
 
       if (aiEnabled) {
-        const delay = Math.floor(Math.random() * (9000 - 3000 + 1)) + 3000;
+        const delay = Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000;
         await new Promise(r => setTimeout(r, delay));
 
-        const aiResponse = await WhatsAppAIProvider.getResponse(userId, from, text);
+        const aiResponse = await WhatsAppAIProvider.getResponse(userId, from, text, contact.id.user);
         if (aiResponse) {
           await WhatsAppSessionManager.getInstance().sendMessage(userId, from, aiResponse, { messageType: 'ai_response' });
         }

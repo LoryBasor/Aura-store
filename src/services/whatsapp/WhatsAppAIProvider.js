@@ -6,12 +6,12 @@ class WhatsAppAIProvider {
   /**
    * Obtient une réponse de l'IA (Groq) avec le contexte du magasin et l'historique
    */
-  static async getResponse(userId, chatId, messageContent) {
+  static async getResponse(userId, chatId, messageContent, userPhone) {
     try {
       const apiKey = process.env.GROQ_API_KEY;
       if (!apiKey || apiKey === 'votre_cle_groq_ici') {
         console.warn('Clé API Groq non configurée.');
-        return null; // Fallback to normal behavior if no AI configured
+        return null;
       }
 
       // 1. Fetch Store Info
@@ -38,8 +38,8 @@ class WhatsAppAIProvider {
 
       if (!productCatalog) productCatalog = "Aucun produit n'est actuellement disponible.";
 
-      // 3. System Prompt
-      const systemPrompt = `Tu es l'assistant virtuel de la boutique "${businessName}" sur WhatsApp.
+      // 3. System Prompt (Utilisation de 'let' pour permettre la modification)
+      let systemPrompt = `Tu es l'assistant virtuel de la boutique "${businessName}" sur WhatsApp.
 Ta mission est de renseigner les clients sur nos produits, prix et disponibilités avec professionnalisme et concision.
 Lien de la boutique: ${storeUrl}
 
@@ -52,30 +52,40 @@ CONSIGNES :
 - Si le produit n'est pas dans le catalogue, dis que nous ne l'avons pas.`;
 
       // 3.5. Fetch Recent Orders for this customer
-      const customerPhone = chatId.replace(/[^0-9]/g, '');
-      if (customerPhone.length > 5) {
+      // On extrait uniquement les chiffres pour éviter les soucis avec '+', espaces ou '@c.us'
+      const cleanPhone = String(userPhone || '').replace(/\D/g, '');
+      // Si le numéro commence par 237 et fait 12 chiffres, on extrait aussi la partie locale (9 chiffres)
+      const localPhone = cleanPhone.length === 12 && cleanPhone.startsWith('237') ? cleanPhone.slice(3) : cleanPhone;
+
+      if (localPhone.length > 5) {
         const [customerOrders] = await pool.execute(
           `SELECT order_number, status, total_amount, created_at 
            FROM orders 
-           WHERE user_id = ? AND customer_phone LIKE ? 
-           ORDER BY created_at DESC LIMIT 3`,
-          [userId, `%${customerPhone}%`]
+           WHERE user_id = ? AND (customer_phone LIKE ? OR customer_phone LIKE ?)
+           ORDER BY created_at ASC LIMIT 3`,
+          [userId, `%${cleanPhone}%`, `%${localPhone}%`]
         );
 
-        if (customerOrders.length > 0) {
+        if (customerOrders && customerOrders.length > 0) {
           const orderContext = "\n\nINFORMATIONS SUR LES COMMANDES DU CLIENT (utilise ces infos s'il demande où est sa commande) :\n" + customerOrders.map(o => {
-            const date = new Date(o.created_at).toLocaleDateString('fr-FR');
+            const date = o.created_at instanceof Date
+              ? `${o.created_at.toLocaleDateString('fr-FR')} à ${o.created_at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+              : String(o.created_at).replace('T', ' à ').substring(0, 16);
+
             let statusFr = o.status;
-            switch(o.status) {
-              case 'nouvelle': statusFr = 'Nouvelle / En attente'; break;
+            switch ((o.status || '').toLowerCase()) {
+              case 'nouvelle':
+              case 'pending':
+                statusFr = 'Nouvelle ou En attente'; break;
               case 'en_preparation': statusFr = 'En préparation'; break;
               case 'en_livraison': statusFr = 'En cours de livraison'; break;
               case 'livree': statusFr = 'Livrée'; break;
               case 'annulee': statusFr = 'Annulée'; break;
             }
-            return `- Commande #${o.order_number} du ${date} | Statut : ${statusFr}`;
+            const priceStr = o.total_amount ? ` | Montant: ${o.total_amount}` : '';
+            return `- Commande #${o.order_number} du ${date} | Statut : ${statusFr}${priceStr}`;
           }).join('\n');
-          
+
           systemPrompt += orderContext;
         }
       }
@@ -90,7 +100,7 @@ CONSIGNES :
 
       // Inverser pour avoir l'ordre chronologique
       const messages = [{ role: 'system', content: systemPrompt }];
-      
+
       history.reverse().forEach(msg => {
         messages.push({
           role: msg.direction === 'inbound' ? 'user' : 'assistant',
@@ -98,7 +108,7 @@ CONSIGNES :
         });
       });
 
-      // Add the current message if it's not already the last one (it should be in the DB but just in case)
+      // Add the current message if it's not already the last one
       if (messages.length === 1 || messages[messages.length - 1].content !== messageContent) {
         messages.push({ role: 'user', content: messageContent });
       }
