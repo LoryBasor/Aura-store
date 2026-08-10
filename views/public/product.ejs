@@ -680,7 +680,23 @@
       </div>
 
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        <div class="product-price"><%= product.price.toLocaleString() %> <%= product.currency %></div>
+        <% if (product.is_promotion_active) { %>
+          <div>
+            <div style="font-size:18px;color:var(--store-desc);text-decoration:line-through;font-weight:600;">
+              <%= product.price.toLocaleString() %> <%= product.currency %>
+            </div>
+            <div class="product-price" style="line-height:1;">
+              <%= product.effective_price.toLocaleString() %> <%= product.currency %>
+            </div>
+            <div style="margin-top:6px;">
+              <span style="display:inline-block;background:#fef08a;color:#713f12;font-weight:800;font-size:14px;border-radius:100px;padding:4px 12px;">
+                -<%= Math.round((1 - product.effective_price / product.price) * 100) %>% &nbsp;🎷 Promo
+              </span>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="product-price"><%= product.price.toLocaleString() %> <%= product.currency %></div>
+        <% } %>
         <span class="availability-badge <%= product.is_available ? 'in-stock' : 'out-stock' %>">
           <span class="availability-dot"></span>
           <%= product.is_available ? 'En stock' : 'Indisponible' %>
@@ -769,7 +785,12 @@
           
           <div class="order-summary">
             <div class="order-summary-name"><%= product.name %></div>
-            <div class="order-summary-price"><%= product.price.toLocaleString() %> <%= product.currency %></div>
+            <% if (product.is_promotion_active) { %>
+              <div style="font-size:13px;color:#9ca3af;text-decoration:line-through;"><%= product.price.toLocaleString() %> <%= product.currency %></div>
+              <div class="order-summary-price"><%= product.effective_price.toLocaleString() %> <%= product.currency %> 🎷</div>
+            <% } else { %>
+              <div class="order-summary-price"><%= product.price.toLocaleString() %> <%= product.currency %></div>
+            <% } %>
           </div>
 
           <div class="form-group">

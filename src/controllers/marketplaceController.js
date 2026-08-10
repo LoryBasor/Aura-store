@@ -19,6 +19,7 @@ class MarketplaceController {
         popularProducts: homeData.popularProducts || [],
         recentProducts: homeData.recentProducts || [],
         recommendedStores: homeData.recommendedStores || [],
+        sponsoredStores: homeData.sponsoredStores || [],
         trendingCategories: homeData.trendingCategories || []
       });
     } catch (error) {

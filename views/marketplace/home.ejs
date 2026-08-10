@@ -11,7 +11,7 @@
   <style>.svg-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0;}</style>
 </head>
 <body>
-  <% const { popularProducts, recommendedStores, trendingCategories, recentProducts } = data %>
+  <% const { popularProducts, recommendedStores, sponsoredStores, trendingCategories, recentProducts } = data %>
   
   <%- include('../partials/navbar', { currentPage: 'home', user: typeof user !== 'undefined' ? user : null }) %>
   
@@ -67,6 +67,82 @@
     </div>
   </section>
 
+  <!-- Sponsored Stores Carousel -->
+  <% if (sponsoredStores && sponsoredStores.length > 0) { %>
+  <section class="section-container reveal" style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.05), rgba(234, 179, 8, 0.02)); border: 1px solid rgba(234, 179, 8, 0.2); border-radius: 20px; padding: 24px; margin-bottom: 40px;">
+    <div class="section-header" style="margin-bottom: 24px;">
+      <div>
+        <h2 class="section-title" style="color: #ca8a04;">✨ Boutiques Sponsorisées</h2>
+        <p class="section-subtitle">Découvrez nos vendeurs partenaires en avant-première</p>
+      </div>
+      <a href="/marketplace/stores?sort=sponsored" class="see-all-link" style="color: #ca8a04;">Voir tout →</a>
+    </div>
+    
+    <div class="carousel-container" id="sponsoredStores">
+      <div class="carousel-nav" style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
+        <button class="carousel-btn carousel-prev" data-carousel="sponsored" aria-label="Précédent">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <button class="carousel-btn carousel-next" data-carousel="sponsored" aria-label="Suivant">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="carousel-track" data-carousel="sponsored">
+        <% sponsoredStores.forEach(store => { %>
+          <a href="/store/<%= store.store_slug %>" class="store-card" style="border: 1px solid rgba(234, 179, 8, 0.3);">
+            <div class="store-header">
+              <% if (store.logo_url) { %>
+                <img src="<%= store.logo_url %>" alt="<%= store.business_name %>" class="store-logo">
+              <% } else { %>
+                <div class="store-logo-placeholder"><svg class="svg-icon svg-icon-fi-rr-shop" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 9l1-5h16l1 5"></path><path d="M3 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"></path><path d="M5 9v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"></path><path d="M10 21v-6h4v6"></path></svg></div>
+              <% } %>
+              <div class="store-info">
+                <h3 class="store-name">
+                  <%= store.business_name %>
+                  <% if (store.is_verified) { %>
+                    <svg class="verified-badge" width="16" height="16" viewBox="0 0 24 24" fill="#5C6C73">
+                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                    </svg>
+                  <% } %>
+                </h3>
+                <span class="badge badge-warning" style="font-size: 10px; margin-top: 4px; display: inline-block;">✨ Sponsorisé</span>
+                <% if (store.city) { %>
+                  <p class="store-location" style="margin-top: 4px;"><svg class="svg-icon svg-icon-fi-rr-marker" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> <%= store.city %>, <%= store.country || '' %></p>
+                <% } %>
+              </div>
+            </div>
+            
+            <div class="store-stats">
+              <div class="stat">
+                <span class="stat-value"><%= store.product_count %></span>
+                <span class="stat-label">Produits</span>
+              </div>
+            </div>
+            
+            <% if (store.products && store.products.length > 0) { %>
+              <div class="store-products-preview">
+                <% store.products.slice(0, 3).forEach(p => { %>
+                  <div class="preview-img-wrapper" title="<%= p.name %>">
+                    <img src="<%= p.image_url || '/images/placeholder.png' %>" alt="<%= p.name %>" class="preview-img">
+                  </div>
+                <% }); %>
+                <% if (store.product_count > 3) { %>
+                  <div class="preview-more">+<%= store.product_count - 3 %></div>
+                <% } %>
+              </div>
+            <% } %>
+          </a>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
   <!-- Popular Products Carousel -->
   <section class="section-container reveal">
     <div class="section-header">
@@ -101,13 +177,24 @@
               </div>
               <div class="product-info">
                 <h3 class="product-name"><%= product.name %></h3>
-                <p class="product-price"><%= product.price %> <%= product.currency %></p>
+                <% if (product.is_promotion_active) { %>
+                  <p class="product-price" style="color:#ca8a04;">
+                    <span style="font-size:11px;text-decoration:line-through;color:#9ca3af;font-weight:400;margin-right:4px;"><%= product.price %></span>
+                    <%= product.effective_price %> <%= product.currency %>
+                    <span style="background:#fef08a;color:#713f12;font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px;">-<%= Math.round((1 - product.effective_price / product.price) * 100) %>%</span>
+                  </p>
+                <% } else { %>
+                  <p class="product-price"><%= product.price %> <%= product.currency %></p>
+                <% } %>
                 <div class="product-vendor">
                   <span><%= product.business_name %></span>
                   <% if (product.is_verified) { %>
                     <svg class="verified-badge" width="16" height="16" viewBox="0 0 24 24" fill="#5C6C73">
                       <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
                     </svg>
+                  <% } %>
+                  <% if (product.is_sponsored) { %>
+                    <span class="badge badge-warning" style="font-size: 10px; margin-left: 4px;">✨ Sponsorisé</span>
                   <% } %>
                 </div>
                 <% if (product.city) { %>
@@ -188,6 +275,9 @@
                       </svg>
                     <% } %>
                   </h3>
+                  <% if (store.is_sponsored) { %>
+                    <span class="badge badge-warning" style="font-size: 10px; margin-top: 4px; display: inline-block;">✨ Sponsorisé</span>
+                  <% } %>
                   <% if (store.city) { %>
                     <p class="store-location"><svg class="svg-icon svg-icon-fi-rr-marker" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> <%= store.city %>, <%= store.country || '' %></p>
                   <% } %>
@@ -239,7 +329,15 @@
             </div>
             <div class="product-info">
               <h3 class="product-name"><%= product.name %></h3>
-              <p class="product-price"><%= product.price %> <%= product.currency %></p>
+              <% if (product.is_promotion_active) { %>
+                <p class="product-price" style="color:#ca8a04;">
+                  <span style="font-size:11px;text-decoration:line-through;color:#9ca3af;font-weight:400;margin-right:4px;"><%= product.price %></span>
+                  <%= product.effective_price %> <%= product.currency %>
+                  <span style="background:#fef08a;color:#713f12;font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px;">-<%= Math.round((1 - product.effective_price / product.price) * 100) %>%</span>
+                </p>
+              <% } else { %>
+                <p class="product-price"><%= product.price %> <%= product.currency %></p>
+              <% } %>
               <div class="product-vendor">
                 <span><%= product.business_name %></span>
                 <% if (product.is_verified) { %>

@@ -1,0 +1,243 @@
+<%# ========================================
+    views/admin/sponsorships.ejs - Gestion des Sponsorings
+    ======================================== %>
+<% 
+  const sponsorshipsList = sponsorships || [];
+  const vendorsList = vendors || [];
+%>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">✨ Sponsoring Boutiques</h1>
+    <p class="page-subtitle">Gérez les sponsorisations des boutiques du marketplace</p>
+  </div>
+  <button class="btn btn-primary" id="newSponsorshipBtn">
+    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+    </svg>
+    Sponsoriser une boutique
+  </button>
+</div>
+
+<!-- Info Banner -->
+<div style="background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:13px;color:var(--color-secondary);">
+  ℹ️ <strong>Règle du Marketplace :</strong> Une boutique sponsorisée (active dans la période définie) passe automatiquement en priorité 1 ou 2 sur tout le marketplace (Accueil, Recherches, Catégories), devant les plans Business, Pro et Gratuit.
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <% if (sponsorshipsList.length === 0) { %>
+      <div style="text-align:center;padding:64px 24px;">
+        <div style="font-size:64px;margin-bottom:16px;">✨</div>
+        <h3 style="font-size:20px;font-weight:700;color:var(--color-primary);margin-bottom:8px;">Aucun Sponsoring</h3>
+        <p style="color:var(--color-secondary);margin-bottom:24px;">Il n'y a actuellement aucune boutique sponsorisée.</p>
+        <button class="btn btn-primary" id="newSponsorshipBtn2">+ Sponsoriser une boutique</button>
+      </div>
+    <% } else { %>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Boutique</th>
+              <th>Début</th>
+              <th>Fin</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% sponsorshipsList.forEach(s => { 
+                const now = new Date();
+                const start = new Date(s.start_date);
+                const end = new Date(s.end_date);
+                const isExpired = end < now;
+                const isUpcoming = start > now;
+                let statusLabel = s.is_active ? (isExpired ? 'Expiré' : (isUpcoming ? 'À venir' : 'Actif')) : 'Désactivé';
+                let statusColor = s.is_active ? (isExpired ? 'neutral' : (isUpcoming ? 'info' : 'success')) : 'error';
+            %>
+              <tr>
+                <td>
+                  <strong><%= s.business_name %></strong>
+                  <div style="font-size:12px;color:var(--color-secondary);"><%= s.email %></div>
+                </td>
+                <td><%= start.toLocaleDateString('fr-FR') %></td>
+                <td><%= end.toLocaleDateString('fr-FR') %></td>
+                <td>
+                  <span class="badge badge-<%= statusColor %>"><%= statusLabel %></span>
+                </td>
+                <td>
+                  <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="editSponsorship(<%= JSON.stringify(s).replace(/'/g, '&#39;') %>)">✏️</button>
+                    <button class="btn btn-outline btn-sm" onclick="toggleSponsorship(<%= s.id %>)" title="<%= s.is_active ? 'Désactiver' : 'Activer' %>">
+                      <%= s.is_active ? '⏸' : '▶' %>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteSponsorship(<%= s.id %>, '<%= s.business_name %>')">🗑</button>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Modal Sponsoring -->
+<div class="modal-overlay" id="sponsorshipModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="sponsorshipModalTitle">Sponsoriser une boutique</h3>
+      <button class="modal-close" onclick="document.getElementById('sponsorshipModal').classList.remove('active')">✕</button>
+    </div>
+    <form id="sponsorshipForm">
+      <div class="modal-body">
+        <input type="hidden" id="sponsorshipId" name="id">
+        
+        <div class="form-group" id="vendorSelectGroup">
+          <label class="form-label required">Sélectionner la boutique</label>
+          <select id="sponsorshipUserId" name="user_id" class="form-input" required>
+            <option value="">-- Choisir une boutique --</option>
+            <% vendorsList.forEach(v => { %>
+              <option value="<%= v.id %>"><%= v.business_name %> <%= v.is_verified ? '✓' : '' %></option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">Date de début</label>
+          <input type="date" id="sponsorshipStart" name="start_date" class="form-input" required>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required">Date de fin</label>
+          <input type="date" id="sponsorshipEnd" name="end_date" class="form-input" required>
+        </div>
+
+        <div class="form-group" id="statusGroup" style="display:none;">
+          <label class="form-label">Statut (Activation forcée)</label>
+          <select id="sponsorshipActive" name="is_active" class="form-input">
+            <option value="1">Activé</option>
+            <option value="0">Désactivé</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('sponsorshipModal').classList.remove('active')">Annuler</button>
+        <button type="submit" class="btn btn-primary" id="saveSponsorshipBtn">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Fonctions d'interface
+  function formatDateForInput(dateStr) {
+    if(!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toISOString().split('T')[0];
+  }
+
+  function openSponsorshipModal(spons = null) {
+    const isEdit = !!spons;
+    document.getElementById('sponsorshipModalTitle').textContent = isEdit ? 'Modifier le sponsoring' : 'Sponsoriser une boutique';
+    document.getElementById('sponsorshipId').value = isEdit ? spons.id : '';
+    
+    if (isEdit) {
+      document.getElementById('vendorSelectGroup').style.display = 'none';
+      document.getElementById('sponsorshipUserId').removeAttribute('required');
+      document.getElementById('sponsorshipStart').value = formatDateForInput(spons.start_date);
+      document.getElementById('sponsorshipEnd').value = formatDateForInput(spons.end_date);
+      document.getElementById('statusGroup').style.display = 'block';
+      document.getElementById('sponsorshipActive').value = spons.is_active ? '1' : '0';
+    } else {
+      document.getElementById('vendorSelectGroup').style.display = 'block';
+      document.getElementById('sponsorshipUserId').setAttribute('required', 'required');
+      document.getElementById('sponsorshipUserId').value = '';
+      document.getElementById('sponsorshipStart').value = formatDateForInput(new Date());
+      
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      document.getElementById('sponsorshipEnd').value = formatDateForInput(nextWeek);
+      
+      document.getElementById('statusGroup').style.display = 'none';
+    }
+    
+    document.getElementById('sponsorshipModal').classList.add('active');
+  }
+
+  // Écouteurs
+  const btn1 = document.getElementById('newSponsorshipBtn');
+  const btn2 = document.getElementById('newSponsorshipBtn2');
+  if(btn1) btn1.addEventListener('click', () => openSponsorshipModal());
+  if(btn2) btn2.addEventListener('click', () => openSponsorshipModal());
+
+  // Edition
+  window.editSponsorship = function(spons) {
+    openSponsorshipModal(spons);
+  };
+
+  // Soumission formulaire
+  document.getElementById('sponsorshipForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('saveSponsorshipBtn');
+    const oldText = btn.textContent;
+    btn.textContent = 'Enregistrement...';
+    btn.disabled = true;
+
+    try {
+      const id = document.getElementById('sponsorshipId').value;
+      const payload = {
+        start_date: document.getElementById('sponsorshipStart').value + ' 00:00:00',
+        end_date: document.getElementById('sponsorshipEnd').value + ' 23:59:59'
+      };
+
+      let url = '/api/admin/sponsorships';
+      let method = 'POST';
+
+      if (id) {
+        url += '/' + id;
+        method = 'PUT';
+        payload.is_active = document.getElementById('sponsorshipActive').value;
+      } else {
+        payload.user_id = document.getElementById('sponsorshipUserId').value;
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.message || 'Erreur lors de l\'enregistrement');
+      
+      window.location.reload();
+    } catch (err) {
+      alert(err.message);
+      btn.textContent = oldText;
+      btn.disabled = false;
+    }
+  });
+
+  // Actions
+  window.toggleSponsorship = async function(id) {
+    if(!confirm('Changer le statut de ce sponsoring ?')) return;
+    try {
+      const res = await fetch(`/api/admin/sponsorships/${id}/toggle`, { method: 'PATCH' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      window.location.reload();
+    } catch(e) { alert(e.message); }
+  };
+
+  window.deleteSponsorship = async function(id, name) {
+    if(!confirm(`Supprimer définitivement le sponsoring de ${name} ?`)) return;
+    try {
+      const res = await fetch(`/api/admin/sponsorships/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      window.location.reload();
+    } catch(e) { alert(e.message); }
+  };
+</script>

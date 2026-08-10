@@ -1,9 +1,12 @@
-// src/services/orderService.js
 const { pool } = require('../config/database');
 const { generateOrderNumber, calculateOffset, buildWhatsAppOrderUrl } = require('../utils/helpers');
 const { AppError } = require('../middlewares/errorHandler');
 const { ORDER_STATUS } = require('../config/constants');
-const { addNotificationJob } = require('../queues/NotificationQueue'); // ✨ NOUVEAU WhatsApp Automation
+const { addNotificationJob } = require('../queues/NotificationQueue');
+const { generateOrderCode } = require('./orderCodeService');
+const WhatsAppSessionManager = require('./whatsapp/WhatsAppSessionManager');
+const { addOutboundWhatsAppJob } = require('../queues/OutboundWhatsAppQueue');
+
 
 /**
  * Service de gestion des commandes
@@ -15,9 +18,9 @@ class OrderService {
   async createOrder(orderData) {
     const { product_id, customer_name, customer_phone, customer_address, quantity, notes } = orderData;
 
-    // Récupérer le produit
+    // Récupérer le produit avec son prix promotionnel
     const [products] = await pool.execute(
-      'SELECT id, user_id, name, price, currency, stock_quantity, is_available FROM products WHERE id = ? AND deleted_at IS NULL',
+      'SELECT id, user_id, name, price, promotion_price, currency, stock_quantity, is_available FROM products WHERE id = ? AND deleted_at IS NULL',
       [product_id]
     );
 
@@ -48,6 +51,12 @@ class OrderService {
       }
     }
 
+    // Déterminer le prix effectif (promotionnel si le vendeur est Pro/Business et promo valide)
+    const canUsePromo = (planSlug === 'pro' || planSlug === 'business');
+    const effectivePrice = (canUsePromo && product.promotion_price !== null && Number(product.promotion_price) < Number(product.price))
+      ? Number(product.promotion_price)
+      : Number(product.price);
+
     if (!product.is_available) {
       throw new AppError('Produit indisponible', 400);
     }
@@ -73,8 +82,8 @@ class OrderService {
       customerId = customerResult.insertId;
     }
 
-    // Calculer le montant total
-    const total_amount = product.price * quantity;
+    // Calculer le montant total avec le prix effectif (promo ou normal)
+    const total_amount = effectivePrice * quantity;
     const order_number = generateOrderNumber();
 
     // Créer la commande
@@ -92,7 +101,7 @@ class OrderService {
         customer_phone,
         customer_address,
         product.name,
-        product.price,
+        effectivePrice,  // Prix figé au moment de la commande
         quantity,
         total_amount,
         ORDER_STATUS.NOUVELLE,
@@ -110,6 +119,15 @@ class OrderService {
       'UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ?, last_order_at = NOW() WHERE id = ?',
       [total_amount, customerId]
     );
+
+    // Générer et affecter le code commande WhatsApp à 4 chiffres
+    try {
+      const orderCode = await generateOrderCode(product.user_id);
+      await pool.execute('UPDATE orders SET order_code = ? WHERE id = ?', [orderCode, result.insertId]);
+    } catch (codeErr) {
+      // Ne pas bloquer la commande si le code échoue (la commande est créée, le code restera NULL)
+      console.error('[OrderCode] Impossible de générer le code pour la commande', result.insertId, codeErr.message);
+    }
 
     if (product.stock_quantity > 0) {
       await pool.execute(
@@ -133,8 +151,9 @@ class OrderService {
       [product.user_id]
     );
 
-    let whatsappUrl = null;
     let vendorWhatsAppNumber = null;
+    let fallbackUrl = null;
+    
     if (integrations.length > 0) {
       const config = integrations[0];
       vendorWhatsAppNumber = config.whatsapp_number;
@@ -142,7 +161,7 @@ class OrderService {
         const isBusiness = planAccess.length > 0;
         const template = isBusiness ? config.custom_order_message : null;
 
-        whatsappUrl = buildWhatsAppOrderUrl(
+        fallbackUrl = buildWhatsAppOrderUrl(
           product,
           config.whatsapp_number,
           quantity,
@@ -153,16 +172,68 @@ class OrderService {
 
     const order = await this.getOrderById(result.insertId, product.user_id);
     
-    // ✨ NOUVEAU: Déclencher la notification WhatsApp via BullMQ
+    // ✨ Notification au vendeur (via BullMQ)
     if (vendorWhatsAppNumber) {
         addNotificationJob('new_order', {
             order: order,
             vendorWhatsApp: vendorWhatsAppNumber,
-            storeSlug: 'store' // on n'a pas le slug exact ici, mais pas indispensable pour le message
+            storeSlug: 'store'
         }).catch(err => console.error('Erreur ajout job notification:', err));
     }
 
-    return { ...order, whatsapp_url: whatsappUrl };
+    // ✨ NOUVEAU: Orchestration de l'envoi automatique au client
+    const sessionManager = WhatsAppSessionManager.getInstance();
+    const canUseAutomatic = await sessionManager.canUseAutomaticWhatsAppOrder(product.user_id);
+    
+    if (canUseAutomatic && fallbackUrl && customer_phone) {
+      // 1. Créer un message chaleureux automatique de la part du vendeur au client
+      const automatedMessageText = `Bonjour ${customer_name} 👋\n\n` +
+        `Merci pour votre commande ! 🎉\n\n` +
+        `*Récapitulatif de votre commande :*\n` +
+        `📦 Produit : ${product.name}\n` +
+        `🔢 Quantité : ${quantity}\n` +
+        `💰 Total : ${total_amount.toLocaleString()} ${product.currency || 'FCFA'}\n` +
+        (customer_address ? `📍 Adresse : ${customer_address}\n` : '') +
+        `\n*Numéro de suivi :* #${order.order_number}\n\n` +
+        `Je suis à votre disposition si vous avez des questions ! 😊`;
+
+      // 2. Insérer dans wa_outbound_jobs
+      const [jobResult] = await pool.execute(
+        `INSERT INTO wa_outbound_jobs 
+        (order_id, user_id, customer_phone, message_text, vendor_whatsapp_number, whatsapp_url, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`,
+        [order.id, product.user_id, customer_phone, automatedMessageText, vendorWhatsAppNumber, fallbackUrl]
+      );
+      
+      const jobId = jobResult.insertId;
+
+      // 3. Ajouter à la queue
+      await addOutboundWhatsAppJob({
+        jobId,
+        userId: product.user_id,
+        customerPhone: customer_phone,
+        messageText: automatedMessageText
+      });
+
+      return { 
+        ...order, 
+        whatsapp: {
+          mode: 'queued',
+          status: 'waiting',
+          jobId: jobId,
+          fallback_url: fallbackUrl
+        }
+      };
+    }
+
+    // Fallback: Mode classique
+    return { 
+      ...order, 
+      whatsapp: {
+        mode: 'classic',
+        whatsapp_url: fallbackUrl
+      }
+    };
   }
 
   /**
@@ -171,9 +242,9 @@ class OrderService {
   async createManualOrder(userId, orderData) {
     const { product_id, customer_name, customer_phone, customer_address, quantity, notes, status } = orderData;
 
-    // Vérifier que le produit appartient au vendeur
+    // Vérifier que le produit appartient au vendeur (avec prix promo)
     const [products] = await pool.execute(
-      'SELECT id, user_id, name, price, currency, stock_quantity, is_available FROM products WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+      'SELECT id, user_id, name, price, promotion_price, currency, stock_quantity, is_available FROM products WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
       [product_id, userId]
     );
 
@@ -211,7 +282,20 @@ class OrderService {
       customerId = customerResult.insertId;
     }
 
-    const total_amount = product.price * quantity;
+    // Prix effectif pour la commande manuelle
+    const [vendorPlanInfo] = await pool.execute(
+      `SELECT COALESCE(LOWER(sp.slug), 'free') as plan_slug
+       FROM subscriptions s JOIN subscription_plans sp ON s.plan_id = sp.id
+       WHERE s.user_id = ? AND s.status IN ('active','trial') LIMIT 1`,
+      [userId]
+    );
+    const vPlanSlug = vendorPlanInfo.length > 0 ? vendorPlanInfo[0].plan_slug : 'free';
+    const canVendorUsePromo = (vPlanSlug === 'pro' || vPlanSlug === 'business');
+    const manualEffectivePrice = (canVendorUsePromo && product.promotion_price !== null && Number(product.promotion_price) < Number(product.price))
+      ? Number(product.promotion_price)
+      : Number(product.price);
+
+    const total_amount = manualEffectivePrice * quantity;
     const order_number = generateOrderNumber();
     const orderStatus = status || ORDER_STATUS.NOUVELLE;
 
@@ -230,7 +314,7 @@ class OrderService {
         customer_phone,
         customer_address || null,
         product.name,
-        product.price,
+        manualEffectivePrice,  // Prix figé au moment de la commande
         quantity,
         total_amount,
         orderStatus,
@@ -254,6 +338,14 @@ class OrderService {
         'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?',
         [quantity, product_id]
       );
+    }
+
+    // Générer et affecter le code commande WhatsApp à 4 chiffres
+    try {
+      const orderCode = await generateOrderCode(userId);
+      await pool.execute('UPDATE orders SET order_code = ? WHERE id = ?', [orderCode, result.insertId]);
+    } catch (codeErr) {
+      console.error('[OrderCode] Impossible de générer le code pour la commande manuelle', result.insertId, codeErr.message);
     }
 
     return this.getOrderById(result.insertId, userId);

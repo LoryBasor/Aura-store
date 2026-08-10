@@ -18,6 +18,7 @@ const feedbackRoutes = require('./feedbackRoutes');
 const reportRoutes = require('./reportRoutes');
 const messagingRoutes = require('./messagingRoutes');
 const whatsappRoutes = require('./whatsappRoutes'); // ✨ NOUVEAU WhatsApp Automation
+const marketplaceCategoryPublicRoutes = require('./marketplaceCategoryRoutes'); // ✨ Catégories Marketplace publiques
 
 const router = express.Router();
 
@@ -67,6 +68,7 @@ router.use('/feedback', feedbackRoutes);
 router.use('/reports', reportRoutes);
 router.use('/messages', messagingRoutes);
 router.use('/whatsapp', whatsappRoutes); // ✨ NOUVEAU WhatsApp Automation
+router.use('/marketplace-categories', publicLimiter, marketplaceCategoryPublicRoutes); // ✨ Catégories Marketplace publiques
 
 // Routes du dashboard vendeur (protégées)
 router.get(

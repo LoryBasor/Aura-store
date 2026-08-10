@@ -48,13 +48,13 @@ const notificationWorker = new Worker('NotificationQueue', async job => {
       return;
     }
 
-    const shortCode = `A${order.id}`;
+    const shortCode = order.order_code || String(order.id);
 
     // Message de base (Pro et Business)
     let message =
       `━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `📦 *Commande*\n` +
-      `#${shortCode}\n\n` +
+      `📦 *Nouvelle commande*\n` +
+      `Code WhatsApp : *#${shortCode}*\n\n` +
       `*Client* : ${order.customer_name}\n` +
       `*Téléphone* : ${order.customer_phone}\n` +
       `*Produit* : ${order.product_name}\n` +
@@ -66,20 +66,24 @@ const notificationWorker = new Worker('NotificationQueue', async job => {
     if (planSlug === 'business') {
       message +=
         `\n\n📋 *Mettre à jour le statut* :\n` +
-        `Répondez avec : [Chiffre] [Code]\n` +
-        `Exemple: *1 ${shortCode}*\n\n` +
+        `Tapez : *[Action] ${shortCode}*\n\n` +
         `  1 ➔ Confirmer\n` +
         `  2 ➔ En Préparation\n` +
         `  3 ➔ En Livraison\n` +
         `  4 ➔ Livrée ✅\n` +
-        `  5 ➔ Annuler ❌\n` +
+        `  5 ➔ Annuler ❌\n\n` +
+        `Exemple: *1 ${shortCode}*\n` +
         `━━━━━━━━━━━━━━━━━━━━━━`;
     }
 
     // Envoyer le message au vendeur
     try {
-       await sessionManager.sendMessage(order.user_id, vendorWhatsApp, message, { orderId: order.id, orderNumber: order.order_number });
-       console.log(`Order notification sent for order #${order.order_number} (plan: ${planSlug})`);
+       await sessionManager.sendMessage(order.user_id, vendorWhatsApp, message, {
+         orderId: order.id,
+         orderNumber: order.order_number,
+         orderCode: order.order_code || null
+       });
+       console.log(`Order notification sent for order #${order.order_code || order.id} (plan: ${planSlug})`);
     } catch (error) {
        console.error('Failed to send WhatsApp notification', error);
        throw error; // triggers a retry

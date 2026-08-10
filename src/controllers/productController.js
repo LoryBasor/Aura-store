@@ -36,6 +36,11 @@ async function createProduct(req, res, next) {
     const planName = await getUserPlanInfo(req.user.id);
     const { maxImages, maxVideos } = getPlanQuotas(planName);
 
+    // Normaliser is_available (FormData envoie des strings)
+    if (req.body.is_available !== undefined) {
+      req.body.is_available = req.body.is_available === 'true' || req.body.is_available === true;
+    }
+
     let mediaData = { images: [], video: null };
 
     if (req.files) {
@@ -67,6 +72,27 @@ async function createProduct(req, res, next) {
         console.error('Erreur upload Cloudinary:', uploadError);
         return next(new Error("Échec de l'upload des médias."));
       }
+    }
+
+    // Gestion du prix promotionnel selon le plan
+    if (planName === 'Pro' || planName === 'Business') {
+      if (req.body.promotionPrice !== undefined && req.body.promotionPrice !== '') {
+        const p = parseFloat(req.body.price);
+        const pp = parseFloat(req.body.promotionPrice);
+        if (isNaN(pp) || pp < 0) {
+          return next(new Error("Le prix promotionnel est invalide ou négatif."));
+        }
+        if (pp >= p) {
+          return next(new Error("Le prix promotionnel doit être strictement inférieur au prix normal."));
+        }
+        req.body.promotion_price = pp;
+      } else {
+        req.body.promotion_price = null;
+      }
+    } else {
+      // Pour Gratuit : on ne passe pas de promotion_price, la BD ignorera ou mettra NULL
+      req.body.promotion_price = undefined; 
+      // Si une valeur avait été envoyée côté client, on l'ignore.
     }
 
     const product = await productService.createProduct(req.user.id, req.body, mediaData);
@@ -147,6 +173,11 @@ async function updateProduct(req, res, next) {
       deleteVideo: req.body.deleteVideo === 'true' || req.body.deleteVideo === true
     };
 
+    // Normaliser is_available (FormData envoie des strings)
+    if (req.body.is_available !== undefined) {
+      req.body.is_available = req.body.is_available === 'true' || req.body.is_available === true;
+    }
+
     try {
       for (const img of uploadedImages) {
         const r = await uploadImage(img.buffer, 'products', req.user.id);
@@ -159,6 +190,31 @@ async function updateProduct(req, res, next) {
     } catch (uploadError) {
       console.error('Erreur upload Cloudinary:', uploadError);
       return next(new Error("Échec de l'upload des nouveaux médias."));
+    }
+
+    // Gestion du prix promotionnel
+    if (planName === 'Pro' || planName === 'Business') {
+      // S'il est présent et non vide dans la requête, on le valide
+      if (req.body.promotionPrice !== undefined && req.body.promotionPrice !== '') {
+        // Attention : req.body.price peut ne pas être défini si ce n'est pas une màj du prix, 
+        // mais le form envoie toujours le prix.
+        const p = parseFloat(req.body.price || (await productService.getProductById(req.params.id, req.user.id)).price);
+        const pp = parseFloat(req.body.promotionPrice);
+        
+        if (isNaN(pp) || pp < 0) {
+          return next(new Error("Le prix promotionnel est invalide ou négatif."));
+        }
+        if (pp >= p) {
+          return next(new Error("Le prix promotionnel doit être strictement inférieur au prix normal."));
+        }
+        req.body.promotion_price = pp;
+      } else if (req.body.promotionPrice === '') {
+        // L'utilisateur a explicitement vidé le champ, on veut supprimer la promo
+        req.body.promotion_price = null;
+      }
+    } else {
+      // Plan Gratuit : on ignore silencieusement toute tentative de modification de promotionPrice
+      req.body.promotion_price = undefined; 
     }
 
     const product = await productService.updateProduct(

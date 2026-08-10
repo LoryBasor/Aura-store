@@ -6,7 +6,7 @@ class WhatsAppAIProvider {
   /**
    * Obtient une réponse de l'IA (Groq) avec le contexte du magasin et l'historique
    */
-  static async getResponse(userId, chatId, messageContent, userPhone) {
+  static async getResponse(userId, chatId, messageContent, userPhone, chat) {
     try {
       const apiKey = process.env.GROQ_API_KEY;
       if (!apiKey || apiKey === 'votre_cle_groq_ici') {
@@ -56,13 +56,12 @@ CONSIGNES :
       const cleanPhone = String(userPhone || '').replace(/\D/g, '');
       // Si le numéro commence par 237 et fait 12 chiffres, on extrait aussi la partie locale (9 chiffres)
       const localPhone = cleanPhone.length === 12 && cleanPhone.startsWith('237') ? cleanPhone.slice(3) : cleanPhone;
-
       if (localPhone.length > 5) {
         const [customerOrders] = await pool.execute(
           `SELECT order_number, status, total_amount, created_at 
            FROM orders 
            WHERE user_id = ? AND (customer_phone LIKE ? OR customer_phone LIKE ?)
-           ORDER BY created_at ASC LIMIT 3`,
+           ORDER BY created_at DESC LIMIT 5`,
           [userId, `%${cleanPhone}%`, `%${localPhone}%`]
         );
 
@@ -90,27 +89,59 @@ CONSIGNES :
         }
       }
 
-      // 4. Fetch Message History (last 10 messages)
-      const [history] = await pool.execute(
-        `SELECT direction, content FROM wa_messages 
-         WHERE user_id = ? AND remote_jid = ? 
-         ORDER BY created_at DESC LIMIT 10`,
-        [userId, chatId]
-      );
-
-      // Inverser pour avoir l'ordre chronologique
+      // 4. Fetch Message History (last 10 messages) via WhatsApp
       const messages = [{ role: 'system', content: systemPrompt }];
 
-      history.reverse().forEach(msg => {
-        messages.push({
-          role: msg.direction === 'inbound' ? 'user' : 'assistant',
-          content: msg.content
-        });
-      });
+      let hasHistory = false;
+      console.log('Chat:', chat);
+      if (chat) {
+        try {
+          const fetchedMessages = await chat.fetchMessages({ limit: 10 });
+          fetchedMessages.forEach(msg => {
+            if (msg.body) {
+              console.log('Msg:', msg);
+              messages.push({
+                role: msg.fromMe ? 'assistant' : 'user',
+                content: msg.body
+              });
+            }
+          });
+          hasHistory = fetchedMessages.length > 0;
+        } catch (fetchErr) {
+          console.error("Erreur lors de la récupération de l'historique WhatsApp:", fetchErr);
+        }
+      }
 
-      // Add the current message if it's not already the last one
-      if (messages.length === 1 || messages[messages.length - 1].content !== messageContent) {
-        messages.push({ role: 'user', content: messageContent });
+      // Fallback si pas d'historique WhatsApp récupéré (ex: bug 'r' de getChat)
+      if (!hasHistory) {
+        try {
+          const [history] = await pool.execute(
+            `SELECT direction, content FROM wa_messages 
+             WHERE user_id = ? AND remote_jid = ? 
+             ORDER BY created_at DESC LIMIT 10`,
+            [userId, chatId]
+          );
+
+          history.reverse().forEach(msg => {
+            messages.push({
+              role: msg.direction === 'inbound' ? 'user' : 'assistant',
+              content: msg.content
+            });
+          });
+        } catch (dbErr) {
+          console.error("Erreur fallback DB historique:", dbErr);
+        }
+
+        const lastMsg = messages[messages.length - 1];
+        if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== messageContent) {
+           messages.push({ role: 'user', content: messageContent });
+        }
+      } else {
+        // Vérifier si le dernier message récupéré est bien le message actuel, sinon l'ajouter
+        const lastMsg = messages[messages.length - 1];
+        if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== messageContent) {
+           messages.push({ role: 'user', content: messageContent });
+        }
       }
 
       const response = await axios.post(

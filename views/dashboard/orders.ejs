@@ -71,7 +71,7 @@
     <table class="table">
       <thead>
         <tr>
-          <th>N° Commande</th>
+          <th>Code WhatsApp</th>
           <th>Date</th>
           <th>Client</th>
           <th>Produit</th>
@@ -92,7 +92,10 @@
         <% } else { %>
           <% currentOrders.forEach(order => { %>
             <tr>
-              <td><strong><%= order.order_number %></strong></td>
+              <td>
+                <strong style="font-size:16px;letter-spacing:1px;">#<%= order.order_code || '---' %></strong>
+                <div style="font-size:10px;color:var(--color-secondary);margin-top:2px;"><%= order.order_number %></div>
+              </td>
               <td><%= fmtDate(order.created_at) %></td>
               <td>
                 <div><strong><%= order.customer_name %></strong></div>

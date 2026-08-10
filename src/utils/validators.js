@@ -82,14 +82,26 @@ const productSchema = Joi.object({
     .positive()
     .optional()
     .allow('', null),
+  marketplace_category_id: Joi.number()
+    .integer()
+    .positive()
+    .optional()
+    .allow('', null),
   stock_quantity: Joi.number()
     .integer()
     .min(0)
     .optional()
     .allow('', null)
     .default(0),
-  is_available: Joi.boolean()
+  is_available: Joi.alternatives()
+    .try(Joi.boolean(), Joi.string().valid('true', 'false'))
+    .optional()
     .default(true),
+  // Prix promotionnel (optionnel, validé en détail dans le contrôleur)
+  promotionPrice: Joi.alternatives()
+    .try(Joi.number().min(0), Joi.string().allow(''))
+    .optional()
+    .allow('', null),
   // Champs multi-médias (ignorés par la validation Joi, gérés par le contrôleur)
   retainedMediaIds: Joi.alternatives()
     .try(Joi.array().items(Joi.string()), Joi.string())

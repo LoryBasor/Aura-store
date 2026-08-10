@@ -20,4 +20,14 @@ router.post(
   incrementOrderCount
 );
 
+/**
+ * ✨ NOUVEAU - Obtenir le statut d'un envoi WhatsApp automatique
+ * GET /api/public/orders/job/:jobId
+ */
+router.get(
+  '/job/:jobId',
+  publicLimiter,
+  orderController.getWhatsAppJobStatus
+);
+
 module.exports = router;

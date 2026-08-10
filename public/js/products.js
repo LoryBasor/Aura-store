@@ -62,6 +62,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /** Met à jour la prévisualisation de la promotion */
+  function updatePromoPreview() {
+    const pInput = document.getElementById('price');
+    const ppInput = document.getElementById('promotionPrice');
+    const preview = document.getElementById('promoPreview');
+    if (!pInput || !ppInput || !preview) return;
+
+    const p = parseFloat(pInput.value);
+    const pp = parseFloat(ppInput.value);
+
+    if (!isNaN(p) && !isNaN(pp) && pp >= 0 && pp < p) {
+      document.getElementById('promoOldPrice').textContent = p.toLocaleString() + ' ' + (document.getElementById('currency').value || 'XAF');
+      document.getElementById('promoNewPrice').textContent = pp.toLocaleString() + ' ' + (document.getElementById('currency').value || 'XAF');
+      document.getElementById('promoDiscount').textContent = '-' + Math.round((1 - pp / p) * 100) + '%';
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+
+  const pInput = document.getElementById('price');
+  const ppInput = document.getElementById('promotionPrice');
+  if (pInput) pInput.addEventListener('input', updatePromoPreview);
+  if (ppInput) ppInput.addEventListener('input', updatePromoPreview);
+
   /* ─────────────────────────────────────────
      Action : Nouveau produit
      ───────────────────────────────────────── */
@@ -70,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('productId').value = '';
     modalTitle.textContent = 'Nouveau produit';
     resetMediaPreviews();
+    updatePromoPreview();
     ModalManager.openModal('productModal');
   });
 
@@ -99,7 +125,17 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('currency').value        = product.currency || 'XAF';
       document.getElementById('stock_quantity').value  = product.stock_quantity;
       document.getElementById('category_id').value     = product.category_id || '';
-      document.getElementById('is_available').value    = product.is_available.toString();
+      document.getElementById('is_available').value    = product.is_available === 1 || product.is_available === true ? 'true' : 'false';
+      // Prix promotionnel (pour Pro/Business)
+      const promoPriceInput = document.getElementById('promotionPrice');
+      if (promoPriceInput) {
+        promoPriceInput.value = (product.promotion_price !== null && product.promotion_price !== undefined) ? product.promotion_price : '';
+        updatePromoPreview();
+      }
+
+      // Catégorie Marketplace
+      const mkCatSelect = document.getElementById('marketplace_category_id');
+      if (mkCatSelect) mkCatSelect.value = product.marketplace_category_id || '';
 
       // Réinitialiser les aperçus puis afficher les médias existants
       resetMediaPreviews();
@@ -114,6 +150,15 @@ document.addEventListener('DOMContentLoaded', () => {
       UI.hideLoader();
     }
   });
+
+  /* Bouton "Créer une catégorie" dans le modal produit → redirige vers /categories */
+  const newInternalCategoryBtn = document.getElementById('newInternalCategoryBtn');
+  if (newInternalCategoryBtn) {
+    newInternalCategoryBtn.addEventListener('click', () => {
+      window.location.href = '/categories';
+    });
+  }
+
 
   /* ─────────────────────────────────────────
      Action : Supprimer produit
@@ -165,6 +210,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const isEdit    = !!productId;
       const url       = isEdit ? `/api/products/${productId}` : '/api/products';
       const method    = isEdit ? 'PUT' : 'POST';
+
+      // Validation prix promotionnel côté frontend
+      const priceInput = document.getElementById('price');
+      const promoPriceInput = document.getElementById('promotionPrice');
+      if (promoPriceInput && promoPriceInput.value !== '') {
+        const p  = parseFloat(priceInput.value);
+        const pp = parseFloat(promoPriceInput.value);
+        if (isNaN(pp) || pp < 0) {
+          UI.showNotification('Prix promotionnel invalide', 'Le prix promotionnel ne peut pas être négatif.', 'error');
+          return;
+        }
+        if (pp >= p) {
+          UI.showNotification('Prix promotionnel invalide', 'Le prix promotionnel doit être strictement inférieur au prix normal.', 'error');
+          return;
+        }
+      }
 
       // Construire le FormData depuis le formulaire
       const formData = new FormData(productForm);

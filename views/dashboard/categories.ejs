@@ -7,8 +7,8 @@
 <!-- Page Header -->
 <div class="page-header">
   <div>
-    <h1 class="page-title">Mes catégories</h1>
-    <p class="page-subtitle">Organisez vos produits par catégorie (<%= currentCategories.length %> catégorie<%= currentCategories.length > 1 ? 's' : '' %>)</p>
+    <h1 class="page-title">📂 Catégories de ma boutique</h1>
+    <p class="page-subtitle">Organisez votre boutique avec vos propres catégories internes (<%= currentCategories.length %> catégorie<%= currentCategories.length > 1 ? 's' : '' %>)</p>
   </div>
   <button class="btn btn-primary" data-action="new-category">
     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -16,6 +16,12 @@
     </svg>
     Nouvelle catégorie
   </button>
+</div>
+
+<!-- Info Banner -->
+<div style="background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:13px;color:var(--color-secondary);">
+  ℹ️ <strong>Catégories internes de votre boutique</strong> — Ces catégories sont visibles uniquement dans votre boutique (onglets, filtres). Elles n'apparaissent <strong>jamais</strong> dans le marketplace global Aura Store.
+  Pour classer vos produits dans le marketplace, utilisez les <strong>Catégories Marketplace</strong> lors de la création ou modification d'un produit.
 </div>
 
 <!-- Categories List -->

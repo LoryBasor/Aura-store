@@ -10,9 +10,14 @@ const { calculateOffset } = require('../utils/helpers');
  */
 class ProductService {
   async createProduct(userId, productData, mediaData = { images: [], video: null }) {
-    const { name, description, price, currency, stock_quantity, is_available, category_id } = productData;
+    const { name, description, price, promotion_price, currency, stock_quantity, is_available, category_id, marketplace_category_id } = productData;
+    // category_id = catégorie interne de boutique (appartient au vendeur)
     if (category_id) {
       await this.validateCategoryOwnership(userId, category_id);
+    }
+    // marketplace_category_id = catégorie globale Marketplace (créée par l'admin) — on vérifie juste qu'elle existe
+    if (marketplace_category_id) {
+      await this.validateMarketplaceCategoryExists(marketplace_category_id);
     }
 
     let slug = slugify(name);
@@ -36,15 +41,17 @@ class ProductService {
 
     const [result] = await pool.execute(
       `INSERT INTO products 
-       (user_id, category_id, name, slug, description, price, currency, image_url, image_public_id, stock_quantity, is_available, admin_disabled)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (user_id, category_id, marketplace_category_id, name, slug, description, price, promotion_price, currency, image_url, image_public_id, stock_quantity, is_available, admin_disabled)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         category_id || null,
+        marketplace_category_id || null,
         name, 
         slug, 
         description, 
         price, 
+        promotion_price !== undefined ? promotion_price : null,
         currency || 'XAF', 
         coverImage?.url || null,
         coverImage?.public_id || null,
@@ -89,10 +96,13 @@ class ProductService {
               pl.token as share_token,
               c.id as category_id,
               c.name as category_name,
+              mc.id as marketplace_category_id,
+              mc.name as marketplace_category_name,
               p.admin_disabled
        FROM products p
        LEFT JOIN product_links pl ON p.id = pl.product_id
        LEFT JOIN categories c ON p.category_id = c.id
+       LEFT JOIN marketplace_categories mc ON p.marketplace_category_id = mc.id
        WHERE p.id = ? AND p.user_id = ? AND p.deleted_at IS NULL`,
       [productId, userId]
     );
@@ -126,10 +136,13 @@ class ProductService {
              pl.click_count,
              c.id as category_id,
              c.name as category_name,
+             mc.id as marketplace_category_id,
+             mc.name as marketplace_category_name,
              p.admin_disabled
       FROM products p
       LEFT JOIN product_links pl ON p.id = pl.product_id
       LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN marketplace_categories mc ON p.marketplace_category_id = mc.id
       WHERE p.user_id = ? AND p.deleted_at IS NULL AND p.name LIKE '%${search === 'undefined' ? '' : search}%'
     `;
     const params = [userId];
@@ -208,6 +221,15 @@ class ProductService {
       fields.push('price = ?');
       values.push(updates.price);
     }
+    // Gestion du prix promotionnel (valeur déjà validée par le controller)
+    if (updates.promotion_price !== undefined) {
+      if (updates.promotion_price === null) {
+        fields.push('promotion_price = NULL');
+      } else {
+        fields.push('promotion_price = ?');
+        values.push(updates.promotion_price);
+      }
+    }
     if (updates.currency !== undefined) {
       fields.push('currency = ?');
       values.push(updates.currency);
@@ -228,6 +250,15 @@ class ProductService {
         values.push(updates.category_id);
       } else {
         fields.push('category_id = NULL');
+      }
+    }
+    if (updates.marketplace_category_id !== undefined) {
+      if (updates.marketplace_category_id) {
+        await this.validateMarketplaceCategoryExists(updates.marketplace_category_id);
+        fields.push('marketplace_category_id = ?');
+        values.push(updates.marketplace_category_id);
+      } else {
+        fields.push('marketplace_category_id = NULL');
       }
     }
 
@@ -358,6 +389,16 @@ class ProductService {
        planName = isPlanBusiness[0].plan_name;
     }
 
+    // Calculer le prix effectif selon le plan du vendeur
+    const canUsePromo = (planName === 'Pro' || planName === 'Business');
+    product.is_promotion_active = canUsePromo && product.promotion_price !== null && Number(product.promotion_price) < Number(product.price);
+    product.effective_price = product.is_promotion_active ? product.promotion_price : product.price;
+    if (!canUsePromo) {
+      // Si vendeur rétrogradé, on n'expose pas la promo publiquement
+      product.promotion_price = null;
+      product.is_promotion_active = false;
+    }
+
     let customMessage = null;
     if (planName === 'Business'){
       const [custom_message] = await pool.execute(
@@ -409,7 +450,20 @@ class ProductService {
     );
 
     if (categories.length === 0) {
-      throw new AppError('Catégorie invalide ou introuvable', 400);
+      throw new AppError('Catégorie de boutique invalide ou introuvable', 400);
+    }
+  }
+
+  /**
+   * Vérifie qu'une catégorie Marketplace existe (accessible à tous les vendeurs)
+   */
+  async validateMarketplaceCategoryExists(marketplaceCategoryId) {
+    const [rows] = await pool.execute(
+      `SELECT id FROM marketplace_categories WHERE id = ? AND is_active = 1`,
+      [marketplaceCategoryId]
+    );
+    if (rows.length === 0) {
+      throw new AppError('Catégorie Marketplace invalide ou inactive', 400);
     }
   }
 

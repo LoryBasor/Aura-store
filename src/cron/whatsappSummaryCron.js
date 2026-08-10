@@ -1,129 +1,164 @@
+// src/cron/whatsappSummaryCron.js
+// Tâche planifiée : résumé quotidien WhatsApp envoyé aux vendeurs à l'heure choisie.
+//
+// ARCHITECTURE : Ce cron tourne dans le WORKER (src/worker.js) séparé du serveur HTTP.
+// Il communique avec le serveur via la file d'attente BullMQ OutboundWhatsAppQueue
+// pour ne JAMAIS appeler directement WhatsAppSessionManager (qui vit dans app.js).
 const cron = require('node-cron');
 const { pool } = require('../config/database');
-const WhatsAppSessionManager = require('../services/whatsapp/WhatsAppSessionManager');
+const { addOutboundWhatsAppJob } = require('../queues/OutboundWhatsAppQueue');
+
+const CRON_TAG = '[CRON][WhatsAppSummary]';
 
 let summaryCronJob = null;
+let isRunning = false; // Verrou anti-chevauchement
 
 function startWhatsAppSummaryCron() {
   if (summaryCronJob) {
-    console.log('[WhatsAppSummaryCron] Cron déjà démarré.');
+    console.log(`${CRON_TAG} Cron déjà démarré.`);
     return;
   }
 
-  // Run every minute to check if any vendor needs a summary at the current time
+  // Vérifie chaque minute quel vendeur doit recevoir son résumé à cette heure
   summaryCronJob = cron.schedule('* * * * *', async () => {
+    // ── Verrou anti-chevauchement ────────────────────────────────────────────
+    if (isRunning) {
+      console.warn(`${CRON_TAG} ⏭️ Exécution précédente toujours en cours — ignorée.`);
+      return;
+    }
+    isRunning = true;
+    const jobStart = Date.now();
+
     try {
       const now = new Date();
-      // Format current time as HH:MM
-      const currentHHMM = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false });
-      
-      // Get start and end of today
-      const startOfDay = new Date();
+      const currentHHMM = now.toLocaleTimeString('fr-FR', {
+        hour: '2-digit', minute: '2-digit', hour12: false
+      });
+
+      const startOfDay = new Date(now);
       startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date();
+      const endOfDay = new Date(now);
       endOfDay.setHours(23, 59, 59, 999);
 
-      // Find sessions that match the current time
+      // Récupère uniquement les sessions qui correspondent à l'heure actuelle
       const [sessions] = await pool.execute(
-        `SELECT user_id, connected_number FROM wa_sessions 
+        `SELECT user_id, connected_number FROM wa_sessions
          WHERE status = 'connected' AND ai_enabled = 1 AND summary_time = ?`,
         [currentHHMM]
       );
 
       if (sessions.length === 0) return;
-      console.log(`[WhatsAppSummaryCron] Envoi du résumé quotidien pour ${sessions.length} vendeur(s) à ${currentHHMM}`);
+
+      console.log(`${CRON_TAG} ${currentHHMM} — Résumé pour ${sessions.length} vendeur(s)`);
 
       for (const session of sessions) {
         const userId = session.user_id;
         const vendorNumber = session.connected_number;
         if (!vendorNumber) continue;
 
+        const sessionStart = Date.now();
         try {
-          // 1. Nouvelles commandes
-          const [newOrdersRows] = await pool.execute(
-            `SELECT COUNT(*) as count FROM orders WHERE user_id = ? AND created_at >= ? AND created_at <= ?`,
+          // ── 1. Récupérer les statistiques en une seule requête groupée ──────
+          const [[orderStats]] = await pool.execute(
+            `SELECT
+               COUNT(*)                                              AS newOrders,
+               SUM(CASE WHEN status = 'annulee' THEN 1 ELSE 0 END) AS cancelledOrders
+             FROM orders
+             WHERE user_id = ? AND created_at >= ? AND created_at <= ?`,
             [userId, startOfDay, endOfDay]
           );
-          const newOrders = newOrdersRows[0].count;
 
-          // 2. Commandes annulées
-          const [cancelledOrdersRows] = await pool.execute(
-            `SELECT COUNT(*) as count FROM orders WHERE user_id = ? AND status = 'annulee' AND updated_at >= ? AND updated_at <= ?`,
+          // ── 2. Réponses IA du jour ───────────────────────────────────────────
+          const [[aiStats]] = await pool.execute(
+            `SELECT COUNT(*) AS aiQuestions FROM wa_messages
+             WHERE user_id = ? AND message_type = 'ai_response'
+               AND created_at >= ? AND created_at <= ?`,
             [userId, startOfDay, endOfDay]
           );
-          const cancelledOrders = cancelledOrdersRows[0].count;
 
-          // 3. Questions traitées automatiquement par l'IA
-          const [aiMsgsRows] = await pool.execute(
-            `SELECT COUNT(*) as count FROM wa_messages WHERE user_id = ? AND message_type = 'ai_response' AND created_at >= ? AND created_at <= ?`,
-            [userId, startOfDay, endOfDay]
-          );
-          const aiQuestions = aiMsgsRows[0].count;
-
-          // 4. Produit le plus consulté/demandé (basic mock or extract from AI messages)
-          // For a real implementation, we could track product view events, but here we can check inbound messages
-          const [inboundMsgs] = await pool.execute(
-            `SELECT content FROM wa_messages WHERE user_id = ? AND direction = 'inbound' AND created_at >= ? AND created_at <= ? LIMIT 50`,
-            [userId, startOfDay, endOfDay]
-          );
-          
-          let requestedProduct = "Aucun spécifié";
-          // We can fetch vendor products to match names
+          // ── 3. Produit le plus demandé (optimisé via Map) ───────────────────
+          // Récupère les produits ET les messages en 2 requêtes, puis croise en mémoire
           const [products] = await pool.execute(
-            `SELECT name, stock_quantity FROM products WHERE user_id = ? AND deleted_at IS NULL`, [userId]
+            `SELECT name, stock_quantity FROM products WHERE user_id = ? AND deleted_at IS NULL`,
+            [userId]
           );
-          
-          const productCounts = {};
-          inboundMsgs.forEach(msg => {
-             const text = (msg.content || '').toLowerCase();
-             products.forEach(p => {
-                if (text.includes(p.name.toLowerCase())) {
-                   productCounts[p.name] = (productCounts[p.name] || 0) + 1;
-                }
-             });
-          });
-          
-          let maxCount = 0;
-          for (const [pName, pCount] of Object.entries(productCounts)) {
-             if (pCount > maxCount) {
-                 maxCount = pCount;
-                 requestedProduct = pName;
-             }
+
+          // Map nom_produit_lowercase → { originalName, count }
+          const productMap = new Map();
+          products.forEach(p => productMap.set(p.name.toLowerCase(), { name: p.name, count: 0 }));
+
+          if (productMap.size > 0) {
+            const [inboundMsgs] = await pool.execute(
+              `SELECT content FROM wa_messages
+               WHERE user_id = ? AND direction = 'inbound'
+                 AND created_at >= ? AND created_at <= ?
+               LIMIT 100`,
+              [userId, startOfDay, endOfDay]
+            );
+
+            // Comptage en O(N) via Map au lieu de O(N×M) avec deux forEach imbriqués
+            for (const msg of inboundMsgs) {
+              const text = (msg.content || '').toLowerCase();
+              for (const [key, val] of productMap) {
+                if (text.includes(key)) val.count++;
+              }
+            }
           }
 
-          // 5. Produit en rupture
-          const outOfStockProducts = products.filter(p => p.stock_quantity <= 0);
-          const outOfStockStr = outOfStockProducts.length > 0 ? outOfStockProducts[0].name : "Aucun";
+          let requestedProduct = 'Aucun spécifié';
+          let maxCount = 0;
+          for (const { name, count } of productMap.values()) {
+            if (count > maxCount) { maxCount = count; requestedProduct = name; }
+          }
 
-          // Générer le message
-          const message = `📊 *Résumé du jour (Aura Store)*\n\n` +
-                          `📦 ${newOrders} nouvelle(s) commande(s)\n` +
-                          `❌ ${cancelledOrders} commande(s) annulée(s)\n` +
-                          `🤖 ${aiQuestions} question(s) traitée(s) automatiquement\n\n` +
-                          `🔥 Produit le plus demandé : ${requestedProduct}\n` +
-                          `🛑 Produit en rupture : ${outOfStockStr}\n\n` +
-                          `_Bonne soirée et à demain !_ ✨`;
+          // ── 4. Produit en rupture ────────────────────────────────────────────
+          const outOfStockName = products.find(p => p.stock_quantity <= 0)?.name || 'Aucun';
 
-          // Send message to the vendor's own number
-          await WhatsAppSessionManager.getInstance().sendMessage(userId, vendorNumber, message);
-          
+          // ── 5. Construire le message ─────────────────────────────────────────
+          const message =
+            `📊 *Résumé du jour (Aura Store)*\n\n` +
+            `📦 ${orderStats.newOrders} nouvelle(s) commande(s)\n` +
+            `❌ ${orderStats.cancelledOrders} commande(s) annulée(s)\n` +
+            `🤖 ${aiStats.aiQuestions} question(s) traitée(s) automatiquement\n\n` +
+            `🔥 Produit le plus demandé : ${requestedProduct}\n` +
+            `🛑 Produit en rupture : ${outOfStockName}\n\n` +
+            `_Bonne soirée et à demain !_ ✨`;
+
+          // ── 6. Envoi via BullMQ (découplé du processus WhatsApp) ────────────
+          await addOutboundWhatsAppJob({
+            jobId: null,             // Pas de job wa_outbound_jobs pour les résumés auto
+            userId,
+            customerPhone: vendorNumber,
+            messageText: message,
+            isSummary: true          // Marqueur pour identifier ces messages si nécessaire
+          });
+
+          const duration = Date.now() - sessionStart;
+          console.log(`${CRON_TAG} ✅ Résumé mis en file pour user ${userId} (${duration}ms)`);
+
         } catch (error) {
-          console.error(`[WhatsAppSummaryCron] Erreur lors de l'envoi du résumé pour le user_id ${userId}:`, error.message);
+          console.error(`${CRON_TAG} ❌ Erreur résumé user ${userId}:`, error.message);
         }
       }
+
     } catch (error) {
-      console.error('[WhatsAppSummaryCron] ❌ Erreur globale:', error.message);
+      console.error(`${CRON_TAG} ❌ Erreur globale:`, error.message);
+    } finally {
+      const totalDuration = Date.now() - jobStart;
+      console.log(`${CRON_TAG} Job terminé en ${totalDuration}ms`);
+      isRunning = false; // Libère le verrou dans tous les cas
     }
   });
 
-  console.log('[WhatsAppSummaryCron] ✅ Cron job démarré (exécution chaque minute pour vérifier l\'heure).');
+  console.log(`${CRON_TAG} ✅ Cron job démarré (vérification chaque minute).`);
 }
 
 function stopWhatsAppSummaryCron() {
   if (summaryCronJob) {
     summaryCronJob.stop();
     summaryCronJob = null;
-    console.log('[WhatsAppSummaryCron] Cron job arrêté.');
+    isRunning = false;
+    console.log(`${CRON_TAG} Cron job arrêté.`);
   }
 }
 

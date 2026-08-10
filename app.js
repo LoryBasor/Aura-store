@@ -19,8 +19,12 @@ require('dotenv').config();
 const { pool, testConnection, closePool } = require('./src/config/database');
 const { testConnection: testCloudinary } = require('./src/config/cloudinary');
 const { UPLOAD_DIR } = require('./src/config/upload');
-const { startSubscriptionCron, stopSubscriptionCron } = require('./src/cron/subscriptionCron');
-const { startWhatsAppSummaryCron, stopWhatsAppSummaryCron } = require('./src/cron/whatsappSummaryCron');
+// Les crons sont gérés exclusivement par le processus worker (src/worker.js)
+// NE PAS importer ici pour éviter la duplication en cas de redémarrage PM2
+
+// Initialisation des Queues & Workers
+require('./src/queues/NotificationQueue');
+require('./src/queues/OutboundWhatsAppQueue');
 
 // Routes API
 const apiRoutes = require('./src/routes');
@@ -702,11 +706,14 @@ app.get('/products', authenticateView, async (req, res, next) => {
     const category = req.query.category || null;
     const page = parseInt(req.query.page) || 1;
 
-    const [productData, categories] = await Promise.all([
+    const marketplaceCategoryService = require('./src/services/marketplaceCategoryService');
+
+    const [productData, categories, marketplaceCategories] = await Promise.all([
       productService.getProductsByUser(req.user.id, `search=${search}`, {
         page, limit: 20, is_available: status, category_id: category
       }),
-      categoryService.getCategoriesByUser(req.user.id)
+      categoryService.getCategoriesByUser(req.user.id),
+      marketplaceCategoryService.getActiveCategories()
     ]);
 
     res.render('dashboard/products', {
@@ -717,6 +724,7 @@ app.get('/products', authenticateView, async (req, res, next) => {
       products: productData.products,
       pagination: productData.pagination,
       categories,
+      marketplaceCategories,
       filters: { search, status, category, page }
     });
   } catch (error) { next(error); }
@@ -1087,7 +1095,53 @@ app.get('/admin/dashboard', authenticateView, requireSuperAdminView, async (req,
   } catch (error) { next(error); }
 });
 
+// ── Catégories Marketplace (Admin) ──
+app.get('/admin/marketplace-categories', authenticateView, requireSuperAdminView, async (req, res, next) => {
+  try {
+    const marketplaceCategoryService = require('./src/services/marketplaceCategoryService');
+    const marketplaceCategories = await marketplaceCategoryService.getAllCategories();
+    res.render('admin/categories', {
+      title: 'Catégories Marketplace',
+      pageTitle: 'Catégories Marketplace',
+      currentPage: 'admin-categories',
+      user: req.user,
+      marketplaceCategories
+    });
+  } catch (error) { next(error); }
+});
+
+// ── Sponsoring Marketplace (Admin) ──
+app.get('/admin/sponsorships', authenticateView, requireSuperAdminView, async (req, res, next) => {
+  try {
+    const { pool } = require('./src/config/database');
+    const [sponsorships] = await pool.execute(`
+      SELECT ss.*, u.business_name, u.store_slug, u.email
+      FROM store_sponsorships ss
+      JOIN users u ON ss.user_id = u.id
+      ORDER BY ss.created_at DESC
+    `);
+    
+    // Récupérer la liste des vendeurs vérifiés/actifs pour le dropdown de sélection
+    const [vendors] = await pool.execute(`
+      SELECT id, business_name, store_slug, is_verified 
+      FROM users 
+      WHERE is_active = 1 AND deleted_at IS NULL
+      ORDER BY business_name ASC
+    `);
+
+    res.render('admin/sponsorships', {
+      title: 'Sponsoring Boutiques',
+      pageTitle: 'Sponsoring Boutiques',
+      currentPage: 'admin-sponsorships',
+      user: req.user,
+      sponsorships,
+      vendors
+    });
+  } catch (error) { next(error); }
+});
+
 // ── Vendeurs admin ──
+
 app.get('/admin/vendors', authenticateView, requireSuperAdminView, async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -1374,11 +1428,8 @@ async function startServer() {
       throw new Error('Connexion Cloudinary échouée');
     }
 
-    // Démarrer le cron job des abonnements
-    startSubscriptionCron();
-    
-    // Démarrer le cron job du résumé quotidien WhatsApp
-    startWhatsAppSummaryCron();
+
+    // Les crons (abonnements, résumé WhatsApp) sont gérés par le processus 'saas-worker'
     
     // Initialiser les sessions WhatsApp actives
     try {
@@ -1433,8 +1484,7 @@ async function startServer() {
 async function gracefulShutdown(server) {
   console.log('\n⏳ Arrêt du serveur en cours...');
   
-  stopSubscriptionCron(); // Arrêter le cron
-  stopWhatsAppSummaryCron(); // Arrêter le cron WhatsApp
+  // Note: Les crons sont gérés par le processus worker dédié (src/worker.js)
 
   try {
     const WhatsAppSessionManager = require('./src/services/whatsapp/WhatsAppSessionManager');

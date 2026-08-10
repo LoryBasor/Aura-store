@@ -122,7 +122,7 @@ async function downgradeToFree(userId, sub) {
  */
 async function processAllExpiredSubscriptions() {
   try {
-    // Récupérer tous les abonnements actifs/trial expirés (hors plan Gratuit)
+    // Récupérer les abonnements expirés (LIMIT 100 par batch pour éviter la surcharge)
     const [expiredSubs] = await pool.execute(
       `SELECT s.id, s.user_id, s.plan_id, s.status,
               sp.name as plan_name,
@@ -134,7 +134,8 @@ async function processAllExpiredSubscriptions() {
          AND s.expires_at IS NOT NULL
          AND s.expires_at < NOW()
          AND sp.slug != 'free'
-         AND u.deleted_at IS NULL`
+         AND u.deleted_at IS NULL
+       LIMIT 100`
     );
 
     console.log(`[SubscriptionCron] ${expiredSubs.length} abonnements expirés trouvés`);

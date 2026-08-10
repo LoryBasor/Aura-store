@@ -12,6 +12,8 @@ const adminUserController = require('../controllers/admin/userController');
 const adminSubscriptionController = require('../controllers/admin/subscriptionController');
 const adminDashboardController = require('../controllers/admin/dashboardController');
 const adminProductController = require('../controllers/admin/adminProductController');
+const adminCategoryController = require('../controllers/admin/adminCategoryController');
+const adminSponsorshipController = require('../controllers/admin/adminSponsorshipController');
 
 const router = express.Router();
 
@@ -202,5 +204,24 @@ router.put('/notifications/read-all', async (req, res, next) => {
     res.json({ success: true, data: result });
   } catch (error) { next(error); }
 });
+
+// ==============================================
+// ROUTES CATÉGORIES MARKETPLACE (Admin uniquement)
+// ==============================================
+router.get('/marketplace-categories', adminCategoryController.listCategories);
+router.post('/marketplace-categories', adminCategoryController.createCategory);
+router.get('/marketplace-categories/:id', adminCategoryController.getCategory);
+router.put('/marketplace-categories/:id', adminCategoryController.updateCategory);
+router.patch('/marketplace-categories/:id/toggle', adminCategoryController.toggleStatus);
+router.delete('/marketplace-categories/:id', adminCategoryController.deleteCategory);
+
+// ==============================================
+// ROUTES SPONSORING MARKETPLACE (Admin uniquement)
+// ==============================================
+router.get('/sponsorships', adminSponsorshipController.listSponsorships);
+router.post('/sponsorships', adminSponsorshipController.createSponsorship);
+router.put('/sponsorships/:id', adminSponsorshipController.updateSponsorship);
+router.patch('/sponsorships/:id/toggle', adminSponsorshipController.toggleSponsorship);
+router.delete('/sponsorships/:id', adminSponsorshipController.deleteSponsorship);
 
 module.exports = router;

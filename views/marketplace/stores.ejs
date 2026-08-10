@@ -130,7 +130,7 @@
               <% if (stores && stores.length> 0) { %>
                 <% stores.forEach(store=> { %>
                   <a href="/store/<%= store.store_slug %>" class="store-card">
-                    <div class="store-header" style="<%- store.banner_url ? `background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url('${store.banner_url}'); background-size: cover; background-position: center;` : '' %>">
+                    <div class="store-header" style="<%= store.banner_url ? `background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url('${store.banner_url}'); background-size: cover; background-position: center;` : '' %>">
                       <% if (store.logo_url) { %>
                         <img src="<%= store.logo_url %>" alt="<%= store.business_name %>" class="store-logo">
                         <% } else { %>
@@ -148,6 +148,9 @@
                                     </svg>
                                     <% } %>
                               </h3>
+                              <% if (store.is_sponsored) { %>
+                                <span class="badge badge-warning" style="font-size: 10px; margin-top: 4px; display: inline-block;">✨ Sponsorisé</span>
+                              <% } %>
                               <% if (store.city) { %>
                                 <p class="store-location"><svg class="svg-icon svg-icon-fi-rr-marker" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> <%= store.city %>, <%= store.country || '' %>
                                 </p>

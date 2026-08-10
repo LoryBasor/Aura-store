@@ -530,7 +530,14 @@
               <div class="product-tag"><%= product.category_name || 'Général' %></div>
               <h3 class="product-title"><%= product.name %></h3>
               <div style="display:flex; justify-content:space-between; align-items:center; margin-top: auto;">
-                <span class="product-price-val"><%= product.price.toLocaleString() %> <%= product.currency %></span>
+                <% if (product.promotion_price && product.promotion_price > 0 && Number(product.promotion_price) < Number(product.price)) { %>
+                  <span class="product-price-val">
+                    <span style="text-decoration: line-through; color: var(--store-desc); font-size: 14px; margin-right: 4px;"><%= product.price.toLocaleString() %></span>
+                    <%= product.promotion_price.toLocaleString() %> <%= product.currency %>
+                  </span>
+                <% } else { %>
+                  <span class="product-price-val"><%= product.price.toLocaleString() %> <%= product.currency %></span>
+                <% } %>
                 <span class="store-btn">Détails</span>
               </div>
             </div>

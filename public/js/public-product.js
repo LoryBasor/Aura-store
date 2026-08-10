@@ -115,9 +115,51 @@
       const data = await resp.json();
 
       if (resp.ok) {
-        overlay?.classList.remove('open');
         const order = data?.data?.order;
-        if (order?.whatsapp_url) {
+        
+        // --- NOUVEAU FLUX WHATSAPP AUTOMATIQUE ---
+        if (order?.whatsapp?.mode === 'queued') {
+          if (btn) {
+            btn.textContent = 'Préparation de WhatsApp... ⏳';
+            btn.disabled = true;
+          }
+          
+          let attempts = 0;
+          const maxAttempts = 20; // 40 secondes d'attente max
+          
+          const poll = setInterval(async () => {
+            attempts++;
+            try {
+              const resJob = await fetch(`/api/public/orders/job/${order.whatsapp.jobId}`);
+              if (!resJob.ok) throw new Error('Job not found');
+              
+              const dataJob = await resJob.json();
+              const status = dataJob?.data?.job?.status;
+              
+              if (status === 'SENT') {
+                clearInterval(poll);
+                let num = dataJob.data.job.vendor_whatsapp_number.replace(/[^\d]/g, '');
+                if (num.length === 9) num = '237' + num;
+                window.location.href = `https://wa.me/${num}`;
+              } else if (status === 'FAILED' || status === 'CANCELLED' || attempts > maxAttempts) {
+                clearInterval(poll);
+                alert("Nous n'avons pas pu préparer automatiquement votre conversation WhatsApp. Redirection classique...");
+                window.location.href = order.whatsapp.fallback_url;
+              }
+            } catch (err) {
+              clearInterval(poll);
+              window.location.href = order.whatsapp.fallback_url;
+            }
+          }, 2000);
+          
+          return; // On ne réactive pas le bouton pour l'instant, on sort
+        }
+        
+        // --- FLUX CLASSIQUE / FALLBACK ---
+        overlay?.classList.remove('open');
+        if (order?.whatsapp?.mode === 'classic' && order.whatsapp.whatsapp_url) {
+          window.location.href = order.whatsapp.whatsapp_url;
+        } else if (order?.whatsapp_url) {
           window.location.href = order.whatsapp_url;
         } else {
           alert('✅ Commande envoyée ! Le vendeur vous contactera bientôt.');
@@ -127,11 +169,12 @@
       }
     } catch (err) {
       alert('Erreur réseau.');
-    } finally {
-      if (btn) {
-        btn.disabled    = false;
-        btn.textContent = '✅ Confirmer la commande';
-      }
+    }
+    
+    // Réactivation du bouton par défaut (sauf si mode queued, où on a fait un return plus haut)
+    if (btn) {
+      btn.disabled    = false;
+      btn.textContent = '✅ Confirmer la commande';
     }
   }));
 

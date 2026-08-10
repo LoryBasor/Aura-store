@@ -7,11 +7,13 @@
   const currentFilters = filters || {};
   const currentProducts = products || [];
   const currentCategories = categories || [];
+  const currentMarketplaceCategories = marketplaceCategories || [];
   const currentPagination = pagination || { page:1, limit:20, total:0 };
   const totalPages = Math.ceil(currentPagination.total / currentPagination.limit);
   
   let maxImages = 1;
   let maxVideos = 0;
+  const canUsePromotion = (user.plan_slug === 'pro' || user.plan_slug === 'business');
   if(user.plan_slug === 'pro') maxImages = 4;
   else if(user.plan_slug === 'business') {
     maxImages = 7;
@@ -83,6 +85,9 @@
           <%= product.is_available ? 'Disponible' : 'Indisponible' %>
         </span>
 
+        <% if (product.marketplace_category_name) { %>
+          <span class="badge badge-warning" style="font-size:11px;margin-bottom:4px;display:inline-block;" title="Catégorie Marketplace">🏪 <%= product.marketplace_category_name %></span>
+        <% } %>
         <% if (product.category_name) { %>
           <span class="badge badge-info" style="font-size:11px;margin-bottom:8px;display:inline-block;"><%= product.category_name %></span>
         <% } %>
@@ -96,9 +101,23 @@
         <% } %>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <strong style="font-size:18px;color:var(--color-primary);">
-            <%= fmtCurrency(product.price, product.currency) %>
-          </strong>
+          <div>
+            <% if (product.promotion_price && canUsePromotion) { %>
+              <div style="font-size:13px;color:var(--color-secondary);text-decoration:line-through;">
+                <%= fmtCurrency(product.price, product.currency) %>
+              </div>
+              <strong style="font-size:18px;color:#ca8a04;">
+                <%= fmtCurrency(product.promotion_price, product.currency) %>
+              </strong>
+              <span class="badge badge-warning" style="font-size:10px;margin-left:6px;">
+                -<%= Math.round((1 - product.promotion_price / product.price) * 100) %>%
+              </span>
+            <% } else { %>
+              <strong style="font-size:18px;color:var(--color-primary);">
+                <%= fmtCurrency(product.price, product.currency) %>
+              </strong>
+            <% } %>
+          </div>
           <% if (product.stock_quantity > 0) { %>
             <span style="font-size:12px;color:var(--color-secondary);">Stock: <%= product.stock_quantity %></span>
           <% } %>
@@ -163,18 +182,31 @@
         </div>
 
         <div class="form-group">
-          <label for="category_id" class="form-label">Catégorie</label>
-          <select id="category_id" name="category_id" class="form-select">
-            <option value="">Aucune catégorie</option>
-            <% currentCategories.forEach(cat => { %>
+          <label for="marketplace_category_id" class="form-label">🏪 Catégorie Marketplace</label>
+          <p class="form-help" style="margin-bottom:6px;">Classe votre produit dans le catalogue global Aura Store.</p>
+          <select id="marketplace_category_id" name="marketplace_category_id" class="form-select">
+            <option value="">-- Sélectionner une catégorie --</option>
+            <% currentMarketplaceCategories.forEach(cat => { %>
               <option value="<%= cat.id %>"><%= cat.name %></option>
             <% }); %>
           </select>
         </div>
 
+        <div class="form-group">
+          <label for="category_id" class="form-label">📂 Catégorie de ma boutique</label>
+          <p class="form-help" style="margin-bottom:6px;">Organise votre produit dans votre boutique uniquement.</p>
+          <select id="category_id" name="category_id" class="form-select">
+            <option value="">Aucune catégorie interne</option>
+            <% currentCategories.forEach(cat => { %>
+              <option value="<%= cat.id %>"><%= cat.name %></option>
+            <% }); %>
+          </select>
+          <button type="button" class="btn btn-outline btn-sm" style="margin-top:8px;" id="newInternalCategoryBtn">+ Créer une catégorie</button>
+        </div>
+
         <div class="form-grid-2">
           <div class="form-group">
-            <label for="price" class="form-label required">Prix</label>
+            <label for="price" class="form-label required">Prix <%= canUsePromotion ? 'normal' : '' %></label>
             <input type="number" id="price" name="price" class="form-input" placeholder="50000" step="0.01" min="0" required>
           </div>
           <div class="form-group">
@@ -184,6 +216,26 @@
             </select>
           </div>
         </div>
+
+        <% if (canUsePromotion) { %>
+        <div class="form-group" id="promotionPriceGroup">
+          <label for="promotionPrice" class="form-label">
+            ✨ Prix promotionnel <span style="font-size:11px;color:var(--color-secondary);font-weight:400;">(Facultatif)</span>
+          </label>
+          <input type="number" id="promotionPrice" name="promotionPrice" class="form-input" placeholder="Ex: 19900" step="0.01" min="0">
+          <p class="form-help">Doit être strictement inférieur au prix normal. Vider ce champ pour supprimer la promotion.</p>
+          <div id="promoPreview" style="display:none;margin-top:8px;padding:10px;background:rgba(202,138,4,0.08);border:1px solid rgba(202,138,4,0.3);border-radius:8px;font-size:13px;">
+            Affichage public :
+            <span id="promoOldPrice" style="text-decoration:line-through;color:var(--color-secondary);"></span>
+            &rarr; <strong id="promoNewPrice" style="color:#ca8a04;"></strong>
+            <span id="promoDiscount" class="badge badge-warning" style="font-size:10px;"></span>
+          </div>
+        </div>
+        <% } else { %>
+        <div class="form-group" style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:14px;">
+          <p style="font-size:13px;margin:0;">🔒 <strong>Prix promotionnels</strong> — fonctionnalité disponible à partir du plan <strong>Pro</strong>.</p>
+        </div>
+        <% } %>
 
         <div class="form-grid-2">
           <div class="form-group">
@@ -230,6 +282,7 @@
 <script id="ssr-products-data" type="application/json">
   {
     "categories": <%- JSON.stringify(currentCategories) %>,
+    "marketplaceCategories": <%- JSON.stringify(currentMarketplaceCategories) %>,
     "products": <%- JSON.stringify(currentProducts) %>
   }
 </script>

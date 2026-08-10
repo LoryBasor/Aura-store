@@ -1,0 +1,208 @@
+<%# ========================================
+    views/admin/categories.ejs - Gestion des catégories Marketplace
+    ======================================== %>
+
+<% 
+  const cats = marketplaceCategories || [];
+%>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">🏪 Catégories Marketplace</h1>
+    <p class="page-subtitle">Gérez les catégories officielles d'Aura Store (<%= cats.length %> catégorie<%= cats.length > 1 ? 's' : '' %>)</p>
+  </div>
+  <button class="btn btn-primary" id="newMarketplaceCategoryBtn">
+    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+    </svg>
+    Nouvelle catégorie
+  </button>
+</div>
+
+<!-- Info Banner -->
+<div style="background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:13px;color:var(--color-secondary);">
+  ℹ️ <strong>Ces catégories sont globales et réservées à l'administration.</strong> Elles apparaissent dans le marketplace Aura Store et servent à classer les produits des vendeurs. Les vendeurs peuvent sélectionner une catégorie Marketplace pour leur produit mais <strong>ne peuvent pas en créer</strong>.
+</div>
+
+<!-- Categories Table -->
+<div class="card">
+  <div class="card-body">
+    <% if (cats.length === 0) { %>
+      <div style="text-align:center;padding:64px 24px;">
+        <div style="font-size:64px;margin-bottom:16px;">🏪</div>
+        <h3 style="font-size:20px;font-weight:700;color:var(--color-primary);margin-bottom:8px;">Aucune catégorie Marketplace</h3>
+        <p style="color:var(--color-secondary);margin-bottom:24px;">Créez les premières catégories officielles pour le marketplace</p>
+        <button class="btn btn-primary" id="newMarketplaceCategoryBtn2">+ Nouvelle catégorie</button>
+      </div>
+    <% } else { %>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Slug</th>
+              <th>Produits</th>
+              <th>Statut</th>
+              <th>Ordre</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% cats.forEach(cat => { %>
+              <tr>
+                <td>
+                  <strong><%= cat.name %></strong>
+                  <% if (cat.description) { %><div style="font-size:12px;color:var(--color-secondary);"><%= cat.description %></div><% } %>
+                </td>
+                <td><code><%= cat.slug %></code></td>
+                <td><span class="badge badge-info"><%= cat.product_count || 0 %></span></td>
+                <td>
+                  <span class="badge badge-<%= cat.is_active ? 'success' : 'error' %>">
+                    <%= cat.is_active ? 'Active' : 'Inactive' %>
+                  </span>
+                </td>
+                <td><%= cat.display_order || 0 %></td>
+                <td>
+                  <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="editCategory(<%= JSON.stringify(cat).replace(/'/g, '&#39;') %>)">✏️ Modifier</button>
+                    <button class="btn btn-outline btn-sm" onclick="toggleCategory(<%= cat.id %>, <%= cat.is_active %>)" title="<%= cat.is_active ? 'Désactiver' : 'Activer' %>">
+                      <%= cat.is_active ? '⏸ Désactiver' : '▶ Activer' %>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteCategory(<%= cat.id %>, '<%= cat.name %>', <%= cat.product_count || 0 %>)" 
+                            <%= (cat.product_count > 0) ? 'disabled title="Des produits utilisent cette catégorie"' : '' %>>🗑</button>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Modal Catégorie Marketplace -->
+<div class="modal-overlay" id="mktCategoryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="mktModalTitle">Nouvelle catégorie Marketplace</h3>
+      <button class="modal-close" onclick="document.getElementById('mktCategoryModal').classList.remove('active')">✕</button>
+    </div>
+    <form id="mktCategoryForm">
+      <div class="modal-body">
+        <input type="hidden" id="mktCategoryId" name="id">
+        <div class="form-group">
+          <label class="form-label required">Nom de la catégorie</label>
+          <input type="text" id="mktName" name="name" class="form-input" placeholder="Ex: Mode & Vêtements" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="mktDescription" name="description" class="form-textarea" rows="2" placeholder="Description..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Icône (classe Font Awesome)</label>
+          <input type="text" id="mktIcon" name="icon" class="form-input" placeholder="fa-tshirt">
+          <p class="form-help">Optionnel — Ex: fa-laptop, fa-tshirt, fa-utensils</p>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Ordre d'affichage</label>
+            <input type="number" id="mktDisplayOrder" name="display_order" class="form-input" value="0" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Statut</label>
+            <select id="mktIsActive" name="is_active" class="form-select">
+              <option value="1">Active</option>
+              <option value="0">Inactive</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('mktCategoryModal').classList.remove('active')">Annuler</button>
+        <button type="submit" class="btn btn-primary" id="mktSubmitBtn">Créer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Ouvrir modal nouveau
+  function openNewModal() {
+    document.getElementById('mktCategoryForm').reset();
+    document.getElementById('mktCategoryId').value = '';
+    document.getElementById('mktModalTitle').textContent = 'Nouvelle catégorie Marketplace';
+    document.getElementById('mktSubmitBtn').textContent = 'Créer';
+    document.getElementById('mktCategoryModal').classList.add('active');
+  }
+  document.getElementById('newMarketplaceCategoryBtn').addEventListener('click', openNewModal);
+  const btn2 = document.getElementById('newMarketplaceCategoryBtn2');
+  if (btn2) btn2.addEventListener('click', openNewModal);
+
+  // Modifier
+  function editCategory(cat) {
+    document.getElementById('mktCategoryId').value = cat.id;
+    document.getElementById('mktName').value = cat.name;
+    document.getElementById('mktDescription').value = cat.description || '';
+    document.getElementById('mktIcon').value = cat.icon || '';
+    document.getElementById('mktDisplayOrder').value = cat.display_order || 0;
+    document.getElementById('mktIsActive').value = cat.is_active ? '1' : '0';
+    document.getElementById('mktModalTitle').textContent = 'Modifier la catégorie';
+    document.getElementById('mktSubmitBtn').textContent = 'Enregistrer';
+    document.getElementById('mktCategoryModal').classList.add('active');
+  }
+
+  // Soumission formulaire
+  document.getElementById('mktCategoryForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('mktCategoryId').value;
+    const isEdit = !!id;
+    const url = isEdit ? `/api/admin/marketplace-categories/${id}` : '/api/admin/marketplace-categories';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    const body = {
+      name: document.getElementById('mktName').value,
+      description: document.getElementById('mktDescription').value,
+      icon: document.getElementById('mktIcon').value,
+      display_order: parseInt(document.getElementById('mktDisplayOrder').value) || 0,
+      is_active: document.getElementById('mktIsActive').value === '1'
+    };
+
+    try {
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Erreur');
+      window.location.reload();
+    } catch (err) {
+      alert('Erreur : ' + err.message);
+    }
+  });
+
+  // Toggle actif/inactif
+  async function toggleCategory(id, currentlyActive) {
+    if (!confirm(`Voulez-vous ${currentlyActive ? 'désactiver' : 'activer'} cette catégorie ?`)) return;
+    try {
+      const res = await fetch(`/api/admin/marketplace-categories/${id}/toggle`, { method: 'PATCH' });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Erreur');
+      window.location.reload();
+    } catch (err) {
+      alert('Erreur : ' + err.message);
+    }
+  }
+
+  // Supprimer
+  async function deleteCategory(id, name, productCount) {
+    if (productCount > 0) { alert('Impossible de supprimer : des produits utilisent cette catégorie.'); return; }
+    if (!confirm(`Supprimer définitivement la catégorie "${name}" ?`)) return;
+    try {
+      const res = await fetch(`/api/admin/marketplace-categories/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Erreur');
+      window.location.reload();
+    } catch (err) {
+      alert('Erreur : ' + err.message);
+    }
+  }
+</script>

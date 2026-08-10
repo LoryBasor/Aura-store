@@ -101,17 +101,38 @@ class WhatsAppMessageHandler {
       const aiEnabled = sessionRows.length === 0 || !!sessionRows[0].ai_enabled;
 
       if (aiEnabled) {
-        const delay = Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000;
-        await new Promise(r => setTimeout(r, delay));
+        let chat = null;
+        try {
+          chat = await message.getChat();
+        } catch (e) {
+          // Bug connu de whatsapp-web.js (r: r), on utilise getChats() comme alternative robuste
+          try {
+            const chats = await client.getChats();
+            chat = chats.find(c => c.id._serialized === from) || null;
+          } catch (err) {}
+        }
 
-        const aiResponse = await WhatsAppAIProvider.getResponse(userId, from, text, contact.id.user);
+        if (chat) {
+          try { await chat.sendStateTyping(); } catch (e) {}
+        } else {
+          console.warn(`[WhatsApp] Chat introuvable pour le numéro ${from} (statut d'écriture ignoré)`);
+        }
+
+        const aiResponse = await WhatsAppAIProvider.getResponse(userId, from, text, contact.id.user, chat);
+        
+        if (chat) {
+          try { await chat.clearState(); } catch (e) {}
+        }
+
         if (aiResponse) {
+          const delay = Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000;
+          await new Promise(resolve => setTimeout(resolve, delay));
           await WhatsAppSessionManager.getInstance().sendMessage(userId, from, aiResponse, { messageType: 'ai_response' });
         }
       }
 
     } catch (error) {
-      console.error(`[WhatsApp] Erreur handleMessage User ${userId}:`, error.message);
+      console.error(`[WhatsApp] Erreur handleMessage User ${userId}:`, error);
     }
   }
 
@@ -157,45 +178,47 @@ class WhatsAppMessageHandler {
           const pending = sessionManager.getPendingOrder(userId);
           
           if (pending) {
-            fallbackOrderId = pending.orderId;
-            console.log(`[WhatsApp] Utilisation de la commande en mémoire (fallback): A${fallbackOrderId}`);
+            // Utiliser le code à 4 chiffres si disponible, sinon fallback sur l'ID (compatibilité)
+            fallbackOrderId = pending.orderCode || String(pending.orderId);
+            console.log(`[WhatsApp] Utilisation de la commande en mémoire (fallback): code=${fallbackOrderId}`);
           } else {
             console.log(`[WhatsApp] Commande simple reçue mais aucun contexte (ni citation, ni en mémoire).`);
             return;
           }
         }
 
-        // Traiter l'action avec stanzaId OU fallbackOrderId
+      // Traiter l'action avec stanzaId OU fallback mémoire (order_code)
         let handled = false;
         if (stanzaId) {
            handled = await WhatsAppActionHandler.handleAction(userId, from, text, { stanzaId });
         } else if (fallbackOrderId) {
+           // fallbackOrderId contient désormais l'order_code (string 4 chiffres)
            handled = await WhatsAppActionHandler.handleDirectAction(userId, from, text, fallbackOrderId);
         }
 
         if (handled) {
           console.log(`[WhatsApp] ✅ Commande "${text}" traitée avec succès.`);
-          // Clear pending if it was used
           WhatsAppSessionManager.getInstance().pendingOrders.delete(userId);
           return;
         }
       }
 
       // ══════════════════════════════════════════════════════════════
-      // MÉTHODE B : Commande directe format "CHIFFRE A_ID" ou "CHIFFRE ID"
-      // Exemple: "3 A47" ou "1 26"
+      // MÉTHODE B : Commande directe format "[1-5] XXXX" ou "#[1-5] XXXX"
+      // Exemple: "1 5831", "#3 0294"
+      // Le code XXXX = exactement 4 chiffres
       // ══════════════════════════════════════════════════════════════
-      const directCmdMatch = text.match(/^([1-5])\s*A?(\d+)/i);
+      const directCmdMatch = text.match(/^#?([1-5])\s+(\d{4})$/);
       if (directCmdMatch) {
-        const action = directCmdMatch[1];
-        const orderId = parseInt(directCmdMatch[2], 10);
-        console.log(`[WhatsApp] Commande directe: action=${action}, orderId=${orderId}`);
+        const action    = directCmdMatch[1];
+        const orderCode = directCmdMatch[2]; // string 4 chiffres, zéros préservés
+        console.log(`[WhatsApp] Commande directe: action=${action}, code=${orderCode}`);
 
-        const handled = await WhatsAppActionHandler.handleDirectAction(userId, from, action, orderId);
+        const handled = await WhatsAppActionHandler.handleDirectAction(userId, from, action, orderCode);
         if (handled) {
-          console.log(`[WhatsApp] ✅ Commande directe "${action} A${orderId}" traitée.`);
+          console.log(`[WhatsApp] ✅ Commande directe "${action} ${orderCode}" traitée.`);
         } else {
-          console.log(`[WhatsApp] Commande directe introuvable pour ID ${orderId}`);
+          console.log(`[WhatsApp] Commande directe introuvable pour code ${orderCode}`);
         }
         return;
       }

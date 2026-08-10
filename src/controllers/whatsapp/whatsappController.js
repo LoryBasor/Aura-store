@@ -34,26 +34,21 @@ class WhatsAppController {
       const userId = req.user.id;
       const sessionManager = WhatsAppSessionManager.getInstance();
       
-      let qrCode = await new Promise(async (resolve) => {
-          let timeout = setTimeout(() => resolve(null), 10000);
-          
-          try {
-              await sessionManager.createSession(userId, 
-                  (qr) => { 
-                      clearTimeout(timeout);
-                      resolve(qr); 
-                  },
-                  () => console.log('Connecté'),
-                  () => console.log('Déconnecté'),
-                  true // forceNew = true
-              );
-          } catch (err) {
-              clearTimeout(timeout);
-              resolve(null);
-          }
-      });
+      const currentState = sessionManager.getState(userId);
+      if (currentState === 'READY') {
+          return res.status(400).json({ success: false, error: 'Session déjà connectée.' });
+      }
+
+      // On force la création d'une nouvelle session
+      await sessionManager.createSession(userId, true);
       
-      return successResponse(res, { status: 'connecting', qr: qrCode });
+      try {
+          // Attendre que le QR soit disponible
+          const stateInfo = await sessionManager.waitForState(userId, 'WAITING_FOR_QR', 30000);
+          return successResponse(res, { status: 'connecting', qr: stateInfo.qr });
+      } catch (err) {
+          return res.status(500).json({ success: false, error: 'Timeout ou erreur lors de la génération du QR Code.' });
+      }
     } catch (error) {
       next(error);
     }
@@ -74,12 +69,25 @@ class WhatsAppController {
       if (cleanPhone.length < 8) throw new AppError('Numéro de téléphone invalide', 400);
 
       const sessionManager = WhatsAppSessionManager.getInstance();
+      const currentState = sessionManager.getState(userId);
+      
+      if (currentState === 'READY') {
+          return res.status(400).json({ success: false, error: 'Session déjà connectée.' });
+      }
 
-      // createSessionWithPairingCode appelle requestPairingCode() immédiatement
-      // après makeWASocket(), avant que WA n'envoie le QR — c'est la clé du succès
-      const pairingCode = await sessionManager.createSessionWithPairingCode(userId, cleanPhone);
+      // On force une nouvelle session pour s'assurer que l'authentification est requise
+      const client = await sessionManager.createSession(userId, true);
 
-      return successResponse(res, { pairingCode });
+      try {
+          // On attend que WhatsApp web soit chargé et prêt à scanner un QR (état WAITING_FOR_QR)
+          await sessionManager.waitForState(userId, 'WAITING_FOR_QR', 30000);
+          
+          // Maintenant on peut demander le code d'appairage en toute sécurité
+          const pairingCode = await client.requestPairingCode(cleanPhone);
+          return successResponse(res, { pairingCode });
+      } catch (err) {
+          return res.status(500).json({ success: false, error: 'Impossible de générer le code d\'appairage : ' + err.message });
+      }
     } catch (error) {
       next(error);
     }
@@ -93,8 +101,7 @@ class WhatsAppController {
       const userId = req.user.id;
       const sessionManager = WhatsAppSessionManager.getInstance();
       
-      sessionManager.deleteSession(userId);
-      await sessionManager.updateSessionStatus(userId, 'disconnected', null);
+      await sessionManager.disconnectSession(userId);
       
       return successResponse(res, null, 'Session déconnectée avec succès');
     } catch (error) {

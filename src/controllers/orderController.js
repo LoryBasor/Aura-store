@@ -165,6 +165,29 @@ class OrderController {
   }
 
   /**
+   * ✨ NOUVEAU - Obtenir le statut d'un envoi WhatsApp automatique
+   * GET /api/orders/public/job/:jobId
+   */
+  async getWhatsAppJobStatus(req, res, next) {
+    try {
+      const { jobId } = req.params;
+
+      const [jobs] = await pool.execute(
+        'SELECT status, error_message, whatsapp_url, vendor_whatsapp_number FROM wa_outbound_jobs WHERE id = ?',
+        [jobId]
+      );
+
+      if (jobs.length === 0) {
+        throw new AppError('Job introuvable', 404);
+      }
+
+      return successResponse(res, { job: jobs[0] });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Récupérer toutes les commandes du vendeur
    * GET /api/orders
    */

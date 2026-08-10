@@ -186,13 +186,24 @@
                 </div>
                 <div class="product-info">
                   <h3 class="product-name"><%= product.name %></h3>
-                  <p class="product-price"><%= product.price %> <%= product.currency %></p>
+                  <% if (product.is_promotion_active) { %>
+                    <p class="product-price" style="color:#ca8a04;">
+                      <span style="font-size:11px;text-decoration:line-through;color:#9ca3af;font-weight:400;margin-right:4px;"><%= product.price %></span>
+                      <%= product.effective_price %> <%= product.currency %>
+                      <span style="background:#fef08a;color:#713f12;font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px;">-<%= Math.round((1 - product.effective_price / product.price) * 100) %>%</span>
+                    </p>
+                  <% } else { %>
+                    <p class="product-price"><%= product.price %> <%= product.currency %></p>
+                  <% } %>
                   <div class="product-vendor">
                     <span><%= product.business_name %></span>
                     <% if (product.is_verified) { %>
                       <svg class="verified-badge" width="16" height="16" viewBox="0 0 24 24" fill="#5C6C73" title="Vendeur vérifié">
                         <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
                       </svg>
+                    <% } %>
+                    <% if (product.is_sponsored) { %>
+                      <span class="badge badge-warning" style="font-size: 10px; margin-left: 4px;">✨ Sponsorisé</span>
                     <% } %>
                   </div>
                   <% if (product.city) { %>
