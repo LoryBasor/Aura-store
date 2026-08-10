@@ -1,5 +1,7 @@
 .env
 node_modules/
+notification/
+sessions/*
 fontend.txt
 backend.txt
 package.json
