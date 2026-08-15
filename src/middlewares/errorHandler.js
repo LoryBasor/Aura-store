@@ -1,5 +1,7 @@
 // src/middlewares/errorHandler.js
 const { errorResponse, serverErrorResponse } = require('../utils/response');
+const { isDevelopment } = require('../../config/env');
+
 
 /**
  * Middleware de gestion centralisée des erreurs
@@ -8,10 +10,10 @@ const { errorResponse, serverErrorResponse } = require('../utils/response');
 function errorHandler(err, req, res, next) {
   console.error('❌ Erreur capturée:', {
     message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-    url: req.originalUrl,
-    method: req.method,
-    user: req.user?.id
+    stack:   isDevelopment ? err.stack : undefined,
+    url:     req.originalUrl,
+    method:  req.method,
+    user:    req.user?.id
   });
 
   // Erreur Multer (upload)
@@ -55,10 +57,8 @@ function errorHandler(err, req, res, next) {
     return errorResponse(res, err.message, err.statusCode);
   }
 
-  // Erreur générique
-  const message = process.env.NODE_ENV === 'development' 
-    ? err.message 
-    : 'Une erreur est survenue';
+  // Erreur générique — ne jamais exposer les détails en production
+  const message = isDevelopment ? err.message : 'Une erreur est survenue';
   
   if (req.accepts('html') && !req.path.startsWith('/api')) {
     return res.status(500).render('errors/404', { title: 'Erreur', showSidebar: false, showHeader: false }); // On peut utiliser 404 comme fallback ou créer une 500

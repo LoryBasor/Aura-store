@@ -2,39 +2,43 @@
  * ========================================
  * AURA - Application Express Principale
  * ========================================
- * Serveur avec support EJS, API REST et authentification JWT
+ * Serveur HTTP avec support EJS, API REST et authentification JWT.
+ *
+ * CE FICHIER ne démarre PAS :
+ *   - WhatsApp / Chromium  → npm run whatsapp
+ *   - BullMQ Workers       → npm run whatsapp
+ *   - Cron / Scheduler     → npm run scheduler
+ *
+ * En développement, utiliser : npm run dev (lance tout via concurrently)
  * ========================================
  */
 
 const express = require('express');
-const path = require('path');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
+const path    = require('path');
+const cors    = require('cors');
+const helmet  = require('helmet');
+const morgan  = require('morgan');
 const expressLayouts = require('express-ejs-layouts');
-const cookieParser = require('cookie-parser');
+const cookieParser   = require('cookie-parser');
 require('dotenv').config();
 
-// Configuration et utilitaires
+// ─── Configuration centralisée ────────────────────────────────────────────────
+const { nodeEnv, isDevelopment, isProduction, port: PORT } = require('./config/env');
+
+// ─── Config et utilitaires ───────────────────────────────────────────────────
 const { pool, testConnection, closePool } = require('./src/config/database');
-const { testConnection: testCloudinary } = require('./src/config/cloudinary');
+const { testConnection: testCloudinary }  = require('./src/config/cloudinary');
 const { UPLOAD_DIR } = require('./src/config/upload');
-// Les crons sont gérés exclusivement par le processus worker (src/worker.js)
-// NE PAS importer ici pour éviter la duplication en cas de redémarrage PM2
 
-// Initialisation des Queues & Workers
-require('./src/queues/NotificationQueue');
-require('./src/queues/OutboundWhatsAppQueue');
-
-// Routes API
-const apiRoutes = require('./src/routes');
+// ─── Routes API ──────────────────────────────────────────────────────────────
+const apiRoutes  = require('./src/routes');
 const docsRoutes = require('./src/routes/docsRoutes');
 
-// Gestion des erreurs
+// ─── Gestion des erreurs ─────────────────────────────────────────────────────
 const { errorHandler, notFoundHandler } = require('./src/middlewares/errorHandler');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+
 
 /**
  * ========================================
@@ -85,8 +89,8 @@ app.use(cors({
   credentials: true
 }));
 
-// Logging
-if (process.env.NODE_ENV === 'development') {
+// Logging — lisible en dev, JSON structuré en prod
+if (isDevelopment) {
   app.use(morgan('dev'));
 } else {
   app.use(morgan('combined'));
@@ -216,6 +220,19 @@ function requireSuperAdminView(req, res, next) {
   }
   next();
 }
+
+/**
+ * ========================================
+ * HEALTHCHECK
+ * ========================================
+ */
+app.get('/health', (req, res) => {
+  res.json({
+    status:      'ok',
+    environment: nodeEnv,
+    timestamp:   new Date().toISOString(),
+  });
+});
 
 /**
  * ========================================
@@ -1415,97 +1432,82 @@ app.use(errorHandler);
  */
 async function startServer() {
   try {
-    // Test connexion BDD
+    // 1. Test connexion BDD
     const dbConnected = await testConnection();
-    
     if (!dbConnected) {
-      console.error('❌ Impossible de se connecter à la base de données');
+      console.error('[❌ API] Impossible de se connecter à la base de données');
       process.exit(1);
     }
-    // Tester la connexion Cloudinary
+
+    // 2. Test connexion Cloudinary
     const cloudinaryOk = await testCloudinary();
     if (!cloudinaryOk) {
       throw new Error('Connexion Cloudinary échouée');
     }
 
+    // ⚠️  NE PAS démarrer WhatsApp ici.
+    // WhatsApp est géré par le processus dédié : workers/whatsapp.js
+    // (npm run whatsapp)
+    //
+    // ⚠️  NE PAS démarrer les Workers BullMQ ici.
+    // Les Workers sont gérés par : workers/whatsapp.js
+    //
+    // ⚠️  NE PAS démarrer les crons ici.
+    // Les crons sont gérés par : workers/scheduler.js
+    // (npm run scheduler)
 
-    // Les crons (abonnements, résumé WhatsApp) sont gérés par le processus 'saas-worker'
-    
-    // Initialiser les sessions WhatsApp actives
-    try {
-      const WhatsAppSessionManager = require('./src/services/whatsapp/WhatsAppSessionManager');
-      const sessionManager = WhatsAppSessionManager.getInstance();
-      await sessionManager.restoreAllSessions();
-    } catch (err) {
-      console.error('Erreur initialisation WhatsApp:', err);
-    }
-
-    // Démarrer le serveur
+    // 3. Démarrer le serveur HTTP
     const server = app.listen(PORT, () => {
       console.log('');
       console.log('=================================');
       console.log('✨ AURA - Serveur démarré !');
       console.log('=================================');
-      console.log(`📱 Port: ${PORT}`);
-      process.env.NODE_ENV === "dev" ? console.log(`🌐 http://localhost:${process.env.PORT}/`) : console.log(`🌐 ${process.env.APP_URL}/`);
-      console.log(`🔧 Environnement: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📱 Port        : ${PORT}`);
+      console.log(`🔧 Environnement: ${nodeEnv}`);
+      if (isDevelopment) {
+        console.log(`🌐 URL         : http://localhost:${PORT}/`);
+      } else {
+        console.log(`🌐 URL         : ${process.env.APP_URL || `http://localhost:${PORT}`}/`);
+      }
       console.log('=================================');
-      console.log('');
-      console.log('📍 Routes disponibles:');
-      console.log(`   - ${process.env.APP_URL}/ (Accueil)`);
-      console.log(`   - ${process.env.APP_URL}/marketplace (Marketplace)`);
-      console.log(`   - ${process.env.APP_URL}/marketplace/products (Produits)`);
-      console.log(`   - ${process.env.APP_URL}/marketplace/stores (Boutiques)`);
-      console.log(`   - ${process.env.APP_URL}/login (Connexion)`);
-      console.log(`   - ${process.env.APP_URL}/register (Inscription)`);
-      console.log(`   - ${process.env.APP_URL}/dashboard (Vendeur)`);
-      console.log(`   - ${process.env.APP_URL}/admin/dashboard (Admin)`);
-      console.log(`   - ${process.env.APP_URL}/api/health (API Health)`);
       console.log('');
     });
 
     // Arrêt gracieux
     process.on('SIGTERM', () => gracefulShutdown(server));
-    process.on('SIGINT', () => gracefulShutdown(server));
+    process.on('SIGINT',  () => gracefulShutdown(server));
     process.on('SIGUSR2', async () => {
       await gracefulShutdown(server);
       process.kill(process.pid, 'SIGUSR2');
     });
 
   } catch (error) {
-    console.error('❌ Erreur au démarrage:', error);
+    console.error('[❌ API] Erreur au démarrage:', error.message);
     process.exit(1);
   }
 }
 
 /**
- * Arrêt gracieux du serveur
+ * Arrêt gracieux du serveur API.
+ * Ferme uniquement les ressources de l'API.
+ * WhatsApp est géré séparément par workers/whatsapp.js.
  */
 async function gracefulShutdown(server) {
-  console.log('\n⏳ Arrêt du serveur en cours...');
-  
-  // Note: Les crons sont gérés par le processus worker dédié (src/worker.js)
-
-  try {
-    const WhatsAppSessionManager = require('./src/services/whatsapp/WhatsAppSessionManager');
-    await WhatsAppSessionManager.getInstance().shutdownAllSessions();
-  } catch (e) {
-    console.error('Erreur lors de la fermeture des sessions WhatsApp:', e.message);
-  }
+  console.log('\n⏳ Arrêt du serveur API en cours...');
 
   server.close(async () => {
     console.log('✅ Serveur HTTP fermé');
     await closePool();
-    console.log('✅ Connexions BDD fermées');
+    console.log('✅ Connexions MySQL fermées');
     console.log('✅ Arrêt complet');
     process.exit(0);
   });
 
-  // Forcer l'arrêt après 10 secondes
+  // Forcer l'arrêt après 15 secondes
   setTimeout(() => {
     console.error('⚠️ Arrêt forcé après timeout');
     process.exit(1);
-  }, 10000);
+  }, 15000);
 }
 
 // Démarrer le serveur

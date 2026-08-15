@@ -5,7 +5,10 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js",
+    "dev": "node scripts/dev.js",
+    "whatsapp": "node workers/whatsapp.js",
+    "worker": "node workers/worker.js",
+    "scheduler": "node workers/scheduler.js",
     "create-admin": "node scripts/createSuperAdmin.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

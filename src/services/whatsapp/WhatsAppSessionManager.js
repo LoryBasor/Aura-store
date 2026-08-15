@@ -1,8 +1,9 @@
 // src/services/whatsapp/WhatsAppSessionManager.js
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
 const { pool } = require('../../config/database');
+const { isDevelopment } = require('../../../config/env');
 
 // Empêche le crash du serveur Node.js à cause d'une erreur interne de whatsapp-web.js (timeout sur framenavigated)
 process.on('unhandledRejection', (reason, promise) => {
@@ -40,6 +41,24 @@ const PUPPETEER_ARGS = [
   "--disable-accelerated-2d-canvas"
 ];
 
+/**
+ * Configuration Puppeteer selon l'environnement.
+ * - En production : PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium (Docker)
+ * - En développement Windows : laisser vide → Puppeteer utilise son Chromium intégré
+ * - En développement Linux/Mac : PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium (optionnel)
+ */
+function buildPuppeteerConfig() {
+  const config = {
+    headless: true,
+    args: PUPPETEER_ARGS,
+  };
+  // Utiliser le chemin Chromium si fourni (production Docker ou dev Linux)
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    config.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  return config;
+}
+
 // Simple Mutex for async operations
 class Mutex {
   constructor() {
@@ -68,15 +87,27 @@ class Mutex {
 
 class WhatsAppSessionManager {
   constructor() {
-    this.sessions = new Map(); // Store active clients (Client instance)
-    this.sessionStates = new Map(); // Store session states: CREATED, INITIALIZING, WAITING_FOR_QR, READY, DISCONNECTED
-    this.userLocks = new Map(); // Store mutex per user
-    this.idleTimers = new Map(); // Store inactivity timers
-    
-    this.sessionsDir = path.join(process.cwd(), 'sessions', 'whatsapp');
+    this.sessions      = new Map(); // userId → Client instance
+    this.sessionStates = new Map(); // userId → { state, qr, ... }
+    this.userLocks     = new Map(); // userId → Mutex
+    this.idleTimers    = new Map(); // userId → Timer
+    this.pendingOrders = new Map(); // userId → { orderId, orderNumber, orderCode, ts }
+
+    /**
+     * Chemin de stockage des sessions WhatsApp.
+     * - Développement : ./sessions/whatsapp (configurable via WHATSAPP_SESSION_PATH)
+     * - Production    : /app/.wwebjs_auth   (Persistent Volume Coolify)
+     *
+     * Structure multi-tenant :
+     *   sessions/whatsapp/
+     *     session-user_123_xxx/   ← session du vendeur 123
+     *     session-user_456_xxx/   ← session du vendeur 456
+     *
+     * LocalAuth utilise clientId pour nommer le dossier : session-{clientId}/
+     */
+    const sessionBasePath = process.env.WHATSAPP_SESSION_PATH || './sessions/whatsapp';
+    this.sessionsDir         = path.resolve(process.cwd(), sessionBasePath);
     this.pendingDeletionsDir = path.join(this.sessionsDir, '_pending_deletions');
-    
-    this.pendingOrders = new Map();
 
     if (!fs.existsSync(this.sessionsDir)) {
       fs.mkdirSync(this.sessionsDir, { recursive: true });
@@ -84,6 +115,8 @@ class WhatsAppSessionManager {
     if (!fs.existsSync(this.pendingDeletionsDir)) {
       fs.mkdirSync(this.pendingDeletionsDir, { recursive: true });
     }
+
+    console.log(`[WhatsAppSession] Dossier sessions: ${this.sessionsDir}`);
 
     // Lance le garbage collector des dossiers orphelins
     this.cleanupPendingDeletions();
@@ -240,10 +273,7 @@ class WhatsAppSessionManager {
           clientId: clientId,
           dataPath: this.sessionsDir
         }),
-        puppeteer: {
-          headless: true,
-          args: PUPPETEER_ARGS
-        }
+        puppeteer: buildPuppeteerConfig()
       });
 
       this.sessions.set(userId, client);

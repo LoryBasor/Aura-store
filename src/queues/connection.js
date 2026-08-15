@@ -1,10 +1,11 @@
-// src/queues/connection.js
-require('dotenv').config();
+/**
+ * ============================================================
+ * AURA STORE — Connexion BullMQ (re-export depuis config/redis.js)
+ * ============================================================
+ * Ce fichier maintient la rétrocompatibilité avec les imports
+ * existants tout en centralisant la config Redis dans config/redis.js.
+ * ============================================================
+ */
+const { redisConnection } = require('../../config/redis');
 
-const connection = {
-  host: process.env.REDIS_HOST || '127.0.0.1',
-  port: parseInt(process.env.REDIS_PORT) || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-};
-
-module.exports = { connection };
+module.exports = { connection: redisConnection };
